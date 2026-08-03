@@ -1,0 +1,357 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+  SUPER_ADMIN
+  PARENT
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
+}
+
+enum QuestionType {
+  MCQ
+  CODE_OUTPUT
+  DEBUGGING
+  FILL_IN_BLANKS
+  MATCH_THE_FOLLOWING
+  IMAGE_BASED
+  DRAG_AND_DROP
+  PROGRAMMING_PUZZLE
+  CODE_COMPLETION
+  ARRANGE_STEPS
+  MEMORY_BASED
+  RAPID_FIRE
+  BOSS_BATTLE
+}
+
+enum TileType {
+  QUESTION
+  TRAP
+  TREASURE
+  MYSTERY
+  PORTAL
+  BOSS
+  LUCKY_SPIN
+  BONUS_XP
+  COIN_CHEST
+  TELEPORT
+  SECRET_PATH
+}
+
+enum TrapType {
+  LOSE_COINS
+  MOVE_BACK
+  SKIP_TURN
+  DOUBLE_QUESTION
+  BOSS_FIGHT
+  RANDOM_TELEPORT
+}
+
+model User {
+  id                String          @id @default(uuid())
+  email             String          @unique
+  passwordHash      String
+  role              Role            @default(STUDENT)
+  firstName         String
+  lastName          String
+  isVerified        Boolean         @default(false)
+  verificationToken String?
+  otpCode           String?
+  otpExpiresAt      DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  deletedAt         DateTime?
+
+  // Relationships
+  refreshTokens     RefreshToken[]
+  sentMessages      ChatMessage[]
+  studentProfile    StudentProfile?
+  teacherProfile    TeacherProfile?
+  parentProfile     ParentProfile?
+
+  @@index([email])
+  @@index([deletedAt])
+}
+
+model RefreshToken {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash         String   @unique
+  deviceFingerprint String?
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+}
+
+model StudentProfile {
+  id             String          @id @default(uuid())
+  userId         String          @unique
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId       String?
+  school         School?         @relation(fields: [schoolId], references: [id])
+  classId        String?
+  class          Class?          @relation(fields: [classId], references: [id])
+  sectionId      String?
+  section        Section?        @relation(fields: [sectionId], references: [id])
+  xp             Int             @default(0)
+  coins          Int             @default(0)
+  level          Int             @default(1)
+  deletedAt      DateTime?
+
+  // Relationships
+  parents        ParentProfile[] @relation("ParentToStudent")
+  roomPlayers    RoomPlayer[]
+  gameSessions   PlayerGameStats[]
+  moves          PlayerMove[]
+  badges         StudentBadge[]
+  teamMembers    TeamMember[]
+  sessionResults SessionResult[]
+
+  @@index([userId])
+  @@index([schoolId])
+}
+
+model TeacherProfile {
+  id             String           @id @default(uuid())
+  userId         String           @unique
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId       String
+  school         School           @relation(fields: [schoolId], references: [id])
+  isApproved     Boolean          @default(false)
+  classes        Class[]
+  questionDrafts Question[]
+  deletedAt      DateTime?
+
+  @@index([userId])
+}
+
+model ParentProfile {
+  id                 String           @id @default(uuid())
+  userId             String           @unique
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students           StudentProfile[] @relation("ParentToStudent")
+  weeklyEmailEnabled Boolean          @default(true)
+  deletedAt          DateTime?
+}
+
+model School {
+  id       String           @id @default(uuid())
+  name     String           @unique
+  district String
+  state    String
+  students StudentProfile[]
+  teachers TeacherProfile[]
+}
+
+model Class {
+  id           String         @id @default(uuid())
+  name         String
+  teacherId    String
+  teacher      TeacherProfile @relation(fields: [teacherId], references: [id])
+  sections     Section[]
+  students     StudentProfile[]
+  teams        Team[]
+  gameSessions GameSession[]
+}
+
+model Section {
+  id       String           @id @default(uuid())
+  name     String
+  classId  String
+  class    Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  students StudentProfile[]
+}
+
+model Question {
+  id            String          @id @default(uuid())
+  classLevel    Int
+  subject       String          @default("Computer Science")
+  topic         String
+  subtopic      String
+  difficulty    Difficulty
+  type          QuestionType
+  title         String
+  questionText  String
+  options       String[]
+  correctAnswer String
+  explanation   String
+  imageUrl      String?
+  codeSnippet   String?
+  marks         Int             @default(1)
+  timeLimit     Int             @default(30)
+  isApproved    Boolean         @default(false)
+  creatorId     String?
+  creator       TeacherProfile? @relation(fields: [creatorId], references: [id])
+  deletedAt     DateTime?
+
+  moves         PlayerMove[]
+
+  @@index([topic])
+  @@index([difficulty])
+  @@index([classLevel])
+  @@index([deletedAt])
+}
+
+model MapWorld {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  description  String
+  tiles        MapTile[]
+  gameSessions GameSession[]
+}
+
+model MapTile {
+  id           String    @id @default(uuid())
+  worldId      String
+  world        MapWorld  @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  position     Int
+  type         TileType
+  trapType     TrapType?
+  rewardsXP    Int       @default(0)
+  rewardsCoins Int       @default(0)
+
+  @@unique([worldId, position])
+}
+
+model GameSession {
+  id                 String            @id @default(uuid())
+  roomCode           String            @unique
+  worldId            String
+  world              MapWorld          @relation(fields: [worldId], references: [id])
+  classId            String?
+  class              Class?            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  status             String            @default("LOBBY")
+  currentPlayerIndex Int               @default(0)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  deletedAt          DateTime?
+
+  players            RoomPlayer[]
+  playerStats        PlayerGameStats[]
+  moves              PlayerMove[]
+  chatMessages       ChatMessage[]
+  results            SessionResult[]
+
+  @@index([roomCode])
+}
+
+model RoomPlayer {
+  id        String         @id @default(uuid())
+  sessionId String
+  session   GameSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  position  Int            @default(1)
+  turnOrder Int
+  isReady   Boolean        @default(false)
+  isActive  Boolean        @default(true)
+
+  @@unique([sessionId, studentId])
+}
+
+model PlayerGameStats {
+  id               String         @id @default(uuid())
+  sessionId        String
+  session          GameSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId        String
+  student          StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  rank             Int?
+  xpEarned         Int            @default(0)
+  coinsEarned      Int            @default(0)
+  correctAnswers   Int            @default(0)
+  incorrectAnswers Int            @default(0)
+  trapsTriggered   Int            @default(0)
+
+  @@unique([sessionId, studentId])
+}
+
+model PlayerMove {
+  id              String         @id @default(uuid())
+  sessionId       String
+  session         GameSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fromTile        Int
+  toTile          Int
+  diceRoll        Int
+  questionId      String?
+  question        Question?      @relation(fields: [questionId], references: [id])
+  isAnswerCorrect Boolean?
+  timeTaken       Int?
+  trapTriggered   TrapType?
+  timestamp       DateTime       @default(now())
+}
+
+model ChatMessage {
+  id        String       @id @default(uuid())
+  sessionId String?
+  session   GameSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  message   String
+  createdAt DateTime     @default(now())
+}
+
+model StudentBadge {
+  id        String         @id @default(uuid())
+  badgeId   String // "PERFECT_ROUND" | "COMEBACK_KID" | "SPEED_RUNNER"
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  earnedAt  DateTime       @default(now())
+
+  @@unique([studentId, badgeId])
+}
+
+model Team {
+  id             String          @id @default(uuid())
+  classId        String
+  class          Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+  name           String
+  color          String // Tailwind color, e.g. "bg-red-500"
+  members        TeamMember[]
+  sessionResults SessionResult[]
+}
+
+model TeamMember {
+  id        String         @id @default(uuid())
+  teamId    String
+  team      Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, studentId])
+}
+
+model SessionResult {
+  id        String          @id @default(uuid())
+  sessionId String
+  session   GameSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  teamId    String?
+  team      Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  studentId String?
+  student   StudentProfile? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  position  Int             @default(0)
+  accuracy  Float           @default(0)
+  xp        Int             @default(0)
+  coins     Int             @default(0)
+  rank      Int             @default(0)
+
+  @@unique([sessionId, teamId])
+  @@unique([sessionId, studentId])
+}
