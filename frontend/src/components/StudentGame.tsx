@@ -71,6 +71,17 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
   const [joinCodeInput, setJoinCodeInput] = useState<string>('');
   const [joinClassroomStatus, setJoinClassroomStatus] = useState<string>('');
   const [joinClassroomError, setJoinClassroomError] = useState<string>('');
+  
+  // Navigation History
+  const [tabHistory, setTabHistory] = useState<string[]>([]);
+  const [prevTab, setPrevTab] = useState<string>('dashboard');
+
+  // Lobby Config States
+  const [lobbyConfigName, setLobbyConfigName] = useState<string>('');
+  const [lobbyConfigGrade, setLobbyConfigGrade] = useState<string>('mixed');
+  const [lobbyConfigMaxPlayers, setLobbyConfigMaxPlayers] = useState<number>(4);
+  const [lobbyConfigPrivate, setLobbyConfigPrivate] = useState<boolean>(false);
+  const [showLobbyConfigModal, setShowLobbyConfigModal] = useState<boolean>(false);
 
   // Active Game State controls
   const [gameState, setGameState] = useState<'dashboard' | 'lobby' | 'playing' | 'victory'>('dashboard');
@@ -557,6 +568,29 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
     }
   };
 
+  useEffect(() => {
+    if (activeTab !== prevTab) {
+      setTabHistory(prev => {
+        if (prev[prev.length - 1] === prevTab) return prev;
+        return [...prev, prevTab];
+      });
+      setPrevTab(activeTab);
+    }
+  }, [activeTab, prevTab]);
+
+  const handleGoBack = () => {
+    playBeep(430, 'sine', 0.05);
+    if (tabHistory.length > 0) {
+      const nextHistory = [...tabHistory];
+      const lastTab = (nextHistory.pop() || 'dashboard') as any;
+      setTabHistory(nextHistory);
+      setPrevTab(lastTab);
+      setActiveTab(lastTab);
+    } else {
+      setActiveTab('dashboard');
+    }
+  };
+
   const handleSelectNameAndJoin = () => {
     if (!activeStudent || !socket) return;
     if (roomCode.startsWith('BQ')) {
@@ -983,7 +1017,40 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
     const pendingAssignments = activeStudent.assignments ? activeStudent.assignments.filter((a: any) => !a.isCompleted) : [];
 
     return (
-      <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full px-4 py-4 md:py-8 gap-4 md:gap-8 select-text pb-20 md:pb-8">
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* MOBILE TOP APP BAR */}
+        <header className="flex md:hidden sticky top-0 bg-jungle-medium border-b border-jungle-light h-14 items-center px-4 justify-between z-40 select-none shadow-md">
+          <div className="flex items-center gap-3">
+            {activeTab !== 'dashboard' && (
+              <button
+                onClick={handleGoBack}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-gold/10 border border-gold/30 text-gold hover:bg-gold/20 active:scale-95 transition-all text-xs font-bold font-adventure"
+              >
+                ←
+              </button>
+            )}
+            <div className="flex items-center gap-1.5">
+              <Compass className="text-gold w-5 h-5" />
+              <span className="font-adventure text-sm font-bold text-gold uppercase tracking-wider">
+                {activeTab === 'dashboard' && 'ByteQuest'}
+                {activeTab === 'new_adventure' && 'Adventure Hub'}
+                {activeTab === 'practice_quiz' && 'Practice Arena'}
+                {activeTab === 'daily_challenge' && 'Daily Challenge'}
+                {activeTab === 'leaderboard' && 'Roster Rankings'}
+                {activeTab === 'join_classroom' && 'Enroll Class'}
+                {activeTab === 'profile' && 'Explorer Profile'}
+                {activeTab === 'settings' && 'Portal Settings'}
+                {activeTab === 'continue' && 'Saved Matches'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="text-[10px] font-bold text-gold-light/80 bg-jungle-deep/45 px-2 py-1 rounded border border-jungle-light/20">
+            LVL {activeStudent.level}
+          </div>
+        </header>
+
+        <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full px-4 py-4 md:py-8 gap-4 md:gap-8 select-text pb-20 md:pb-8">
         {/* DESKTOP SIDEBAR */}
         <aside className="hidden md:flex md:w-64 bg-jungle-medium border border-jungle-light rounded-2xl p-6 flex-col justify-between">
           <div className="space-y-6">
@@ -1247,7 +1314,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                 <p className="text-gold-light text-[10px]">Select a game mode to begin your CS learning campaign.</p>
               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 min-[340px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {/* CARD 1: SOLO SANDBOX */}
                 <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
                   <div className="min-w-0">
@@ -1267,7 +1334,32 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   </button>
                 </div>
 
-                {/* CARD 2: JOIN LOBBY */}
+                {/* CARD 2: CREATE LOBBY */}
+                <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-xl">🔑</span>
+                      <h4 className="font-adventure text-xs font-bold text-gold-dark truncate">Create Lobby</h4>
+                    </div>
+                    <p className="text-[9px] font-semibold text-jungle-light leading-tight line-clamp-3">
+                      Create a custom multiplayer practice room for your friends to join.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setLobbyConfigName(`${activeStudent.name}'s Party`);
+                      setLobbyConfigGrade('mixed');
+                      setLobbyConfigMaxPlayers(4);
+                      setLobbyConfigPrivate(false);
+                      setShowLobbyConfigModal(true);
+                    }}
+                    className="w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[9px] rounded uppercase transition-colors"
+                  >
+                    Host Room
+                  </button>
+                </div>
+
+                {/* CARD 3: JOIN LOBBY */}
                 <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -1300,7 +1392,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   )}
                 </div>
 
-                {/* CARD 3: DAILY CHALLENGE */}
+                {/* CARD 4: DAILY CHALLENGE */}
                 <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -1313,13 +1405,13 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   </div>
                   <button 
                     onClick={() => { playBeep(430, 'sine', 0.05); setActiveTab('daily_challenge'); }}
-                    className="w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[9px] rounded uppercase transition-colors"
+                    className="w-full py-1 bg-indigo-950 hover:bg-indigo-900 border border-indigo-700 text-indigo-300 font-bold text-[9px] rounded uppercase transition-colors"
                   >
                     Play Daily
                   </button>
                 </div>
 
-                {/* CARD 4: TREASURE HUNT */}
+                {/* CARD 5: TREASURE HUNT */}
                 <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -1338,6 +1430,98 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   </button>
                 </div>
               </div>
+
+              {/* LOBBY CONFIGURATION DIALOG */}
+              {showLobbyConfigModal && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[99999]">
+                  <div className="parchment-panel text-jungle-deep p-5 rounded-2xl w-full max-w-sm shadow-2xl relative select-text">
+                    <h3 className="font-adventure text-lg font-bold text-gold-dark mb-3 uppercase tracking-wide">
+                      Create Practice Lobby
+                    </h3>
+                    
+                    <div className="space-y-3 text-xs">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Lobby Name (Optional)</label>
+                        <input
+                          type="text"
+                          placeholder={`${activeStudent.name}'s Party`}
+                          value={lobbyConfigName}
+                          onChange={(e) => setLobbyConfigName(e.target.value)}
+                          className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-gold font-semibold"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Max Players</label>
+                          <select
+                            value={lobbyConfigMaxPlayers}
+                            onChange={(e) => setLobbyConfigMaxPlayers(Number(e.target.value))}
+                            className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-gold font-semibold"
+                          >
+                            {[2, 3, 4, 5, 6].map(num => (
+                              <option key={num} value={num}>{num} Players</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Target Grade</label>
+                          <select
+                            value={lobbyConfigGrade}
+                            onChange={(e) => setLobbyConfigGrade(e.target.value)}
+                            className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-gold font-semibold"
+                          >
+                            <option value="mixed">Mixed Syllabus</option>
+                            <option value="10">Grade 10</option>
+                            <option value="11">Grade 11</option>
+                            <option value="12">Grade 12</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1 font-sans">Lobby Visibility</label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setLobbyConfigPrivate(false)}
+                            className={`flex-1 py-1.5 rounded font-bold uppercase text-[10px] border transition-all ${!lobbyConfigPrivate ? 'bg-gold border-gold-dark text-jungle-deep shadow-sm' : 'bg-parchment-light border-gold-dark/20 text-jungle-light'}`}
+                          >
+                            Public
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLobbyConfigPrivate(true)}
+                            className={`flex-1 py-1.5 rounded font-bold uppercase text-[10px] border transition-all ${lobbyConfigPrivate ? 'bg-gold border-gold-dark text-jungle-deep shadow-sm' : 'bg-parchment-light border-gold-dark/20 text-jungle-light'}`}
+                          >
+                            Private
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-5">
+                      <button
+                        type="button"
+                        onClick={() => setShowLobbyConfigModal(false)}
+                        className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-jungle-deep font-bold rounded text-[10px] uppercase transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowLobbyConfigModal(false);
+                          handleCreatePracticeRoom();
+                        }}
+                        className="flex-1 py-2 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded text-[10px] uppercase shadow-md transition-colors border border-gold-dark/30"
+                      >
+                        Create Lobby
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1908,6 +2092,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
           )}
         </section>
       </div>
+      </div>
     );
   }
 
@@ -1990,10 +2175,24 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
             <div className="flex justify-between items-center border-b border-gold-dark/25 pb-3 mb-6">
               <div>
-                <span className="text-[10px] block font-bold text-jungle-light uppercase font-sans">Multiplayer Lobby</span>
-                <h3 className="font-adventure text-3xl font-bold">Room Code: {syncState.roomCode}</h3>
+                <span className="text-[10px] block font-bold text-jungle-light uppercase font-sans">
+                  {syncState.roomCode.startsWith('BQ') ? (
+                    `${lobbyConfigPrivate ? '🔒 Private' : '🌐 Public'} Lobby • Grade ${lobbyConfigGrade.toUpperCase()}`
+                  ) : (
+                    'Multiplayer Lobby'
+                  )}
+                </span>
+                <h3 className="font-adventure text-2xl md:text-3xl font-bold">
+                  {syncState.roomCode.startsWith('BQ') && lobbyConfigName ? lobbyConfigName : `Room Code: ${syncState.roomCode}`}
+                </h3>
+                {syncState.roomCode.startsWith('BQ') && (
+                  <p className="text-[10px] text-jungle-light font-bold mt-1">
+                    Room Code: <span className="font-mono text-xs font-extrabold bg-parchment-dark px-1.5 py-0.5 rounded text-jungle-deep select-all">{syncState.roomCode}</span>
+                    <span className="ml-2">• Capacity: {syncState.teams.length} / {lobbyConfigMaxPlayers} Teams</span>
+                  </p>
+                )}
               </div>
-              <span className="px-3 py-1 bg-amber-100 border border-amber-500 rounded-full font-bold text-xs text-amber-800 animate-pulse font-sans">Waiting for Players</span>
+              <span className="px-3 py-1 bg-amber-100 border border-amber-500 rounded-full font-bold text-[10px] text-amber-800 animate-pulse font-sans shrink-0">Waiting for Players</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -2027,9 +2226,10 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
               {(syncState.roomCode.startsWith('BQ') || !syncState.classId) && (
                 <button 
                   onClick={handleStartPracticeGame}
-                  className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-md transition-colors text-xs uppercase"
+                  disabled={syncState.teams.length < 2}
+                  className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-500 disabled:opacity-50 text-white font-bold rounded-lg shadow-md transition-colors text-xs uppercase"
                 >
-                  Start Room
+                  {syncState.teams.length < 2 ? 'Need 2+ Players to Start' : 'Start Room'}
                 </button>
               )}
               <button 
