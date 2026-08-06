@@ -47,6 +47,25 @@ app.use('/api/v1', apiLimiter, apiRouter);
 app.use('/api/v1/teacher', teacherRouter);
 app.use('/api/v1/student', studentRouter);
 
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'ByteQuest Backend',
+    environment: process.env.NODE_ENV
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'ByteQuest Backend Running',
+    version: '1.0',
+    environment: process.env.NODE_ENV
+  });
+});
+
 // Prometheus metrics endpoint
 app.get('/metrics', async (req, res) => {
   const client = require('prom-client');
