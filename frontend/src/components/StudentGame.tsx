@@ -1314,34 +1314,34 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                 <p className="text-gold-light text-[10px]">Select a game mode to begin your CS learning campaign.</p>
               </div>
 
-              <div className="grid grid-cols-1 min-[340px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {/* CARD 1: SOLO SANDBOX */}
-                <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
+                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-jungle-deep min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-xl">🤖</span>
-                      <h4 className="font-adventure text-xs font-bold text-gold-dark truncate">Solo Sandbox</h4>
+                    <div className="flex items-center gap-1.5 mb-1.5 md:mb-3">
+                      <span className="text-2xl md:text-4xl">🤖</span>
+                      <h4 className="font-adventure text-sm md:text-lg font-bold text-gold-dark truncate">Solo Sandbox</h4>
                     </div>
-                    <p className="text-[9px] font-semibold text-jungle-light leading-tight line-clamp-3">
+                    <p className="text-[10px] md:text-xs font-semibold text-jungle-light leading-tight md:leading-relaxed">
                       Fight compilation bots in a completely local, offline practice match.
                     </p>
                   </div>
                   <button 
                     onClick={onStartSoloPractice}
-                    className="w-full py-1 bg-jungle-medium hover:bg-jungle-deep text-offwhite font-bold text-[9px] rounded uppercase transition-colors"
+                    className="w-full h-11 bg-jungle-medium hover:bg-jungle-deep text-offwhite font-bold text-[10px] md:text-xs rounded-lg uppercase transition-all tracking-wide min-h-[44px] mt-4 flex items-center justify-center"
                   >
                     Start Solo
                   </button>
                 </div>
 
                 {/* CARD 2: CREATE LOBBY */}
-                <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
+                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-jungle-deep min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-xl">🔑</span>
-                      <h4 className="font-adventure text-xs font-bold text-gold-dark truncate">Create Lobby</h4>
+                    <div className="flex items-center gap-1.5 mb-1.5 md:mb-3">
+                      <span className="text-2xl md:text-4xl">🔑</span>
+                      <h4 className="font-adventure text-sm md:text-lg font-bold text-gold-dark truncate">Create Lobby</h4>
                     </div>
-                    <p className="text-[9px] font-semibold text-jungle-light leading-tight line-clamp-3">
+                    <p className="text-[10px] md:text-xs font-semibold text-jungle-light leading-tight md:leading-relaxed">
                       Create a custom multiplayer practice room for your friends to join.
                     </p>
                   </div>
@@ -1353,78 +1353,78 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                       setLobbyConfigPrivate(false);
                       setShowLobbyConfigModal(true);
                     }}
-                    className="w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[9px] rounded uppercase transition-colors"
+                    className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] md:text-xs rounded-lg uppercase transition-all tracking-wide min-h-[44px] mt-4 flex items-center justify-center"
                   >
                     Host Room
                   </button>
                 </div>
 
                 {/* CARD 3: JOIN LOBBY */}
-                <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
+                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-jungle-deep min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-xl">🤝</span>
-                      <h4 className="font-adventure text-xs font-bold text-gold-dark truncate">Join Lobby</h4>
+                    <div className="flex items-center gap-1.5 mb-1.5 md:mb-3">
+                      <span className="text-2xl md:text-4xl">🤝</span>
+                      <h4 className="font-adventure text-sm md:text-lg font-bold text-gold-dark truncate">Join Lobby</h4>
                     </div>
                     {!rosterClass ? (
-                      <form onSubmit={handleResolveCode} className="space-y-1 mt-1">
+                      <form onSubmit={handleResolveCode} className="space-y-1.5">
                         <input 
                           type="text" 
                           value={roomCode}
                           onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                           placeholder="Code"
                           maxLength={6}
-                          className="w-full bg-parchment-light border border-gold-dark/45 rounded px-2 py-0.5 text-[10px] text-center font-bold font-mono tracking-wider focus:outline-none"
+                          className="w-full bg-parchment-light border border-gold-dark/45 rounded px-2.5 py-1 text-xs text-center font-bold font-mono tracking-wider focus:outline-none h-8"
                           required
                         />
                         {joinError && <p className="text-[8px] text-red-700 text-center font-bold truncate">{joinError}</p>}
-                        <button type="submit" className="w-full py-1 bg-gold text-jungle-deep font-bold text-[8px] rounded uppercase tracking-wide">Verify</button>
+                        <button type="submit" className="w-full h-11 bg-gold text-jungle-deep font-bold text-[10px] md:text-xs rounded-lg uppercase tracking-wide min-h-[44px] flex items-center justify-center">Verify</button>
                       </form>
                     ) : (
-                      <div className="space-y-1 mt-1 text-[9px] text-center">
-                        <p className="font-bold truncate">{rosterClass.className}</p>
-                        <button onClick={handleSelectNameAndJoin} className="w-full py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded uppercase">Join</button>
+                      <div className="space-y-1.5 text-[9px] md:text-xs text-center">
+                        <p className="font-bold truncate">Class: {rosterClass.className}</p>
+                        <button onClick={handleSelectNameAndJoin} className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg uppercase min-h-[44px] flex items-center justify-center">Join Room</button>
                       </div>
                     )}
                   </div>
                   {rosterClass && (
-                    <button onClick={() => setRosterClass(null)} className="text-center text-[8px] text-jungle-light font-bold">Clear</button>
+                    <button onClick={() => setRosterClass(null)} className="text-center text-[9px] md:text-xs text-jungle-light font-bold mt-1">Clear</button>
                   )}
                 </div>
 
                 {/* CARD 4: DAILY CHALLENGE */}
-                <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
+                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-jungle-deep min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-xl">⚡</span>
-                      <h4 className="font-adventure text-xs font-bold text-gold-dark truncate">Daily Challenge</h4>
+                    <div className="flex items-center gap-1.5 mb-1.5 md:mb-3">
+                      <span className="text-2xl md:text-4xl">⚡</span>
+                      <h4 className="font-adventure text-sm md:text-lg font-bold text-gold-dark truncate">Daily Challenge</h4>
                     </div>
-                    <p className="text-[9px] font-semibold text-jungle-light leading-tight line-clamp-3">
+                    <p className="text-[10px] md:text-xs font-semibold text-jungle-light leading-tight md:leading-relaxed">
                       Complete daily challenges to earn bonus coins and experience XP!
                     </p>
                   </div>
                   <button 
                     onClick={() => { playBeep(430, 'sine', 0.05); setActiveTab('daily_challenge'); }}
-                    className="w-full py-1 bg-indigo-950 hover:bg-indigo-900 border border-indigo-700 text-indigo-300 font-bold text-[9px] rounded uppercase transition-colors"
+                    className="w-full h-11 bg-indigo-950 hover:bg-indigo-900 border border-indigo-700 text-indigo-300 font-bold text-[10px] md:text-xs rounded-lg uppercase transition-all tracking-wide min-h-[44px] mt-4 flex items-center justify-center"
                   >
                     Play Daily
                   </button>
                 </div>
 
                 {/* CARD 5: TREASURE HUNT */}
-                <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
+                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-jungle-deep min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-xl">👑</span>
-                      <h4 className="font-adventure text-xs font-bold text-gold-dark truncate">Treasure Hunt</h4>
+                    <div className="flex items-center gap-1.5 mb-1.5 md:mb-3">
+                      <span className="text-2xl md:text-4xl">👑</span>
+                      <h4 className="font-adventure text-sm md:text-lg font-bold text-gold-dark truncate">Treasure Hunt</h4>
                     </div>
-                    <p className="text-[9px] font-semibold text-jungle-light leading-tight line-clamp-3">
+                    <p className="text-[10px] md:text-xs font-semibold text-jungle-light leading-tight md:leading-relaxed">
                       Join teacher lobbies or classroom events to compete for rewards.
                     </p>
                   </div>
                   <button 
                     onClick={() => { playBeep(460, 'sine', 0.05); setActiveTab('join_classroom'); }}
-                    className="w-full py-1 bg-gold hover:bg-gold-light text-jungle-deep font-bold text-[9px] rounded uppercase transition-colors border border-gold-dark/30 shadow-sm"
+                    className="w-full h-11 bg-gold hover:bg-gold-light text-jungle-deep font-bold text-[10px] md:text-xs rounded-lg uppercase transition-all tracking-wide border border-gold-dark/30 shadow-sm min-h-[44px] mt-4 flex items-center justify-center"
                   >
                     Enter Hunt
                   </button>
@@ -2249,7 +2249,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
       {gameState === 'playing' && syncState && (
         <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative">
           {activeStudent && (
-            <div className="bg-jungle-medium border border-jungle-light px-4 py-2 rounded-xl flex items-center justify-between gap-2 mb-4 shadow-lg text-[10px] md:text-xs font-bold font-adventure text-gold-light">
+            <div className="sticky top-14 md:top-0 z-30 bg-jungle-medium/95 backdrop-blur border border-jungle-light px-4 py-2 rounded-xl flex items-center justify-between gap-2 mb-4 shadow-lg text-[10px] md:text-xs font-bold font-adventure text-gold-light">
               <div>🛡️ LVL <span className="text-white font-mono">{activeStudent.level}</span></div>
               <div className="hidden sm:inline">|</div>
               <div>⭐ XP <span className="text-white font-mono">{activeStudent.xp}</span></div>
@@ -2262,101 +2262,103 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full items-start">
             
-            <div className="lg:col-span-3 bg-jungle-medium border border-jungle-light p-2 md:p-4 rounded-2xl md:rounded-3xl relative shadow-2xl overflow-hidden aspect-[4/3] w-full flex items-center justify-center">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#1a3d30,transparent_70%)]"></div>
-              
-              <div className="relative w-[96%] h-[96%] md:w-[90%] md:h-[90%] border border-gold/15 rounded-2xl bg-jungle-deep/45">
+            <div className="lg:col-span-3 bg-jungle-medium border border-jungle-light p-3 md:p-4 rounded-2xl md:rounded-3xl relative shadow-2xl w-full flex flex-col gap-3">
+              <div className="relative aspect-[4/3] w-full bg-jungle-deep/45 border border-gold/15 rounded-xl md:rounded-2xl flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#1a3d30,transparent_70%)]"></div>
                 
-                <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                  <path 
-                    d={`M ${TILE_COORDS.map(coord => `${coord.x}%,${coord.y}%`).join(' L ')}`}
-                    fill="none"
-                    className="map-connector"
-                  />
-                </svg>
-
-                {BOARD_TILES.map((tile, tIdx) => {
-                  const coord = TILE_COORDS[tIdx];
-                  const isSafe = SAFE_TILES.includes(tIdx);
+                <div className="relative w-[78%] h-[78%] md:w-[90%] md:h-[90%]">
                   
-                  let tileSymbol = '📜';
-                  let tileColor = 'bg-[#E5D6B3] border-gold-dark text-jungle-deep';
-                  
-                  if (tile.type === 'start') {
-                    tileSymbol = '⛺';
-                    tileColor = 'bg-teal-700 border-teal-500 text-white';
-                  } else if (tile.type === 'finish') {
-                    tileSymbol = '👑';
-                    tileColor = 'bg-amber-600 border-amber-400 text-white animate-pulse';
-                  } else if (tile.type === 'trap') {
-                    tileSymbol = '🕸️';
-                    tileColor = 'bg-rose-900 border-rose-600 text-rose-100';
-                  } else if (tile.type === 'treasure') {
-                    tileSymbol = '🎁';
-                    tileColor = 'bg-amber-700 border-gold text-gold-glow';
-                  } else if (tile.type === 'boss') {
-                    tileSymbol = '🐉';
-                    tileColor = 'bg-indigo-950 border-indigo-500 text-indigo-200';
-                  }
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                    <path 
+                      d={`M ${TILE_COORDS.map(coord => `${coord.x}%,${coord.y}%`).join(' L ')}`}
+                      fill="none"
+                      className="map-connector"
+                    />
+                  </svg>
 
-                  return (
-                    <div 
-                      key={tIdx}
-                      className={`absolute -translate-x-1/2 -translate-y-1/2 w-10 sm:w-14 h-10 sm:h-14 rounded-full border-2 flex items-center justify-center text-sm sm:text-xl font-bold transition-all shadow-md group ${tileColor} ${
-                        isSafe ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#F3EAD3]' : ''
-                      }`}
-                      style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
-                    >
-                      <span>{tileSymbol}</span>
-                      {isSafe && (
-                        <div className="absolute -top-1 -left-1 bg-emerald-600 text-white p-0.5 rounded-full border border-white">
-                          <Shield className="w-2 h-2" />
-                        </div>
-                      )}
-                      <span className="absolute -bottom-1 -right-1 text-[8px] w-4 h-4 bg-jungle-deep text-gold rounded-full flex items-center justify-center border border-gold/40">
-                        {tIdx}
-                      </span>
-                    </div>
-                  );
-                })}
+                  {BOARD_TILES.map((tile, tIdx) => {
+                    const coord = TILE_COORDS[tIdx];
+                    const isSafe = SAFE_TILES.includes(tIdx);
+                    
+                    let tileSymbol = '📜';
+                    let tileColor = 'bg-[#E5D6B3] border-gold-dark text-jungle-deep';
+                    
+                    if (tile.type === 'start') {
+                      tileSymbol = '⛺';
+                      tileColor = 'bg-teal-700 border-teal-500 text-white';
+                    } else if (tile.type === 'finish') {
+                      tileSymbol = '👑';
+                      tileColor = 'bg-amber-600 border-amber-400 text-white animate-pulse';
+                    } else if (tile.type === 'trap') {
+                      tileSymbol = '🕸️';
+                      tileColor = 'bg-rose-900 border-rose-600 text-rose-100';
+                    } else if (tile.type === 'treasure') {
+                      tileSymbol = '🎁';
+                      tileColor = 'bg-amber-700 border-gold text-gold-glow';
+                    } else if (tile.type === 'boss') {
+                      tileSymbol = '🐉';
+                      tileColor = 'bg-indigo-950 border-indigo-500 text-indigo-200';
+                    }
 
-                {syncState.teams.map((t: any, idx: number) => {
-                  const coord = TILE_COORDS[t.position];
-                  const teamsOnSameTile = syncState.teams.filter((te: any) => te.position === t.position);
-                  const tIndexOnTile = teamsOnSameTile.findIndex((te: any) => te.id === t.id);
-                  const offsetX = (tIndexOnTile - (teamsOnSameTile.length - 1) / 2) * 16;
-                  const offsetY = tIndexOnTile * 6;
-
-                  return (
-                    <div
-                      key={t.id}
-                      className={`absolute -translate-x-1/2 -translate-y-1/2 w-8 sm:w-10 h-8 sm:h-10 rounded-full border-2 flex items-center justify-center text-xs font-extrabold shadow-lg transition-all duration-500 z-20 ${t.color} ${
-                        syncState.activeTeamIdx === idx ? 'ring-4 ring-gold animate-bounce-slow' : ''
-                      }`}
-                      style={{ 
-                        left: `calc(${coord.x}% + ${offsetX}px)`, 
-                        top: `calc(${coord.y}% - 14px + ${offsetY}px)`
-                      }}
-                      title={t.name}
-                    >
-                      <span className="relative">
-                        🏁
-                        {syncState.activeTeamIdx === idx && (
-                          <span className="absolute -top-1.5 -right-1.5 flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
-                          </span>
+                    return (
+                      <div 
+                        key={tIdx}
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 sm:w-14 sm:h-14 rounded-full border-2 flex items-center justify-center text-xs sm:text-xl font-bold transition-all shadow-md group ${tileColor} ${
+                          isSafe ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#F3EAD3]' : ''
+                        }`}
+                        style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
+                      >
+                        <span>{tileSymbol}</span>
+                        {isSafe && (
+                          <div className="absolute -top-1 -left-1 bg-emerald-600 text-white p-0.5 rounded-full border border-white">
+                            <Shield className="w-2 h-2" />
+                          </div>
                         )}
-                      </span>
-                    </div>
-                  );
-                })}
+                        <span className="absolute -bottom-1 -right-1 text-[7px] sm:text-[8px] w-3 h-3 sm:w-4 sm:h-4 bg-jungle-deep text-gold rounded-full flex items-center justify-center border border-gold/40">
+                          {tIdx}
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {syncState.teams.map((t: any, idx: number) => {
+                    const coord = TILE_COORDS[t.position];
+                    const teamsOnSameTile = syncState.teams.filter((te: any) => te.position === t.position);
+                    const tIndexOnTile = teamsOnSameTile.findIndex((te: any) => te.id === t.id);
+                    const offsetX = (tIndexOnTile - (teamsOnSameTile.length - 1) / 2) * 12;
+                    const offsetY = tIndexOnTile * 5;
+
+                    return (
+                      <div
+                        key={t.id}
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center text-[10px] sm:text-xs font-extrabold shadow-lg transition-all duration-500 z-20 ${t.color} ${
+                          syncState.activeTeamIdx === idx ? 'ring-3 sm:ring-4 ring-gold animate-bounce-slow' : ''
+                        }`}
+                        style={{ 
+                          left: `calc(${coord.x}% + ${offsetX}px)`, 
+                          top: `calc(${coord.y}% - 12px + ${offsetY}px)`
+                        }}
+                        title={t.name}
+                      >
+                        <span className="relative">
+                          🏁
+                          {syncState.activeTeamIdx === idx && (
+                            <span className="absolute -top-1.5 -right-1.5 flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* FLOATING TURN PANEL & DICE CONTROLS FOR MOBILE */}
-              <div className="absolute bottom-3 right-3 bg-jungle-medium/95 backdrop-blur border border-gold/30 p-2 rounded-xl flex items-center gap-2 shadow-2xl z-30 select-none">
-                <div className="text-[10px] text-offwhite min-w-[70px] leading-tight">
-                  <span className="block text-gold font-bold font-adventure truncate max-w-[80px]" title={getActivePlayerName()}>
+              {/* MOBILE DOCKED TURN PANEL - DOCKED OUTSIDE PATH */}
+              <div className="flex md:hidden bg-jungle-deep/40 border border-gold/20 p-2.5 rounded-xl items-center justify-between gap-3 shadow select-none">
+                <div className="text-[10px] text-offwhite min-w-[80px] leading-tight">
+                  <span className="block text-gold font-bold font-adventure truncate max-w-[120px]" title={getActivePlayerName()}>
                     {getActivePlayerName()}
                   </span>
                   <span className="block text-[8px] text-offwhite/50 font-sans uppercase">Active Turn</span>
@@ -2368,13 +2370,13 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                 <button
                   onClick={handleRollClick}
                   disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
-                  className={`h-9 px-2.5 bg-gold border border-gold-dark hover:scale-105 active:scale-95 transition-all text-jungle-deep rounded-lg flex items-center gap-1 shadow-md font-bold disabled:opacity-50 disabled:pointer-events-none ${
+                  className={`h-11 px-6 bg-gold hover:bg-gold-light border border-gold-dark text-jungle-deep rounded-xl flex items-center justify-center gap-1.5 shadow-md font-bold disabled:opacity-50 disabled:pointer-events-none active:scale-95 transition-all w-1/2 min-h-[44px] ${
                     diceRolling ? 'animate-dice-roll' : ''
                   }`}
                 >
-                  <Dices className="w-3.5 h-3.5" />
-                  <span className="text-[8px] uppercase tracking-wider">
-                    {diceRolling ? 'Spin' : 'Roll'}
+                  <Dices className="w-4 h-4" />
+                  <span className="text-[10px] uppercase tracking-wider font-adventure">
+                    {diceRolling ? 'Spinning...' : 'Roll'}
                   </span>
                 </button>
               </div>
