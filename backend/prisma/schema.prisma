@@ -100,28 +100,32 @@ model RefreshToken {
 }
 
 model StudentProfile {
-  id             String          @id @default(uuid())
-  userId         String          @unique
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  schoolId       String?
-  school         School?         @relation(fields: [schoolId], references: [id])
-  classId        String?
-  class          Class?          @relation(fields: [classId], references: [id])
-  sectionId      String?
-  section        Section?        @relation(fields: [sectionId], references: [id])
-  xp             Int             @default(0)
-  coins          Int             @default(0)
-  level          Int             @default(1)
-  deletedAt      DateTime?
+  id                String            @id @default(uuid())
+  userId            String            @unique
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId          String?
+  school            School?           @relation(fields: [schoolId], references: [id])
+  classId           String?
+  class             Class?            @relation(fields: [classId], references: [id])
+  sectionId         String?
+  section           Section?          @relation(fields: [sectionId], references: [id])
+  xp                Int               @default(0)
+  coins             Int               @default(0)
+  level             Int               @default(1)
+  isSuspended       Boolean           @default(false)
+  minutesPlayed     Int               @default(0)
+  grade             Int               @default(10)
+  deletedAt         DateTime?
 
   // Relationships
-  parents        ParentProfile[] @relation("ParentToStudent")
-  roomPlayers    RoomPlayer[]
-  gameSessions   PlayerGameStats[]
-  moves          PlayerMove[]
-  badges         StudentBadge[]
-  teamMembers    TeamMember[]
-  sessionResults SessionResult[]
+  parents           ParentProfile[]   @relation("ParentToStudent")
+  roomPlayers       RoomPlayer[]
+  gameSessions      PlayerGameStats[]
+  moves             PlayerMove[]
+  badges            StudentBadge[]
+  teamMembers       TeamMember[]
+  sessionResults    SessionResult[]
+  joinRequests      JoinRequest[]
 
   @@index([userId])
   @@index([schoolId])
@@ -151,23 +155,29 @@ model ParentProfile {
 }
 
 model School {
-  id       String           @id @default(uuid())
-  name     String           @unique
-  district String
-  state    String
-  students StudentProfile[]
-  teachers TeacherProfile[]
+  id               String            @id @default(uuid())
+  name             String            @unique
+  district         String
+  state            String
+  students         StudentProfile[]
+  teachers         TeacherProfile[]
+  flaggedQuestions FlaggedQuestion[]
 }
 
 model Class {
   id           String         @id @default(uuid())
   name         String
+  section      String         @default("A")
+  grade        Int            @default(11)
+  subject      String         @default("Computer Science")
   teacherId    String
   teacher      TeacherProfile @relation(fields: [teacherId], references: [id])
+  isArchived   Boolean        @default(false)
   sections     Section[]
   students     StudentProfile[]
   teams        Team[]
   gameSessions GameSession[]
+  joinRequests JoinRequest[]
 }
 
 model Section {
@@ -200,7 +210,8 @@ model Question {
   creator       TeacherProfile? @relation(fields: [creatorId], references: [id])
   deletedAt     DateTime?
 
-  moves         PlayerMove[]
+  moves            PlayerMove[]
+  flaggedQuestions FlaggedQuestion[]
 
   @@index([topic])
   @@index([difficulty])
@@ -354,4 +365,26 @@ model SessionResult {
 
   @@unique([sessionId, teamId])
   @@unique([sessionId, studentId])
+}
+
+model JoinRequest {
+  id          String          @id @default(uuid())
+  classId     String
+  class       Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+  studentName String
+  studentId   String?
+  student     StudentProfile? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status      String          @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt   DateTime        @default(now())
+}
+
+model FlaggedQuestion {
+  id          String   @id @default(uuid())
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  reason      String
+  studentName String?
+  createdAt   DateTime @default(now())
 }

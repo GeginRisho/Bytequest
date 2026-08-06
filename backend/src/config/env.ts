@@ -8,6 +8,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().default('postgresql://postgres:postgres@localhost:5432/bytequest?schema=public'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
+  JWT_SECRET: z.string().optional(),
   JWT_ACCESS_SECRET: z.string().default('super_secret_access_key_12345'),
   JWT_REFRESH_SECRET: z.string().default('super_secret_refresh_key_12345'),
   CLOUDINARY_URL: z.string().optional(),
@@ -18,6 +19,16 @@ const envSchema = z.object({
   SMTP_FROM: z.string().default('noreply@bytequest.edu'),
   USE_LLM_RECOMMENDER: z.string().default('false')
 });
+
+// Map JWT_SECRET fallback before validation
+if (process.env.JWT_SECRET) {
+  if (!process.env.JWT_ACCESS_SECRET) {
+    process.env.JWT_ACCESS_SECRET = process.env.JWT_SECRET;
+  }
+  if (!process.env.JWT_REFRESH_SECRET) {
+    process.env.JWT_REFRESH_SECRET = process.env.JWT_SECRET;
+  }
+}
 
 const parsed = envSchema.safeParse(process.env);
 

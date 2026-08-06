@@ -72,6 +72,34 @@ ByteQuest is a board-game-style, dice-driven educational game that turns Class 1
 
 ---
 
+## 🚀 Production Deployment
+
+### 1. Frontend (Vercel)
+Deploy the `/frontend` subfolder to Vercel.
+- **Framework Preset**: Vite
+- **Environment Variables**:
+  - `VITE_API_URL`: The URL of your backend (e.g., `https://bytequest-backend.onrender.com`).
+
+### 2. Backend (Render / Heroku)
+Deploy the `/backend` subfolder to Render.
+- **Build Command**: `npm run build`
+- **Start Command**: `npm start`
+- **Environment Variables**:
+  - `DATABASE_URL`: Your Neon PostgreSQL connection string.
+  - `PORT`: Set automatically by Render.
+  - `JWT_SECRET`: A strong secret key to sign auth tokens.
+  - `NODE_ENV`: `production`
+
+### 3. Database (Neon PostgreSQL)
+1. Create a serverless PostgreSQL instance on Neon.
+2. Initialize your database from your local machine:
+   ```bash
+   DATABASE_URL="your-neon-connection-string" npx prisma db push
+   DATABASE_URL="your-neon-connection-string" npx prisma db seed
+   ```
+
+---
+
 ## 📦 Directory Structure
 
 ```

@@ -15,7 +15,8 @@ import {
   Shield,
   Award,
   Clock,
-  BookOpen
+  BookOpen,
+  X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { io } from 'socket.io-client';
@@ -27,7 +28,7 @@ import TeacherDashboard from './components/TeacherDashboard';
 import StudentGame from './components/StudentGame';
 
 // Connect Socket.io client to backend server
-const socket = io(`${window.location.protocol}//${window.location.hostname}:5000`, {
+const socket = io(import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`, {
   transports: ['websocket'],
   autoConnect: true
 });
@@ -135,6 +136,7 @@ export default function App() {
     name: string;
     grade: 10 | 11 | 12 | 'mixed';
     isBot: boolean;
+    botDifficulty?: 'easy' | 'medium' | 'hard';
     color: string;
     avatar: string;
     position: number;
@@ -169,13 +171,79 @@ export default function App() {
   const [localTimerRemaining, setLocalTimerRemaining] = useState<number>(20);
   const [localQuizPhase, setLocalQuizPhase] = useState<'answering' | 'result'>('answering');
   const [localQuestionStartTime, setLocalQuestionStartTime] = useState<number>(0);
+  const [localIsFirstQuestion, setLocalIsFirstQuestion] = useState<boolean>(true);
+  const [localPendingRetryQuestion, setLocalPendingRetryQuestion] = useState<Question | null>(null);
   
   // Float score popup
   const [localScorePopup, setLocalScorePopup] = useState<{ text: string; success: boolean } | null>(null);
   const [localShowTutorial, setLocalShowTutorial] = useState<boolean>(false);
 
-  const localBotTimeoutRef = useRef<any>(null);
+  const localBotRollTimeoutRef = useRef<any>(null);
+  const localBotThinkTimeoutRef = useRef<any>(null);
   const localTimerIntervalRef = useRef<any>(null);
+  const localSubmitAnswerRef = useRef<any>(null);
+
+  // Spaced Repetition Bot to Player & No Repeats pools
+  const [localPendingBotQuestions, setLocalPendingBotQuestions] = useState<any[]>([]);
+  const [localPlayerSolvedQuestionIds, setLocalPlayerSolvedQuestionIds] = useState<string[]>([]);
+  const [localBotSolvedQuestionIds, setLocalBotSolvedQuestionIds] = useState<string[]>([]);
+
+  // Fast bot think time calculator: Easy 2-3s, Medium 3-4s, Hard/Boss 4-5s
+  const localGetBotThinkTime = (botDifficulty?: 'easy' | 'medium' | 'hard'): number => {
+    if (botDifficulty === 'easy') return 1000;
+    if (botDifficulty === 'hard') return 3000;
+    return 2000; // default medium
+  };
+
+
+
+
+
+  const saveLocalAdventureState = (players: LocalPlayer[], turnIdx: number, mapName: string, screen: string, askedQs: Record<string, string[]>, pendingBotQs: any[], playerSolved: string[], botSolved: string[]) => {
+    const saved = {
+      players,
+      turnIdx,
+      mapName,
+      screen,
+      askedQs,
+      pendingBotQs,
+      playerSolved,
+      botSolved
+    };
+    localStorage.setItem('bytequest_local_adventure', JSON.stringify(saved));
+  };
+
+  const resumeLocalPracticeGame = (savedState: any) => {
+    setLocalPlayers(savedState.players || []);
+    setLocalTurnIdx(savedState.turnIdx || 0);
+    setLocalMapName(savedState.mapName || 'Mixed Map');
+    setLocalScreen(savedState.screen || 'board');
+    setLocalAskedQs(savedState.askedQs || {});
+    setLocalPendingBotQuestions(savedState.pendingBotQs || []);
+    setLocalPlayerSolvedQuestionIds(savedState.playerSolved || []);
+    setLocalBotSolvedQuestionIds(savedState.botSolved || []);
+    
+    setViewMode('local');
+    setLocalQuizPhase('answering');
+    setLocalActiveQuestion(null);
+    setLocalSelectedOptIdx(null);
+  };
+
+  // Autosave local adventure game state to localStorage
+  useEffect(() => {
+    if (viewMode === 'local' && localScreen === 'board' && localPlayers.length > 0) {
+      saveLocalAdventureState(
+        localPlayers,
+        localTurnIdx,
+        localMapName,
+        localScreen,
+        localAskedQs,
+        localPendingBotQuestions,
+        localPlayerSolvedQuestionIds,
+        localBotSolvedQuestionIds
+      );
+    }
+  }, [viewMode, localScreen, localPlayers, localTurnIdx, localMapName, localAskedQs, localPendingBotQuestions, localPlayerSolvedQuestionIds, localBotSolvedQuestionIds]);
 
   // local quiz timer hook
   useEffect(() => {
@@ -199,18 +267,50 @@ export default function App() {
     };
   }, [localActiveQuestion, localQuizPhase, viewMode, localScreen]);
 
+  // Cleanup local questions and states on screen/mode transition
+  useEffect(() => {
+    setLocalActiveQuestion(null);
+    setLocalLandingTile(null);
+    setLocalScorePopup(null);
+    if (localBotRollTimeoutRef.current) {
+      clearTimeout(localBotRollTimeoutRef.current);
+      localBotRollTimeoutRef.current = null;
+    }
+    if (localBotThinkTimeoutRef.current) {
+      clearTimeout(localBotThinkTimeoutRef.current);
+      localBotThinkTimeoutRef.current = null;
+    }
+  }, [localScreen, viewMode, localTurnIdx]);
+
+  // Temporary Turn Check Diagnostic Logging
+  useEffect(() => {
+    if (viewMode === 'local' && localScreen === 'board') {
+      const activeP = localPlayers[localTurnIdx];
+      const turnOwnerName = activeP?.name || 'none';
+      const isBot = activeP?.isBot || false;
+      const isMyTurn = !isBot;
+      
+      console.log(`[LOCAL DEBUG TURN CHECK] Turn Player: ${turnOwnerName}, isBot: ${isBot}, isMyTurn: ${isMyTurn}, activeQuestion: ${localActiveQuestion ? 'present' : 'null'}`);
+    }
+  }, [viewMode, localScreen, localTurnIdx, localPlayers, localActiveQuestion]);
+
   // Automated bot rolls
   useEffect(() => {
     if (viewMode === 'local' && localScreen === 'board') {
       const activeP = localPlayers[localTurnIdx];
       if (activeP && activeP.isBot && !localIsRolling && !localIsMoving && !localLandingTile && !localActiveQuestion) {
-        localBotTimeoutRef.current = setTimeout(() => {
+        console.log(`[BOT DEBUG] BOT TURN START: ${activeP.name}`);
+        localBotRollTimeoutRef.current = setTimeout(() => {
+          console.log(`[BOT DEBUG] BOT ROLL: ${activeP.name} triggers roll`);
           localTriggerDiceRoll();
         }, 1800);
       }
     }
     return () => {
-      if (localBotTimeoutRef.current) clearTimeout(localBotTimeoutRef.current);
+      if (localBotRollTimeoutRef.current) {
+        clearTimeout(localBotRollTimeoutRef.current);
+        localBotRollTimeoutRef.current = null;
+      }
     };
   }, [localTurnIdx, localPlayers, localScreen, viewMode, localIsRolling, localIsMoving, localLandingTile, localActiveQuestion]);
 
@@ -220,6 +320,11 @@ export default function App() {
 
   const localInitializeGame = () => {
     sounds.playBeep(523, 'sine', 0.15);
+    setLocalIsFirstQuestion(true);
+    setLocalPendingRetryQuestion(null);
+    setLocalPendingBotQuestions([]);
+    setLocalPlayerSolvedQuestionIds([]);
+    setLocalBotSolvedQuestionIds([]);
     const humans = localPlayerCount;
     const activeList: LocalPlayer[] = [];
     const grades: Array<10 | 11 | 12> = [];
@@ -253,6 +358,7 @@ export default function App() {
         name: 'Compiler-Bot',
         grade: 'mixed',
         isBot: true,
+        botDifficulty: 'easy',
         color: 'bg-purple-600 text-white border-purple-300',
         avatar: '🤖',
         position: 0,
@@ -271,6 +377,7 @@ export default function App() {
         name: 'Binary-Beast',
         grade: 'mixed',
         isBot: true,
+        botDifficulty: 'medium',
         color: 'bg-slate-600 text-white border-slate-300',
         avatar: '👾',
         position: 0,
@@ -312,10 +419,23 @@ export default function App() {
       const roll = Math.floor(Math.random() * 6) + 1;
       setLocalCurrentRoll(roll);
       setLocalIsRolling(false);
-      localAnimateMovement(roll);
+      
+      const activeP = localPlayers[localTurnIdx];
+      if (activeP.position + roll > 17) {
+        setLocalScorePopup({ text: `Rolled ${roll}! Too high to finish. Stay on tile ${activeP.position}.`, success: false });
+        setTimeout(() => {
+          setLocalScorePopup(null);
+          localPassTurn();
+        }, 2200);
+        return;
+      }
+
+      // FIXED: Don't move yet — pull question first
+      localPullQuestion(roll);
     }, 1200);
   };
 
+  // Move animation — called AFTER correct answer
   const localAnimateMovement = (roll: number) => {
     setLocalIsMoving(true);
     let steps = 0;
@@ -343,58 +463,107 @@ export default function App() {
     const activeP = localPlayers[localTurnIdx];
     const tile = BOARD_TILES[activeP.position];
     setLocalLandingTile(tile);
-
-    // Track if ever in last place
-    const minPos = Math.min(...localPlayers.map(p => p.position));
-    if (activeP.position === minPos) {
-      setLocalPlayers(prev => prev.map((p, idx) => idx === localTurnIdx ? { ...p, wasInLastPlace: true } : p));
-    }
-
-    if (tile.type === 'start') {
-      setTimeout(() => localPassTurn(), 1000);
-    } else if (tile.type === 'finish') {
-      localTriggerVictory();
-    } else if (tile.type === 'question') {
-      localPullQuestion('medium');
-    } else if (tile.type === 'boss') {
-      sounds.playBeep(330, 'square', 0.3, 0.15);
-      localPullQuestion('hard');
-    } else if (tile.type === 'trap') {
-      sounds.playTrap();
-      const randTrap = Math.random() < 0.5 ? 'moveBack' : 'skipTurn';
-      setLocalTrapEffect(randTrap);
-      if (activeP.isBot) {
-        setTimeout(() => localResolveTrap(randTrap), 2000);
-      }
-    } else if (tile.type === 'treasure') {
-      sounds.playChest();
-      setLocalTreasureChoice('decision');
-      if (activeP.isBot) {
-        setTimeout(() => localSelectTreasure('challenge'), 1800);
-      }
-    }
+    // Tile effects (treasure/trap/boss) handled inside localSubmitAnswer
   };
 
-  const localPullQuestion = (difficulty: 'easy' | 'medium' | 'hard') => {
+  const localPullQuestion = (roll?: number) => {
     const activeP = localPlayers[localTurnIdx];
-    const grade = activeP.isBot ? 'mixed' : activeP.grade;
     const askedList = localAskedQs[activeP.id] || [];
 
+    // Same-question-reask-next-turn logic!
+    if (localPendingRetryQuestion) {
+      const q = localPendingRetryQuestion;
+      setLocalPendingRetryQuestion(null);
+      setLocalActiveQuestion(q);
+      setLocalSelectedOptIdx(null);
+      setLocalTimerRemaining(20);
+      setLocalQuizPhase('answering');
+      setLocalQuestionStartTime(Date.now());
+
+      if (activeP.isBot) {
+        const botThinkTime = localGetBotThinkTime(activeP.botDifficulty);
+        console.log(`[BOT DEBUG] QUESTION RECEIVED (RETRY): "${q.question}"`);
+        console.log(`[BOT DEBUG] BOT THINKING: ${activeP.name} will think for ${botThinkTime}ms (Difficulty: ${activeP.botDifficulty})`);
+        localBotThinkTimeoutRef.current = setTimeout(() => {
+          let correctRate = 0.70;
+          if (activeP.botDifficulty === 'easy') correctRate = 0.85;
+          else if (activeP.botDifficulty === 'medium') correctRate = 0.70;
+          else if (activeP.botDifficulty === 'hard') correctRate = 0.55;
+
+          const correct = Math.random() < correctRate;
+          let selection = q.correctIndex;
+          if (!correct) {
+            const incorrects = q.options.map((_, i) => i).filter(i => i !== q.correctIndex);
+            selection = incorrects[Math.floor(Math.random() * incorrects.length)];
+          }
+          const optLetter = String.fromCharCode(65 + selection);
+          console.log(`[BOT DEBUG] BOT SELECTED OPTION ${optLetter}`);
+          console.log(`[BOT DEBUG] CALLING submitAnswer() with option index ${selection}`);
+          localSubmitAnswerRef.current(selection);
+        }, botThinkTime);
+      }
+      return;
+    }
+
+    // Human turn: Check if there are pending questions answered by bot
+    if (!activeP.isBot && localPendingBotQuestions.length > 0) {
+      const nextQ = localPendingBotQuestions[0];
+      setLocalPendingBotQuestions(prev => prev.slice(1));
+      
+      setLocalActiveQuestion(nextQ);
+      setLocalSelectedOptIdx(null);
+      setLocalTimerRemaining(20);
+      setLocalQuizPhase('answering');
+      setLocalQuestionStartTime(Date.now());
+      return;
+    }
+
+    // Otherwise generate a new question
+    const isBossTarget = roll !== undefined && Math.min(BOARD_TILES.length - 1, activeP.position + roll) === 8 ||
+      Math.min(BOARD_TILES.length - 1, activeP.position + (roll || 0)) === 16;
+
+    const grade = activeP.isBot ? 'mixed' : activeP.grade;
+    
+    // Easy Questions First & Difficulty progression: Easy -> Easy -> Medium -> Medium -> Hard
+    let targetDifficulty: 'easy' | 'medium' | 'hard';
+    if (isBossTarget) {
+      targetDifficulty = 'hard';
+    } else {
+      const corrects = activeP.answersCorrect;
+      if (corrects < 2) targetDifficulty = 'easy';
+      else if (corrects < 4) targetDifficulty = 'medium';
+      else targetDifficulty = 'hard';
+    }
+
     let pool = questionBank.filter(q => {
-      if (q.difficulty !== difficulty) return false;
+      if (q.difficulty !== targetDifficulty) return false;
       if (grade !== 'mixed' && q.grade !== grade) return false;
+      // Do not repeat questions
+      if (localPlayerSolvedQuestionIds.includes(q.id)) return false;
+      if (localBotSolvedQuestionIds.includes(q.id)) return false;
+      if (localPendingBotQuestions.some(pq => pq.id === q.id)) return false;
       return true;
     });
 
-    if (pool.length === 0) pool = questionBank.filter(q => q.difficulty === difficulty);
-    
-    let unasked = pool.filter(q => !askedList.includes(q.id));
-    if (unasked.length === 0) {
-      unasked = pool;
-      setLocalAskedQs(prev => ({ ...prev, [activeP.id]: [] }));
+    if (pool.length === 0) {
+      pool = questionBank.filter(q => {
+        if (q.difficulty !== targetDifficulty) return false;
+        if (localPlayerSolvedQuestionIds.includes(q.id)) return false;
+        if (localBotSolvedQuestionIds.includes(q.id)) return false;
+        return true;
+      });
     }
 
-    const q = unasked[Math.floor(Math.random() * unasked.length)] || pool[0];
+    if (pool.length === 0) {
+      pool = questionBank.filter(q => {
+        if (localPlayerSolvedQuestionIds.includes(q.id)) return false;
+        return true;
+      });
+    }
+
+    if (pool.length === 0) pool = [...questionBank];
+    
+    const q = pool[Math.floor(Math.random() * pool.length)] || questionBank[0];
     
     setLocalAskedQs(prev => ({
       ...prev,
@@ -408,51 +577,82 @@ export default function App() {
     setLocalQuestionStartTime(Date.now());
 
     if (activeP.isBot) {
-      localBotTimeoutRef.current = setTimeout(() => {
-        const correct = Math.random() < 0.70;
+      const botThinkTime = localGetBotThinkTime(activeP.botDifficulty);
+      console.log(`[BOT DEBUG] QUESTION RECEIVED: "${q.question}"`);
+      console.log(`[BOT DEBUG] BOT THINKING: ${activeP.name} will think for ${botThinkTime}ms (Difficulty: ${activeP.botDifficulty})`);
+      localBotThinkTimeoutRef.current = setTimeout(() => {
+        let correctRate = 0.70;
+        if (activeP.botDifficulty === 'easy') correctRate = 0.85;
+        else if (activeP.botDifficulty === 'medium') correctRate = 0.70;
+        else if (activeP.botDifficulty === 'hard') correctRate = 0.55;
+
+        const correct = Math.random() < correctRate;
         let selection = q.correctIndex;
         if (!correct) {
           const incorrects = q.options.map((_, i) => i).filter(i => i !== q.correctIndex);
           selection = incorrects[Math.floor(Math.random() * incorrects.length)];
         }
-        localSubmitAnswer(selection);
-      }, 1800);
+        const optLetter = String.fromCharCode(65 + selection);
+        console.log(`[BOT DEBUG] BOT SELECTED OPTION ${optLetter}`);
+        console.log(`[BOT DEBUG] CALLING submitAnswer() with option index ${selection}`);
+        localSubmitAnswerRef.current(selection);
+      }, botThinkTime);
     }
   };
 
   const localSubmitAnswer = (oIdx: number) => {
+    const activeP = localPlayers[localTurnIdx];
+    if (activeP && activeP.isBot) {
+      console.log(`[BOT DEBUG] submitAnswer executing for ${activeP.name}: oIdx=${oIdx}, phase=${localQuizPhase}, hasQuestion=${!!localActiveQuestion}`);
+    }
     if (localQuizPhase !== 'answering' || !localActiveQuestion) return;
     
+    if (localBotThinkTimeoutRef.current) {
+      clearTimeout(localBotThinkTimeoutRef.current);
+      localBotThinkTimeoutRef.current = null;
+    }
+
     setLocalSelectedOptIdx(oIdx);
     setLocalQuizPhase('result');
     const isCorrect = oIdx === localActiveQuestion.correctIndex;
     const timeSpent = (Date.now() - localQuestionStartTime) / 1000;
+    if (activeP.isBot) {
+      console.log(`[BOT DEBUG] ANSWER ACCEPTED: Option ${String.fromCharCode(65 + oIdx)} (Correct: ${isCorrect})`);
+    }
+
+    // Tracking solved pools & Spaced Repetition queue
+    if (activeP.isBot) {
+      setLocalPendingBotQuestions(prev => {
+        if (prev.some(pq => pq.id === localActiveQuestion!.id)) return prev;
+        return [...prev, localActiveQuestion];
+      });
+      setLocalBotSolvedQuestionIds(prev => [...prev, localActiveQuestion!.id]);
+    } else {
+      setLocalPlayerSolvedQuestionIds(prev => [...prev, localActiveQuestion!.id]);
+    }
 
     if (isCorrect) {
+      setLocalPendingRetryQuestion(null); // Clear retry!
       sounds.playCorrect();
       
       let xp = 15;
       let coins = 5;
-      if (localLandingTile?.type === 'boss') {
-        xp = 50;
-        coins = 15;
-      } else if (localActiveQuestion.difficulty === 'easy') {
+      if (localActiveQuestion.difficulty === 'easy') {
         xp = 10;
       } else if (localActiveQuestion.difficulty === 'hard') {
         xp = 25;
+        coins = 15;
       }
 
-      const activeP = localPlayers[localTurnIdx];
       const nextStreak = activeP.streak + 1;
       let streakBonus = 0;
-      let text = `+${xp} XP · +${coins} Coins`;
-
-      if (nextStreak === 3) {
+      if (nextStreak % 3 === 0 && nextStreak > 0) {
         streakBonus = 5;
-        text += ` · +5 Streak Bonus! 🔥`;
       }
 
-      setLocalScorePopup({ text, success: true });
+      let popupText = `✅ Correct! +${xp} XP · +${coins + streakBonus} Coins`;
+      if (streakBonus > 0) popupText += ` · 🔥 Streak Bonus!`;
+      setLocalScorePopup({ text: popupText, success: true });
 
       setLocalPlayers(prev => prev.map((p, idx) => {
         if (idx === localTurnIdx) {
@@ -470,10 +670,22 @@ export default function App() {
         return p;
       }));
 
-      if (localTreasureChoice === 'challenge') setLocalTreasureChoice('safe');
+      // FIXED: Move AFTER correct answer
+      const roll = localCurrentRoll || 1;
+      setTimeout(() => {
+        setLocalScorePopup(null);
+        setLocalActiveQuestion(null);
+        // Animate movement then resolve tile
+        localAnimateMovementThenResolve(roll);
+      }, 2000);
+
     } else {
       sounds.playWrong();
-      setLocalScorePopup({ text: 'Wrong Answer!', success: false });
+      
+      // FIXED: Wrong answer = NO movement. Player stays in place.
+      setLocalPendingRetryQuestion(localActiveQuestion); // Save for spaced repetition retry!
+      
+      setLocalScorePopup({ text: `❌ Wrong Answer! 📖 Retry question queued for next turn.`, success: false });
 
       setLocalPlayers(prev => prev.map((p, idx) => {
         if (idx === localTurnIdx) {
@@ -487,34 +699,106 @@ export default function App() {
         return p;
       }));
 
-      if (localLandingTile?.type === 'question' || localLandingTile?.type === 'boss') {
-        setTimeout(() => localApplyBacktrack(2), 2200);
-        return;
-      } else if (localTreasureChoice === 'challenge') {
-        setTimeout(() => {
-          setLocalTreasureChoice('safe');
-          setLocalScorePopup(null);
-          setLocalActiveQuestion(null);
-          setLocalLandingTile(null);
-          localPassTurn();
-        }, 2500);
-        return;
-      }
+      // No backtrack — just clear and pass turn
+      setTimeout(() => {
+        setLocalScorePopup(null);
+        setLocalActiveQuestion(null);
+        setLocalLandingTile(null);
+        localPassTurn();
+      }, 3500);
     }
+  };
+  localSubmitAnswerRef.current = localSubmitAnswer;
 
-    setTimeout(() => {
-      setLocalScorePopup(null);
-      setLocalActiveQuestion(null);
-      setLocalLandingTile(null);
-      localPassTurn();
-    }, 3800);
+  // Movement animation called AFTER correct answer
+  const localAnimateMovementThenResolve = (roll: number) => {
+    setLocalIsMoving(true);
+    let steps = 0;
+    const interval = setInterval(() => {
+      if (steps < roll) {
+        setLocalPlayers(prev => prev.map((p, idx) => {
+          if (idx === localTurnIdx) {
+            return { ...p, position: Math.min(BOARD_TILES.length - 1, p.position + 1) };
+          }
+          return p;
+        }));
+        sounds.playStep();
+        steps++;
+      } else {
+        clearInterval(interval);
+        setLocalIsMoving(false);
+        const activeP = localPlayers[localTurnIdx];
+        if (activeP && activeP.isBot) {
+          console.log(`[BOT DEBUG] BOT MOVE COMPLETE`);
+        }
+        setTimeout(() => {
+          localResolveLandedTileAfterMove();
+        }, 300);
+      }
+    }, 350);
+  };
+
+  const localResolveLandedTileAfterMove = () => {
+    setLocalPlayers(currentPlayers => {
+      const activeP = currentPlayers[localTurnIdx];
+      const tile = BOARD_TILES[activeP.position];
+      setLocalLandingTile(tile);
+
+      const minPos = Math.min(...currentPlayers.map(p => p.position));
+      let updatedPlayers = currentPlayers;
+      if (activeP.position === minPos) {
+        updatedPlayers = currentPlayers.map((p, idx) => idx === localTurnIdx ? { ...p, wasInLastPlace: true } : p);
+      }
+
+      if (tile.type === 'finish') {
+        setTimeout(() => localTriggerVictory(), 600);
+        return updatedPlayers;
+      }
+
+      if (tile.type === 'boss') {
+        sounds.playBeep(330, 'square', 0.3, 0.15);
+        setLocalScorePopup({ text: '🐉 Boss Tile! Extra XP awarded!', success: true });
+        updatedPlayers = updatedPlayers.map((p, idx) => idx === localTurnIdx ? { ...p, xp: p.xp + 30, coins: p.coins + 10 } : p);
+      } else if (tile.type === 'treasure') {
+        sounds.playChest();
+        setLocalScorePopup({ text: '🎁 Treasure! +15 Coins, +10 XP!', success: true });
+        updatedPlayers = updatedPlayers.map((p, idx) => idx === localTurnIdx ? { ...p, xp: p.xp + 10, coins: p.coins + 15 } : p);
+      } else if (tile.type === 'trap') {
+        sounds.playTrap();
+        const randTrap = Math.random() < 0.5 ? 'moveBack' : 'skipTurn';
+        if (randTrap === 'moveBack') {
+          setLocalScorePopup({ text: '🕸️ Trap! Back 2 spaces.', success: false });
+          updatedPlayers = updatedPlayers.map((p, idx) => idx === localTurnIdx ? { ...p, position: Math.max(0, p.position - 2) } : p);
+        } else {
+          setLocalScorePopup({ text: '🚫 Trap! Next turn skipped.', success: false });
+          updatedPlayers = updatedPlayers.map((p, idx) => idx === localTurnIdx ? { ...p, skipNextTurn: true } : p);
+        }
+      }
+
+      setTimeout(() => {
+        setLocalScorePopup(null);
+        setLocalLandingTile(null);
+        localPassTurn();
+      }, 2500);
+
+      return updatedPlayers;
+    });
   };
 
   const localHandleTimeOut = () => {
     if (localQuizPhase !== 'answering') return;
+    
+    if (localBotThinkTimeoutRef.current) {
+      clearTimeout(localBotThinkTimeoutRef.current);
+      localBotThinkTimeoutRef.current = null;
+    }
+
     sounds.playWrong();
     setLocalQuizPhase('result');
-    setLocalScorePopup({ text: 'Time Out! ⏰', success: false });
+    
+    // FIXED: Time out = no movement, retry queued
+    setLocalPendingRetryQuestion(localActiveQuestion); // Save for retry!
+    setLocalScorePopup({ text: `Time Out! ⏰ Retry question queued for next turn.`, success: false });
     
     setLocalPlayers(prev => prev.map((p, idx) => {
       if (idx === localTurnIdx) {
@@ -528,16 +812,12 @@ export default function App() {
       return p;
     }));
 
-    if (localLandingTile?.type === 'question' || localLandingTile?.type === 'boss') {
-      setTimeout(() => localApplyBacktrack(2), 2200);
-    } else {
-      setTimeout(() => {
-        setLocalScorePopup(null);
-        setLocalActiveQuestion(null);
-        setLocalLandingTile(null);
-        localPassTurn();
-      }, 2500);
-    }
+    setTimeout(() => {
+      setLocalScorePopup(null);
+      setLocalActiveQuestion(null);
+      setLocalLandingTile(null);
+      localPassTurn();
+    }, 3500);
   };
 
   const localApplyBacktrack = (steps: number) => {
@@ -560,36 +840,11 @@ export default function App() {
     }, 350);
   };
 
-  const localResolveTrap = (type: 'moveBack' | 'skipTurn') => {
-    setLocalTrapEffect(null);
-    if (type === 'moveBack') {
-      localApplyBacktrack(2);
-    } else {
-      setLocalPlayers(prev => prev.map((p, idx) => idx === localTurnIdx ? { ...p, skipNextTurn: true } : p));
-      setLocalLandingTile(null);
-      localPassTurn();
-    }
-  };
-
-  const localSelectTreasure = (choice: 'safe' | 'challenge') => {
-    if (choice === 'safe') {
-      sounds.playCorrect();
-      setLocalPlayers(prev => prev.map((p, idx) => idx === localTurnIdx ? { ...p, coins: p.coins + 15, xp: p.xp + 10 } : p));
-      setLocalScorePopup({ text: '+10 XP · +15 Coins Gained! 🪙', success: true });
-      setTimeout(() => {
-        setLocalScorePopup(null);
-        setLocalLandingTile(null);
-        localPassTurn();
-      }, 2000);
-    } else {
-      setLocalTreasureChoice('challenge');
-      localPullQuestion('easy');
-    }
-  };
-
   const localPassTurn = () => {
     const nextIdx = (localTurnIdx + 1) % localPlayers.length;
     const nextP = localPlayers[nextIdx];
+
+    console.log(`[BOT DEBUG] TURN COMPLETE. Passing turn from index ${localTurnIdx} to index ${nextIdx} (${nextP.name})`);
 
     if (nextP.skipNextTurn) {
       setLocalPlayers(prev => prev.map((p, idx) => idx === nextIdx ? { ...p, skipNextTurn: false } : p));
@@ -605,9 +860,13 @@ export default function App() {
 
     setLocalTurnIdx(nextIdx);
     
-    // Switch to pass device screen if human
-    if (!nextP.isBot && localPlayers.filter(p => !p.isBot).length > 1) {
-      setLocalScreen('handoff');
+    if (nextP.isBot) {
+      setLocalScreen('board');
+    } else {
+      // Switch to pass device screen if human
+      if (localPlayers.filter(p => !p.isBot).length > 1) {
+        setLocalScreen('handoff');
+      }
     }
   };
 
@@ -616,7 +875,11 @@ export default function App() {
     
     const end = Date.now() + 3000;
     const interval = setInterval(() => {
-      if (Date.now() > end) return clearInterval(interval);
+      if (Date.now() > end) {
+        clearInterval(interval);
+        setLocalScreen('victory');
+        return;
+      }
       confetti({
         startVelocity: 30,
         spread: 360,
@@ -624,8 +887,6 @@ export default function App() {
         origin: { x: Math.random(), y: Math.random() - 0.2 }
       });
     }, 200);
-
-    setLocalScreen('victory');
   };
 
   const localCalculateBadges = (player: LocalPlayer): string[] => {
@@ -650,6 +911,8 @@ export default function App() {
 
     return earned;
   };
+
+
 
   // ==========================================
   // PRIMARY SELECTION & LAYOUT
@@ -749,7 +1012,12 @@ export default function App() {
 
       {/* R3: STUDENT LOBBY / LIVE GAMEPLAY */}
       {viewMode === 'student' && (
-        <StudentGame onBack={() => setViewMode('selection')} socket={socket} />
+        <StudentGame 
+          onBack={() => setViewMode('selection')} 
+          socket={socket} 
+          onStartSoloPractice={() => { sounds.playBeep(440, 'sine', 0.1); setViewMode('local'); setLocalScreen('setup'); }}
+          onResumeLocalPractice={resumeLocalPracticeGame}
+        />
       )}
 
       {/* R4: LOCAL PASS-AND-PLAY SYSTEM (PHASE 1 MODIFIED) */}
@@ -924,7 +1192,7 @@ export default function App() {
 
           {/* S3: LOCAL BOARD PLAY */}
           {localScreen === 'board' && localPlayers.length > 0 && (
-            <main className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 w-full animate-pulse-slow">
+            <main className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 w-full relative">
               <div className="lg:col-span-3 flex flex-col gap-6">
                 <div className="bg-jungle-medium border border-jungle-light p-4 rounded-2xl overflow-x-auto relative">
                   <div className="flex justify-between items-center mb-3">
@@ -997,64 +1265,85 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Roster leaderboard */}
+              {/* Roster leaderboard / Bot Solving Panel Handoff */}
               <div className="flex flex-col gap-6">
-                <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-                  <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2 mb-4">Leaderboard</h3>
-                  <div className="space-y-3 text-xs">
-                    {localPlayers.slice().sort((a,b)=>b.position - a.position || b.xp - a.xp).map((p, idx) => (
-                      <div key={p.id} className="p-3 bg-jungle-deep/50 border border-jungle-light/40 rounded-xl">
-                        <div className="flex justify-between font-bold mb-1.5">
-                          <span>#{idx+1} {p.avatar} {p.name}</span>
-                          {p.streak >= 3 && <span className="text-rose-500">🔥 {p.streak}</span>}
-                        </div>
-                        <div className="grid grid-cols-3 gap-1 bg-jungle-medium/30 p-1.5 rounded font-mono text-center">
-                          <div><span className="text-[9px] block text-offwhite/50">XP</span><span className="font-bold">{p.xp}</span></div>
-                          <div><span className="text-[9px] block text-offwhite/50">Gold</span><span className="font-bold">{p.coins}</span></div>
-                          <div><span className="text-[9px] block text-offwhite/50">Tile</span><span className="font-bold">{p.position}</span></div>
-                        </div>
+                {localActiveQuestion && localPlayers[localTurnIdx]?.isBot ? (
+                  <div className="bg-jungle-medium border border-indigo-500/50 p-6 rounded-2xl shadow-2xl space-y-4 select-text">
+                    <div className="flex justify-between items-center border-b border-jungle-light pb-2">
+                      <div>
+                        <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest block font-sans">Bot Thinking...</span>
+                        <span className="font-adventure text-lg font-bold text-white">🤖 {localPlayers[localTurnIdx]?.name}</span>
                       </div>
-                    ))}
+                      {localQuizPhase === 'answering' && (
+                        <span className="text-xs font-bold px-2 py-1 rounded-full border bg-jungle-deep border-jungle-light text-gold animate-pulse">
+                          ⏰ {localTimerRemaining}s
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <span className="text-[9px] font-bold text-gold-light uppercase tracking-wider block mb-1">Question</span>
+                      <p className="text-white text-xs font-semibold leading-relaxed font-sans">{localActiveQuestion.question}</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {localActiveQuestion.options.map((opt: string, oi: number) => {
+                        let chipStyle = 'bg-jungle-deep/60 border-jungle-light/30 text-offwhite/70';
+                        if (localQuizPhase === 'result') {
+                          if (oi === localActiveQuestion.correctIndex) chipStyle = 'bg-emerald-950/80 border-emerald-500 text-emerald-200';
+                          else if (oi === localSelectedOptIdx) chipStyle = 'bg-rose-950/80 border-rose-500 text-rose-200';
+                        }
+                        return (
+                          <div key={oi} className={`w-full text-left px-3 py-2 rounded-lg border text-[10px] font-semibold ${chipStyle}`}>
+                            {String.fromCharCode(65 + oi)}. {opt}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {localQuizPhase === 'result' && (
+                      <div className={`p-2 rounded-lg text-[10px] font-bold text-center border ${
+                        localSelectedOptIdx === localActiveQuestion.correctIndex ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300' : 'bg-rose-950/80 border-rose-500 text-rose-300'
+                      }`}>
+                        {localSelectedOptIdx === localActiveQuestion.correctIndex ? `✓ Correct` : `✗ Wrong`}
+                      </div>
+                    )}
+
+                    {localQuizPhase === 'result' && localActiveQuestion.explanation && (
+                      <div className="bg-jungle-deep/80 text-offwhite p-3 rounded-lg text-[10px] border border-jungle-light/20">
+                        <p className="font-bold text-gold mb-1 font-sans">Explanation:</p>
+                        {localActiveQuestion.explanation}
+                      </div>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
+                    <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2 mb-4">Leaderboard</h3>
+                    <div className="space-y-3 text-xs">
+                      {localPlayers.slice().sort((a,b)=>b.position - a.position || b.xp - a.xp).map((p, idx) => (
+                        <div key={p.id} className="p-3 bg-jungle-deep/50 border border-jungle-light/40 rounded-xl">
+                          <div className="flex justify-between font-bold mb-1.5">
+                            <span>#{idx+1} {p.avatar} {p.name}</span>
+                            {p.streak >= 3 && <span className="text-rose-500">🔥 {p.streak}</span>}
+                          </div>
+                          <div className="grid grid-cols-3 gap-1 bg-jungle-medium/30 p-1.5 rounded font-mono text-center">
+                            <div><span className="text-[9px] block text-offwhite/50">XP</span><span className="font-bold">{p.xp}</span></div>
+                            <div><span className="text-[9px] block text-offwhite/50">Gold</span><span className="font-bold">{p.coins}</span></div>
+                            <div><span className="text-[9px] block text-offwhite/50">Tile</span><span className="font-bold">{p.position}</span></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </main>
           )}
 
-          {/* CLAW TRAP PANEL */}
-          {localScreen === 'board' && localLandingTile && localLandingTile.type === 'trap' && localTrapEffect && (
-            <div className="fixed inset-0 bg-black/75 z-40 flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="parchment-panel rounded-xl max-w-sm w-full p-6 text-center text-jungle-deep">
-                <AlertTriangle className="w-16 h-16 text-rose-700 mx-auto mb-3" />
-                <h3 className="font-adventure text-2xl font-bold mb-4">Trap Sprung!</h3>
-                <div className="bg-jungle-deep text-offwhite p-4 rounded-xl mb-6">
-                  {localTrapEffect === 'moveBack' ? 'Slide Back 2 Tiles! 📉' : 'Skip Next Turn! 🚫'}
-                </div>
-                {!localPlayers[localTurnIdx]?.isBot && (
-                  <button onClick={() => localResolveTrap(localTrapEffect)} className="w-full py-3 bg-jungle-medium text-offwhite font-bold rounded-lg border border-gold">OK</button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TREASURE CHEST DECISION */}
-          {localScreen === 'board' && localLandingTile && localLandingTile.type === 'treasure' && localTreasureChoice === 'decision' && (
-            <div className="fixed inset-0 bg-black/75 z-40 flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="parchment-panel rounded-xl max-w-md w-full p-6 text-center text-jungle-deep">
-                <span className="text-5xl block mb-2">🎁</span>
-                <h3 className="font-adventure text-2xl font-bold mb-4">Landed on Treasure Chest!</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => localSelectTreasure('safe')} className="p-3 bg-emerald-100 border border-emerald-500 rounded-xl font-bold text-xs text-emerald-950">Safe Reward (+15 gold)</button>
-                  <button onClick={() => localSelectTreasure('challenge')} className="p-3 bg-amber-100 border border-gold rounded-xl font-bold text-xs text-amber-950">Double Challenge MCQ</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* LOCAL ACTIVE QUIZ */}
-          {localScreen === 'board' && localActiveQuestion && (
-            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="parchment-panel rounded-2xl max-w-xl w-full p-6 text-jungle-deep relative">
+          {/* LOCAL ACTIVE QUIZ (Only for human turns) */}
+          {localScreen === 'board' && localActiveQuestion && !localPlayers[localTurnIdx]?.isBot && (
+            <div className="fixed inset-0 bg-black/15 z-50 flex items-center justify-center p-4">
+              <div className="parchment-panel rounded-2xl max-w-xl w-full p-6 text-jungle-deep relative shadow-2xl">
                 <div className="flex justify-between items-center mb-4 pb-2 border-b border-gold-dark/20 text-xs">
                   <span>Topic: {localActiveQuestion.topic}</span>
                   {localQuizPhase === 'answering' && <span className="font-bold">⏰ {localTimerRemaining}s</span>}
@@ -1136,6 +1425,8 @@ export default function App() {
           )}
         </div>
       )}
+
+
 
     </div>
   );

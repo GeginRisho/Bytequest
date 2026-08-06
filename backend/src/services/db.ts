@@ -31,6 +31,9 @@ export interface DbClass {
   teacherId: string;
   name: string;
   grade: number;
+  section?: string;
+  subject?: string;
+  isArchived?: boolean;
 }
 
 export interface DbStudent {
@@ -135,10 +138,11 @@ export class PostgresDatabase {
     }));
   }
 
-  async getClassesByTeacher(teacherId: string): Promise<DbClass[]> {
+  async getClassesByTeacher(teacherId: string, includeArchived = false): Promise<DbClass[]> {
     const list = await prisma.class.findMany({
       where: {
-        teacherId
+        teacherId,
+        ...(includeArchived ? {} : { isArchived: false })
       }
     });
 
@@ -146,11 +150,12 @@ export class PostgresDatabase {
       id: c.id,
       teacherId: c.teacherId,
       name: c.name,
+      isArchived: c.isArchived,
       grade: c.name.includes('10') ? 10 : c.name.includes('12') ? 12 : 11
     }));
   }
 
-  async getClassStudents(classId: string): Promise<DbStudent[]> {
+  async getClassStudents(classId: string): Promise<any[]> {
     const list = await prisma.studentProfile.findMany({
       where: {
         classId,
@@ -164,7 +169,14 @@ export class PostgresDatabase {
     return list.map(s => ({
       id: s.id,
       classId: s.classId || '',
-      name: `${s.user.firstName} ${s.user.lastName}`.trim()
+      name: `${s.user.firstName} ${s.user.lastName}`.trim(),
+      email: s.user.email,
+      xp: s.xp,
+      coins: s.coins,
+      level: s.level,
+      grade: s.grade,
+      minutesPlayed: s.minutesPlayed,
+      isSuspended: s.isSuspended
     }));
   }
 
@@ -361,11 +373,14 @@ export class PostgresDatabase {
     return true;
   }
 
-  async addClass(teacherId: string, name: string, grade: number): Promise<DbClass> {
+  async addClass(teacherId: string, name: string, grade: number, section?: string, subject?: string): Promise<DbClass> {
     const res = await prisma.class.create({
       data: {
         name,
-        teacherId
+        teacherId,
+        grade,
+        section: section || 'A',
+        subject: subject || 'Computer Science'
       }
     });
 
@@ -373,7 +388,10 @@ export class PostgresDatabase {
       id: res.id,
       teacherId: res.teacherId,
       name: res.name,
-      grade
+      grade: res.grade,
+      section: res.section,
+      subject: res.subject,
+      isArchived: res.isArchived
     };
   }
 
@@ -518,6 +536,146 @@ export class PostgresDatabase {
     }));
 
     await prisma.sessionResult.createMany({ data });
+  }
+
+  async updateClass(classId: string, name: string): Promise<boolean> {
+    await prisma.class.update({
+      where: { id: classId },
+      data: { name }
+    });
+    return true;
+  }
+
+  async archiveClass(classId: string, isArchived: boolean): Promise<boolean> {
+    await prisma.class.update({
+      where: { id: classId },
+      data: { isArchived }
+    });
+    return true;
+  }
+
+  async deleteClass(classId: string): Promise<boolean> {
+    const students = await prisma.studentProfile.findMany({
+      where: { classId }
+    });
+    const userIds = students.map(s => s.userId);
+
+    await prisma.class.delete({
+      where: { id: classId }
+    });
+
+    if (userIds.length > 0) {
+      await prisma.user.deleteMany({
+        where: { id: { in: userIds } }
+      });
+    }
+
+    return true;
+  }
+
+  async suspendStudent(studentId: string, isSuspended: boolean): Promise<boolean> {
+    await prisma.studentProfile.update({
+      where: { id: studentId },
+      data: { isSuspended }
+    });
+    return true;
+  }
+
+  async removeStudentFromClass(studentId: string): Promise<boolean> {
+    await prisma.studentProfile.update({
+      where: { id: studentId },
+      data: { classId: null }
+    });
+    return true;
+  }
+
+  async resetStudentProgress(studentId: string): Promise<boolean> {
+    await prisma.studentProfile.update({
+      where: { id: studentId },
+      data: {
+        xp: 0,
+        coins: 0,
+        level: 1
+      }
+    });
+    return true;
+  }
+
+  async createJoinRequest(classId: string, studentName: string): Promise<any> {
+    return prisma.joinRequest.create({
+      data: {
+        classId,
+        studentName
+      }
+    });
+  }
+
+  async getJoinRequests(classId: string): Promise<any[]> {
+    return prisma.joinRequest.findMany({
+      where: {
+        classId,
+        status: 'PENDING'
+      },
+      include: {
+        student: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async resolveJoinRequest(requestId: string, status: 'ACCEPTED' | 'REJECTED'): Promise<boolean> {
+    const req = await prisma.joinRequest.findUnique({
+      where: { id: requestId }
+    });
+    if (!req) return false;
+
+    await prisma.joinRequest.update({
+      where: { id: requestId },
+      data: { status }
+    });
+
+    if (status === 'ACCEPTED') {
+      if (req.studentId) {
+        // Class change request for an existing student
+        await prisma.studentProfile.update({
+          where: { id: req.studentId },
+          data: { classId: req.classId }
+        });
+      } else {
+        // Standard code join request (creates new student account)
+        const nameParts = req.studentName.trim().split(' ');
+        const firstName = nameParts[0] || 'Student';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        const email = `${firstName.toLowerCase()}.${Math.floor(1000 + Math.random() * 9000)}@bytequest.student.com`;
+        const passwordHash = await bcrypt.hash('student123', 10);
+
+        const user = await prisma.user.create({
+          data: {
+            email,
+            passwordHash,
+            role: Role.STUDENT,
+            firstName,
+            lastName,
+            isVerified: true
+          }
+        });
+
+        const school = await prisma.school.findFirst();
+
+        await prisma.studentProfile.create({
+          data: {
+            userId: user.id,
+            schoolId: school ? school.id : null,
+            classId: req.classId,
+            xp: 100,
+            coins: 50,
+            level: 1
+          }
+        });
+      }
+    }
+
+    return true;
   }
 }
 

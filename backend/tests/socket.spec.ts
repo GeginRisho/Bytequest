@@ -1,8 +1,33 @@
 import { io as ClientIO, Socket as ClientSocket } from 'socket.io-client';
 import http from 'http';
-import app from '../src/app';
-import { SocketService } from '../src/services/socketService';
-import prisma from '../src/config/db';
+
+// Define global mock container to avoid Jest hoist initialization issues
+(global as any).mockPrisma = {
+  $on: jest.fn(),
+  $use: jest.fn(),
+  mapWorld: {
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  gameSession: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  question: {
+    findMany: jest.fn(),
+  },
+  class: {
+    findUnique: jest.fn(),
+  }
+};
+
+jest.mock('@prisma/client', () => {
+  return {
+    PrismaClient: jest.fn().mockImplementation(() => (global as any).mockPrisma),
+    Role: { STUDENT: 'STUDENT', TEACHER: 'TEACHER' },
+    Difficulty: { easy: 'easy', medium: 'medium', hard: 'hard' },
+  };
+});
 
 jest.mock('../src/config/redis', () => {
   const mockRedis = {
@@ -21,31 +46,13 @@ jest.mock('../src/config/redis', () => {
   };
 });
 
-jest.mock('../src/config/db', () => {
-  const m = {
-    mapWorld: {
-      findFirst: jest.fn(),
-    },
-    gameSession: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-    },
-    roomPlayer: {
-      create: jest.fn(),
-    },
-  };
-  return {
-    __esModule: true,
-    prisma: m,
-    default: m,
-  };
-});
+import app from '../src/app';
+import { SocketService } from '../src/services/socketService';
 
 describe('ByteQuest Socket.io Tests', () => {
   let server: http.Server;
   let socketService: SocketService;
   let clientSocket1: ClientSocket;
-  let roomCode: string;
 
   beforeAll((done) => {
     server = http.createServer(app);
@@ -62,20 +69,20 @@ describe('ByteQuest Socket.io Tests', () => {
     });
   });
 
-  it('should connect to WebSocket server and create a game room', (done) => {
+  it('should connect to WebSocket server and create a student practice room', (done) => {
     clientSocket1 = ClientIO('http://localhost:5005', { forceNew: true });
 
-    (prisma.mapWorld.findFirst as jest.Mock).mockResolvedValue({ id: 'world-1' });
-    (prisma.gameSession.create as jest.Mock).mockResolvedValue({ id: 'session-1', roomCode: 'ABCD' });
-    (prisma.roomPlayer.create as jest.Mock).mockResolvedValue({});
+    ((global as any).mockPrisma.mapWorld.findUnique as jest.Mock).mockResolvedValue({ id: 'world-mixed', name: 'Mixed Map' });
+    ((global as any).mockPrisma.question.findMany as jest.Mock).mockResolvedValue([]);
 
     clientSocket1.on('connect', () => {
-      clientSocket1.emit('room:create', { worldName: 'Forest', studentId: 'student-id-123' });
+      clientSocket1.emit('student:create_practice', { studentId: 'student-123', studentName: 'Aarav' });
     });
 
-    clientSocket1.on('room:created', (payload: any) => {
+    clientSocket1.on('room:updated', (payload: any) => {
       expect(payload).toHaveProperty('roomCode');
-      expect(payload).toHaveProperty('sessionId');
+      expect(payload.status).toBe('LOBBY');
+      expect(payload.teams[0].name).toBe('Aarav');
       done();
     });
   });

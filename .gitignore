@@ -29,6 +29,7 @@ frontend/.env
 db.json
 
 # IDEs and editors
+.gemini/
 .idea/
 .vscode/
 *.suo

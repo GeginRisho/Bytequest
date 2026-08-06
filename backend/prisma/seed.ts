@@ -122,7 +122,8 @@ async function main() {
   // 5. Seed Class & Students
   const cls = await prisma.class.create({
     data: {
-      name: "Grade 11 - Section B",
+      name: "Grade 11",
+      section: "B",
       teacherId: teacher.id
     }
   });

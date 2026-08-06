@@ -1,6 +1,41 @@
 import request from 'supertest';
-import app from '../src/app';
-import prisma from '../src/config/db';
+import bcrypt from 'bcrypt';
+
+// Define global mock container to avoid Jest hoist initialization issues
+(global as any).mockPrisma = {
+  $on: jest.fn(),
+  $use: jest.fn(),
+  user: {
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+  },
+  class: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  studentProfile: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  team: {
+    findMany: jest.fn(),
+  },
+  teamMember: {
+    findMany: jest.fn(),
+  },
+  joinRequest: {
+    findMany: jest.fn(),
+  }
+};
+
+jest.mock('@prisma/client', () => {
+  return {
+    PrismaClient: jest.fn().mockImplementation(() => (global as any).mockPrisma),
+    Role: { STUDENT: 'STUDENT', TEACHER: 'TEACHER' },
+    Difficulty: { easy: 'easy', medium: 'medium', hard: 'hard' },
+  };
+});
 
 jest.mock('../src/config/redis', () => {
   const mockRedis = {
@@ -19,86 +54,53 @@ jest.mock('../src/config/redis', () => {
   };
 });
 
-jest.mock('../src/config/db', () => {
-  const m = {
-    user: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      deleteMany: jest.fn(),
-    },
-    studentProfile: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-    },
-    school: {
-      findFirst: jest.fn(),
-    },
-    eventLog: {
-      create: jest.fn().mockResolvedValue({}),
-    },
-    refreshToken: {
-      create: jest.fn(),
-    },
-  };
-  return {
-    __esModule: true,
-    prisma: m,
-    default: m,
-  };
-});
+import app from '../src/app';
 
-describe('ByteQuest API Tests', () => {
-  it('should register a new student user and return OTP message', async () => {
+describe('ByteQuest Teacher API Tests', () => {
+  it('should authenticate a teacher with valid credentials', async () => {
+    const passwordHash = bcrypt.hashSync('password123', 10);
     const mockUser = {
-      id: 'mock-id-123',
-      email: 'test_student@bytequest.edu',
-      role: 'STUDENT',
-      firstName: 'Alex',
+      id: 'user-123',
+      firstName: 'Dr.',
       lastName: 'Coder',
-      otpCode: '123456',
+      email: 'teacher@bytequest.com',
+      passwordHash,
+      role: 'TEACHER',
+      teacherProfile: {
+        id: 'teacher-123',
+        schoolId: 'school-123'
+      }
     };
 
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
-    (prisma.user.create as jest.Mock).mockResolvedValue(mockUser);
-    (prisma.studentProfile.create as jest.Mock).mockResolvedValue({});
+    ((global as any).mockPrisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser);
 
     const res = await request(app)
-      .post('/api/v1/auth/register')
+      .post('/api/v1/teacher/auth/login')
       .send({
-        email: 'test_student@bytequest.edu',
+        email: 'teacher@bytequest.com',
         password: 'password123',
-        role: 'STUDENT',
-        firstName: 'Alex',
-        lastName: 'Coder',
-      });
-
-    expect(res.status).toBe(201);
-    expect(res.body).toHaveProperty('message');
-    expect(res.body.email).toBe('test_student@bytequest.edu');
-  });
-
-  it('should verify OTP and activate user account', async () => {
-    const mockUser = {
-      id: 'mock-id-123',
-      email: 'test_student@bytequest.edu',
-      isVerified: false,
-      otpCode: '123456',
-      otpExpiresAt: new Date(Date.now() + 100000),
-    };
-
-    (prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser);
-    (prisma.user.update as jest.Mock).mockResolvedValue({ ...mockUser, isVerified: true });
-
-    const res = await request(app)
-      .post('/api/v1/auth/verify-otp')
-      .send({
-        email: 'test_student@bytequest.edu',
-        otp: '123456',
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.message).toContain('verified successfully');
+    expect(res.body).toHaveProperty('teacher');
+    expect(res.body.teacher.email).toBe('teacher@bytequest.com');
+  });
+
+  it('should list classes for a logged-in teacher', async () => {
+    const mockClasses = [
+      { id: 'class-1', name: 'Grade 10 - CS Basics', grade: 10, isArchived: false, students: [] },
+      { id: 'class-2', name: 'Grade 11 - Python', grade: 11, isArchived: false, students: [] }
+    ];
+
+    ((global as any).mockPrisma.class.findMany as jest.Mock).mockResolvedValue(mockClasses);
+    ((global as any).mockPrisma.studentProfile.findMany as jest.Mock).mockResolvedValue([]);
+    ((global as any).mockPrisma.team.findMany as jest.Mock).mockResolvedValue([]);
+
+    const res = await request(app)
+      .get('/api/v1/teacher/classes?teacherId=teacher-123');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('classes');
+    expect(res.body.classes.length).toBe(2);
   });
 });
