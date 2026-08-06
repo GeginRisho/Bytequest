@@ -69,8 +69,8 @@ interface TeacherDashboardProps {
 export default function TeacherDashboard({ onBack, socket }: TeacherDashboardProps) {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [email, setEmail] = useState<string>('teacher@bytequest.com');
-  const [password, setPassword] = useState<string>('password123');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [authError, setAuthError] = useState<string>('');
   const [teacherInfo, setTeacherInfo] = useState<any>(null);
 
