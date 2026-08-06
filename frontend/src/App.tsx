@@ -28,20 +28,13 @@ import TeacherDashboard from './components/TeacherDashboard';
 import StudentGame from './components/StudentGame';
 
 const getTokenOffset = (indexOnTile: number, totalOnTile: number) => {
-  if (totalOnTile <= 1) return { x: 0, y: -12 };
-  if (totalOnTile === 2) {
-    return indexOnTile === 0 ? { x: -12, y: -12 } : { x: 12, y: -12 };
-  }
-  if (totalOnTile === 3) {
-    if (indexOnTile === 0) return { x: -12, y: -18 };
-    if (indexOnTile === 1) return { x: 12, y: -18 };
-    return { x: 0, y: -4 };
-  }
-  const angle = (indexOnTile / totalOnTile) * 2 * Math.PI;
-  const radius = 14;
+  if (totalOnTile <= 1) return { x: 0, y: 0 };
+  const angle = (indexOnTile / totalOnTile) * 2 * Math.PI - Math.PI / 2;
+  const isMobile = window.innerWidth < 768;
+  const radius = isMobile ? 8 : 14;
   return {
     x: Math.round(Math.cos(angle) * radius),
-    y: Math.round(Math.sin(angle) * radius) - 10
+    y: Math.round(Math.sin(angle) * radius)
   };
 };
 
@@ -1290,7 +1283,7 @@ export default function App() {
                         return (
                           <div 
                             key={tIdx} 
-                            className={`absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 sm:w-14 sm:h-14 rounded-full border-2 flex items-center justify-center text-xs sm:text-xl font-bold transition-all duration-300 shadow-md group ${color} ${destinationClass} ${safeClass}`} 
+                            className={`absolute -translate-x-1/2 -translate-y-1/2 w-[30px] h-[30px] sm:w-[52px] sm:h-[52px] rounded-full border-2 flex items-center justify-center text-[10px] sm:text-lg font-bold transition-all duration-300 shadow-md group ${color} ${destinationClass} ${safeClass}`} 
                             style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                           >
                             <span>{symbol}</span>
@@ -1299,7 +1292,7 @@ export default function App() {
                                 <Shield className="w-2 h-2" />
                               </div>
                             )}
-                            <span className="absolute -bottom-1 -right-1 text-[7px] sm:text-[8px] w-3 h-3 sm:w-4 sm:h-4 bg-jungle-deep text-gold rounded-full flex items-center justify-center border border-gold/40">{tIdx}</span>
+                            <span className="absolute -bottom-1 -right-1 text-[6px] sm:text-[8px] w-3 h-3 sm:w-4 sm:h-4 bg-jungle-deep text-gold rounded-full flex items-center justify-center border border-gold/40">{tIdx}</span>
                           </div>
                         );
                       })}
@@ -1313,7 +1306,7 @@ export default function App() {
                         return (
                           <div 
                             key={p.id} 
-                            className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 sm:w-10 sm:h-10 rounded-full border border-2 flex items-center justify-center text-[10px] sm:text-xs font-extrabold shadow-lg transition-all duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] z-20 ${p.color} ${localTurnIdx === idx ? 'ring-3 sm:ring-4 ring-gold animate-bounce-slow' : ''}`} 
+                            className={`absolute -translate-x-1/2 -translate-y-1/2 w-[26px] h-[26px] sm:w-[38px] sm:h-[38px] rounded-full border border-2 flex items-center justify-center text-[9px] sm:text-xs font-extrabold shadow-lg transition-all duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] z-20 ${p.color} ${localTurnIdx === idx ? 'ring-3 sm:ring-4 ring-gold animate-bounce-slow' : ''}`} 
                             style={{ 
                               left: `calc(${coord.x}% + ${offset.x}px)`, 
                               top: `calc(${coord.y}% + ${offset.y}px)` 
