@@ -27,6 +27,24 @@ import { Tile, BOARD_TILES, TILE_COORDS, PRESET_COLORS, PRESET_AVATARS } from '.
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentGame from './components/StudentGame';
 
+const getTokenOffset = (indexOnTile: number, totalOnTile: number) => {
+  if (totalOnTile <= 1) return { x: 0, y: -12 };
+  if (totalOnTile === 2) {
+    return indexOnTile === 0 ? { x: -12, y: -12 } : { x: 12, y: -12 };
+  }
+  if (totalOnTile === 3) {
+    if (indexOnTile === 0) return { x: -12, y: -18 };
+    if (indexOnTile === 1) return { x: 12, y: -18 };
+    return { x: 0, y: -4 };
+  }
+  const angle = (indexOnTile / totalOnTile) * 2 * Math.PI;
+  const radius = 14;
+  return {
+    x: Math.round(Math.cos(angle) * radius),
+    y: Math.round(Math.sin(angle) * radius) - 10
+  };
+};
+
 // Connect Socket.io client to backend server
 const socket = io(import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`, {
   transports: ['websocket'],
@@ -1213,81 +1231,157 @@ export default function App() {
 
           {/* S3: LOCAL BOARD PLAY */}
           {localScreen === 'board' && localPlayers.length > 0 && (
-            <main className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 w-full relative">
-              <div className="lg:col-span-3 flex flex-col gap-6">
-                <div className="bg-jungle-medium border border-jungle-light p-4 rounded-2xl overflow-x-auto relative">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-gold font-adventure text-lg font-bold tracking-wide">Offline Trail: {localMapName}</span>
+            <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative pb-24">
+              {/* STICKY LOCAL PLAY HUD */}
+              {localPlayers[localTurnIdx] && (
+                <div className="sticky top-14 md:top-0 z-30 bg-jungle-medium/95 backdrop-blur border border-jungle-light px-4 py-2 rounded-xl flex items-center justify-between gap-2 mb-4 shadow-lg text-[10px] md:text-xs font-bold font-adventure text-gold-light animate-fade-in">
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">{localPlayers[localTurnIdx].avatar}</span>
+                    <span className="text-white uppercase tracking-wide">{localPlayers[localTurnIdx].name}</span>
+                  </div>
+                  <div className="hidden sm:inline">|</div>
+                  <div>📚 GRADE <span className="text-white font-mono">{localPlayers[localTurnIdx].grade}</span></div>
+                  <div>|</div>
+                  <div>⭐ XP <span className="text-white font-mono">{localPlayers[localTurnIdx].xp}</span></div>
+                  <div>|</div>
+                  <div>🪙 COINS <span className="text-white font-mono">{localPlayers[localTurnIdx].coins}</span></div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full items-start">
+                <div className="lg:col-span-3 bg-jungle-medium border border-jungle-light p-3 md:p-4 rounded-2xl md:rounded-3xl relative shadow-2xl w-full flex flex-col gap-3">
+                  <div className="relative aspect-[4/3] w-full bg-jungle-deep/45 border border-gold/15 rounded-xl md:rounded-2xl flex items-center justify-center overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#1a3d30,transparent_70%)]"></div>
+                    
+                    <div className="relative w-[78%] h-[78%] md:w-[90%] md:h-[90%]">
+                      
+                      <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                        <path d={`M ${TILE_COORDS.map(c => `${c.x}%, ${c.y}%`).join(' L ')}`} fill="none" className="map-connector" />
+                      </svg>
+
+                      {BOARD_TILES.map((tile, tIdx) => {
+                        const coord = TILE_COORDS[tIdx];
+                        const isSafe = [0, 5, 10, 15, 20].includes(tIdx); // Offline SAFE_TILES matching config
+                        const activePlayer = localPlayers[localTurnIdx];
+                        const isDestination = activePlayer && activePlayer.position === tIdx;
+                        const isOccupied = localPlayers.some((pl: any) => pl.position === tIdx);
+
+                        let symbol = '📜';
+                        let color = 'bg-[#E5D6B3] border-gold-dark text-jungle-deep';
+                        if (tile.type === 'start') { symbol = '⛺'; color = 'bg-teal-700 border-teal-500 text-white'; }
+                        else if (tile.type === 'finish') { symbol = '👑'; color = 'bg-amber-600 border-amber-400 text-white animate-pulse'; }
+                        else if (tile.type === 'trap') { symbol = '🕸️'; color = 'bg-rose-900 border-rose-600 text-rose-100'; }
+                        else if (tile.type === 'treasure') { 
+                          symbol = '🎁'; 
+                          color = isOccupied 
+                            ? 'bg-amber-700 border-gold text-gold-glow shadow-[0_0_20px_#f59e0b] ring-2 ring-gold/60' 
+                            : 'bg-amber-700 border-gold text-gold-glow'; 
+                        }
+                        else if (tile.type === 'boss') { 
+                          symbol = '🐉'; 
+                          color = isOccupied 
+                            ? 'bg-indigo-950 border-indigo-400 text-indigo-200 shadow-[0_0_20px_#6366f1] ring-2 ring-indigo-500/60' 
+                            : 'bg-indigo-950 border-indigo-500 text-indigo-200'; 
+                        }
+
+                        const destinationClass = isDestination ? 'ring-4 ring-gold ring-offset-2 ring-offset-jungle-deep shadow-[0_0_25px_#f59e0b] border-gold' : '';
+                        const safeClass = isSafe ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#F3EAD3]' : '';
+
+                        return (
+                          <div 
+                            key={tIdx} 
+                            className={`absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 sm:w-14 sm:h-14 rounded-full border-2 flex items-center justify-center text-xs sm:text-xl font-bold transition-all duration-300 shadow-md group ${color} ${destinationClass} ${safeClass}`} 
+                            style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
+                          >
+                            <span>{symbol}</span>
+                            {isSafe && (
+                              <div className="absolute -top-1 -left-1 bg-emerald-600 text-white p-0.5 rounded-full border border-white">
+                                <Shield className="w-2 h-2" />
+                              </div>
+                            )}
+                            <span className="absolute -bottom-1 -right-1 text-[7px] sm:text-[8px] w-3 h-3 sm:w-4 sm:h-4 bg-jungle-deep text-gold rounded-full flex items-center justify-center border border-gold/40">{tIdx}</span>
+                          </div>
+                        );
+                      })}
+
+                      {localPlayers.map((p, idx) => {
+                        const coord = TILE_COORDS[p.position];
+                        const onTile = localPlayers.filter(pl => pl.position === p.position);
+                        const sameIdx = onTile.findIndex(pl => pl.id === p.id);
+                        const offset = getTokenOffset(sameIdx, onTile.length);
+                        
+                        return (
+                          <div 
+                            key={p.id} 
+                            className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 sm:w-10 sm:h-10 rounded-full border border-2 flex items-center justify-center text-[10px] sm:text-xs font-extrabold shadow-lg transition-all duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] z-20 ${p.color} ${localTurnIdx === idx ? 'ring-3 sm:ring-4 ring-gold animate-bounce-slow' : ''}`} 
+                            style={{ 
+                              left: `calc(${coord.x}% + ${offset.x}px)`, 
+                              top: `calc(${coord.y}% + ${offset.y}px)` 
+                            }}
+                          >
+                            <span>{p.avatar}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="relative min-w-[700px] h-[550px] bg-parchment rounded-xl shadow-inner border-4 border-gold-dark/40 overflow-hidden" style={{ backgroundImage: "radial-gradient(#dfd4b7 1px, transparent 1px)", backgroundSize: "20px 20px" }}>
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                      <path d={`M ${TILE_COORDS.map(c => `${c.x}%, ${c.y}%`).join(' L ')}`} fill="none" className="map-connector" />
-                    </svg>
+                  {/* MOBILE DOCKED TURN PANEL - MERGED & DOCKED OUTSIDE PATH */}
+                  <div className="flex md:hidden bg-jungle-deep/40 border border-gold/20 p-3 rounded-xl flex-col items-center justify-center gap-2.5 shadow-md select-none text-center">
+                    <div>
+                      <h4 className="text-gold font-adventure text-sm font-bold block truncate max-w-[200px]" title={localPlayers[localTurnIdx]?.name}>
+                        {localPlayers[localTurnIdx]?.name}
+                      </h4>
+                      <span className="text-[9px] bg-gold/15 text-gold px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block font-sans">
+                        Active Explorer
+                      </span>
+                      {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
+                        <p className="text-gold-glow font-bold font-mono text-[10px] mt-1.5">
+                          Rolled: {localCurrentRoll} 🎲
+                        </p>
+                      )}
+                    </div>
 
-                    {BOARD_TILES.map((tile, tIdx) => {
-                      const coord = TILE_COORDS[tIdx];
-                      let symbol = '📜';
-                      let color = 'bg-[#E5D6B3] border-gold-dark text-jungle-deep';
-                      if (tile.type === 'start') { symbol = '⛺'; color = 'bg-teal-700 border-teal-500 text-white'; }
-                      else if (tile.type === 'finish') { symbol = '👑'; color = 'bg-amber-600 border-amber-400 text-white'; }
-                      else if (tile.type === 'trap') { symbol = '🕸️'; color = 'bg-rose-900 border-rose-600 text-rose-100'; }
-                      else if (tile.type === 'treasure') { symbol = '🎁'; color = 'bg-amber-700 border-gold text-gold-glow'; }
-                      else if (tile.type === 'boss') { symbol = '🐉'; color = 'bg-indigo-950 border-indigo-500 text-indigo-200'; }
-
-                      return (
-                        <div key={tIdx} className={`absolute -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full border-2 flex items-center justify-center text-xl font-bold shadow ${color}`} style={{ left: `${coord.x}%`, top: `${coord.y}%` }}>
-                          <span>{symbol}</span>
-                          <span className="absolute -bottom-1 -right-1 text-[9px] w-4.5 h-4.5 bg-jungle-deep text-gold rounded-full flex items-center justify-center border border-gold/40">{tIdx}</span>
-                        </div>
-                      );
-                    })}
-
-                    {localPlayers.map((p, idx) => {
-                      const coord = TILE_COORDS[p.position];
-                      const onTile = localPlayers.filter(pl => pl.position === p.position);
-                      const sameIdx = onTile.findIndex(pl => pl.id === p.id);
-                      const offX = (sameIdx - (onTile.length - 1) / 2) * 16;
-                      
-                      return (
-                        <div key={p.id} className={`absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 flex items-center justify-center text-xl shadow-lg transition-all duration-300 z-20 ${p.color} ${localTurnIdx === idx ? 'ring-4 ring-gold' : ''}`} style={{ left: `calc(${coord.x}% + ${offX}px)`, top: `calc(${coord.y}% - 14px)` }}>
-                          <span>{p.avatar}</span>
-                        </div>
-                      );
-                    })}
+                    <div className="flex justify-center items-center py-1">
+                      <button
+                        onClick={localTriggerDiceRoll}
+                        disabled={localIsRolling || localIsMoving || localPlayers[localTurnIdx]?.isBot || localActiveQuestion !== null || localLandingTile !== null}
+                        className="w-14 h-14 bg-gold hover:bg-gold-light border border-gold-dark text-jungle-deep rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-90 disabled:opacity-40 disabled:pointer-events-none transition-all duration-150"
+                      >
+                        <Dices className={`w-6 h-6 ${localIsRolling ? 'animate-bounce' : ''}`} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center text-4xl border-2 ${localPlayers[localTurnIdx]?.color}`}>
-                      {localPlayers[localTurnIdx]?.avatar}
+                <div className="flex flex-col gap-6">
+                  {/* DESKTOP TURN PANEL - HIDDEN ON MOBILE */}
+                  <div className="hidden md:flex bg-jungle-medium border border-jungle-light p-6 rounded-2xl flex-col items-center justify-center text-center shadow-xl">
+                    <span className="text-[10px] block font-bold text-gold-light uppercase tracking-wider mb-2">Turn Information</span>
+                    <div className="mb-4">
+                      <span className="font-adventure text-lg font-bold text-white block">
+                        {localPlayers[localTurnIdx]?.name}
+                      </span>
+                      <span className="text-[10px] bg-gold/15 text-gold px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block">
+                        Active Explorer
+                      </span>
                     </div>
-                    <div>
-                      <span className="text-xs text-gold-light font-bold uppercase tracking-wider block font-sans">Active Explorer</span>
-                      <span className="text-2xl font-adventure font-bold text-gold">{localPlayers[localTurnIdx]?.name}</span>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-4">
-                    {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
-                      <div className="bg-jungle-deep px-4 py-2 border border-gold/30 rounded-xl font-bold">
-                        🎲 {localCurrentRoll}
-                      </div>
-                    )}
                     <button
                       onClick={localTriggerDiceRoll}
                       disabled={localIsRolling || localIsMoving || localPlayers[localTurnIdx]?.isBot || localActiveQuestion !== null || localLandingTile !== null}
-                      className="px-8 py-4 bg-gold hover:bg-gold-light text-jungle-deep disabled:opacity-50 disabled:pointer-events-none rounded-xl font-bold font-adventure"
+                      className="w-16 h-16 bg-gold border-2 border-gold-dark text-jungle-deep rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-90 disabled:opacity-40 disabled:pointer-events-none transition-all duration-150"
                     >
-                      Roll Dice
+                      <Dices className={`w-8 h-8 ${localIsRolling ? 'animate-bounce' : ''}`} />
                     </button>
-                  </div>
-                </div>
-              </div>
 
-              {/* Roster leaderboard / Bot Solving Panel Handoff */}
-              <div className="flex flex-col gap-6">
+                    {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
+                      <div className="mt-3 font-adventure text-gold text-lg font-bold">
+                        Rolled: {localCurrentRoll} 🎲
+                      </div>
+                    )}
+                  </div>
+
                 {localActiveQuestion && localPlayers[localTurnIdx]?.isBot ? (
                   <div className="bg-jungle-medium border border-indigo-500/50 p-6 rounded-2xl shadow-2xl space-y-4 select-text">
                     <div className="flex justify-between items-center border-b border-jungle-light pb-2">
@@ -1358,7 +1452,8 @@ export default function App() {
                   </div>
                 )}
               </div>
-            </main>
+            </div>
+          </main>
           )}
 
           {/* LOCAL ACTIVE QUIZ (Only for human turns) */}

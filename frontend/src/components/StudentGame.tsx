@@ -28,6 +28,24 @@ import { questionBank, Question } from '../questions';
 import confetti from 'canvas-confetti';
 
 
+const getTokenOffset = (indexOnTile: number, totalOnTile: number) => {
+  if (totalOnTile <= 1) return { x: 0, y: -12 };
+  if (totalOnTile === 2) {
+    return indexOnTile === 0 ? { x: -12, y: -12 } : { x: 12, y: -12 };
+  }
+  if (totalOnTile === 3) {
+    if (indexOnTile === 0) return { x: -12, y: -18 };
+    if (indexOnTile === 1) return { x: 12, y: -18 };
+    return { x: 0, y: -4 };
+  }
+  const angle = (indexOnTile / totalOnTile) * 2 * Math.PI;
+  const radius = 14;
+  return {
+    x: Math.round(Math.cos(angle) * radius),
+    y: Math.round(Math.sin(angle) * radius) - 10
+  };
+};
+
 interface StudentGameProps {
   onBack: () => void;
   socket: any;
@@ -2066,6 +2084,14 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   </div>
                 )}
               </div>
+
+              {/* ALWAYS VISIBLE SIGN OUT IN PROFILE TAB */}
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-rose-950/30 hover:bg-rose-950/50 text-rose-400 border border-rose-850/40 rounded-xl text-xs font-bold transition-all min-h-[44px] shadow-md uppercase tracking-wider font-adventure mt-4"
+              >
+                <span>🚪 Sign Out</span>
+              </button>
             </div>
           )}
 
@@ -2279,6 +2305,9 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   {BOARD_TILES.map((tile, tIdx) => {
                     const coord = TILE_COORDS[tIdx];
                     const isSafe = SAFE_TILES.includes(tIdx);
+                    const activeTeam = syncState.teams[syncState.activeTeamIdx];
+                    const isDestination = activeTeam && activeTeam.position === tIdx;
+                    const isOccupied = syncState.teams.some((te: any) => te.position === tIdx);
                     
                     let tileSymbol = '📜';
                     let tileColor = 'bg-[#E5D6B3] border-gold-dark text-jungle-deep';
@@ -2294,18 +2323,23 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                       tileColor = 'bg-rose-900 border-rose-600 text-rose-100';
                     } else if (tile.type === 'treasure') {
                       tileSymbol = '🎁';
-                      tileColor = 'bg-amber-700 border-gold text-gold-glow';
+                      tileColor = isOccupied 
+                        ? 'bg-amber-700 border-gold text-gold-glow shadow-[0_0_20px_#f59e0b] ring-2 ring-gold/60' 
+                        : 'bg-amber-700 border-gold text-gold-glow';
                     } else if (tile.type === 'boss') {
                       tileSymbol = '🐉';
-                      tileColor = 'bg-indigo-950 border-indigo-500 text-indigo-200';
+                      tileColor = isOccupied 
+                        ? 'bg-indigo-950 border-indigo-400 text-indigo-200 shadow-[0_0_20px_#6366f1] ring-2 ring-indigo-500/60' 
+                        : 'bg-indigo-950 border-indigo-500 text-indigo-200';
                     }
+
+                    const destinationClass = isDestination ? 'ring-4 ring-gold ring-offset-2 ring-offset-jungle-deep shadow-[0_0_25px_#f59e0b] border-gold' : '';
+                    const safeClass = isSafe ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#F3EAD3]' : '';
 
                     return (
                       <div 
                         key={tIdx}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 sm:w-14 sm:h-14 rounded-full border-2 flex items-center justify-center text-xs sm:text-xl font-bold transition-all shadow-md group ${tileColor} ${
-                          isSafe ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#F3EAD3]' : ''
-                        }`}
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 sm:w-14 sm:h-14 rounded-full border-2 flex items-center justify-center text-xs sm:text-xl font-bold transition-all duration-300 shadow-md group ${tileColor} ${destinationClass} ${safeClass}`}
                         style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                       >
                         <span>{tileSymbol}</span>
@@ -2325,18 +2359,17 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                     const coord = TILE_COORDS[t.position];
                     const teamsOnSameTile = syncState.teams.filter((te: any) => te.position === t.position);
                     const tIndexOnTile = teamsOnSameTile.findIndex((te: any) => te.id === t.id);
-                    const offsetX = (tIndexOnTile - (teamsOnSameTile.length - 1) / 2) * 12;
-                    const offsetY = tIndexOnTile * 5;
+                    const offset = getTokenOffset(tIndexOnTile, teamsOnSameTile.length);
 
                     return (
                       <div
                         key={t.id}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center text-[10px] sm:text-xs font-extrabold shadow-lg transition-all duration-500 z-20 ${t.color} ${
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center text-[10px] sm:text-xs font-extrabold shadow-lg transition-all duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] z-20 ${t.color} ${
                           syncState.activeTeamIdx === idx ? 'ring-3 sm:ring-4 ring-gold animate-bounce-slow' : ''
                         }`}
                         style={{ 
-                          left: `calc(${coord.x}% + ${offsetX}px)`, 
-                          top: `calc(${coord.y}% - 12px + ${offsetY}px)`
+                          left: `calc(${coord.x}% + ${offset.x}px)`, 
+                          top: `calc(${coord.y}% + ${offset.y}px)`
                         }}
                         title={t.name}
                       >
@@ -2355,30 +2388,31 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                 </div>
               </div>
 
-              {/* MOBILE DOCKED TURN PANEL - DOCKED OUTSIDE PATH */}
-              <div className="flex md:hidden bg-jungle-deep/40 border border-gold/20 p-2.5 rounded-xl items-center justify-between gap-3 shadow select-none">
-                <div className="text-[10px] text-offwhite min-w-[80px] leading-tight">
-                  <span className="block text-gold font-bold font-adventure truncate max-w-[120px]" title={getActivePlayerName()}>
+              {/* MOBILE DOCKED TURN PANEL - MERGED & DOCKED OUTSIDE PATH */}
+              <div className="flex md:hidden bg-jungle-deep/40 border border-gold/20 p-3 rounded-xl flex-col items-center justify-center gap-2.5 shadow-md select-none text-center">
+                <div>
+                  <h4 className="text-gold font-adventure text-sm font-bold block truncate max-w-[200px]" title={getActivePlayerName()}>
                     {getActivePlayerName()}
+                  </h4>
+                  <span className="text-[9px] bg-gold/15 text-gold px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block font-sans">
+                    Active Turn
                   </span>
-                  <span className="block text-[8px] text-offwhite/50 font-sans uppercase">Active Turn</span>
                   {localRollResult !== null && (
-                    <span className="block text-gold-glow font-bold font-mono text-[8px] mt-0.5">Rolled: {localRollResult} 🎲</span>
+                    <p className="text-gold-glow font-bold font-mono text-[10px] mt-1.5">
+                      Rolled: {localRollResult} 🎲
+                    </p>
                   )}
                 </div>
-                
-                <button
-                  onClick={handleRollClick}
-                  disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
-                  className={`h-11 px-6 bg-gold hover:bg-gold-light border border-gold-dark text-jungle-deep rounded-xl flex items-center justify-center gap-1.5 shadow-md font-bold disabled:opacity-50 disabled:pointer-events-none active:scale-95 transition-all w-1/2 min-h-[44px] ${
-                    diceRolling ? 'animate-dice-roll' : ''
-                  }`}
-                >
-                  <Dices className="w-4 h-4" />
-                  <span className="text-[10px] uppercase tracking-wider font-adventure">
-                    {diceRolling ? 'Spinning...' : 'Roll'}
-                  </span>
-                </button>
+
+                <div className="flex justify-center items-center py-1">
+                  <button
+                    onClick={handleRollClick}
+                    disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
+                    className="w-14 h-14 bg-gold hover:bg-gold-light border border-gold-dark text-jungle-deep rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-90 disabled:opacity-40 disabled:pointer-events-none transition-all duration-150"
+                  >
+                    <Dices className={`w-6 h-6 ${diceRolling ? 'animate-bounce' : ''}`} />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -2397,14 +2431,9 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                 <button
                   onClick={handleRollClick}
                   disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
-                  className={`relative w-20 h-20 bg-gold border-2 border-gold-dark hover:scale-105 active:scale-95 transition-all text-jungle-deep rounded-2xl flex flex-col items-center justify-center shadow-lg font-bold disabled:opacity-50 disabled:pointer-events-none ${
-                    diceRolling ? 'animate-dice-roll' : ''
-                  }`}
+                  className="w-16 h-16 bg-gold border-2 border-gold-dark hover:bg-gold-light text-jungle-deep rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-90 disabled:opacity-40 disabled:pointer-events-none transition-all duration-150"
                 >
-                  <Dices className="w-10 h-10 mb-1" />
-                  <span className="text-[10px] font-sans">
-                    {diceRolling ? 'Spinning...' : 'ROLL'}
-                  </span>
+                  <Dices className={`w-8 h-8 ${diceRolling ? 'animate-bounce' : ''}`} />
                 </button>
 
                 {localRollResult !== null && (
