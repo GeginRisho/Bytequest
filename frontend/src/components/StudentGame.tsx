@@ -76,6 +76,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
   const [gameState, setGameState] = useState<'dashboard' | 'lobby' | 'playing' | 'victory'>('dashboard');
   const [roomCode, setRoomCode] = useState<string>('');
   const [joinError, setJoinError] = useState<string>('');
+  const [multiplayerLevelUp, setMultiplayerLevelUp] = useState<boolean>(false);
   
   // Roster/Lobby Sync
   const [rosterClass, setRosterClass] = useState<any>(null);
@@ -406,6 +407,11 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
       });
 
       socket.on('game:victory', (data: any) => {
+        setMultiplayerLevelUp(false);
+        if (activeStudent && data.leveledUpMembers && data.leveledUpMembers.includes(activeStudent.id)) {
+          setMultiplayerLevelUp(true);
+        }
+
         const end = Date.now() + 3000;
         const confettiInterval = setInterval(() => {
           if (Date.now() > end) {
@@ -1067,7 +1073,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                 <p className="text-gold-light text-sm">You are logged into class roster: <span className="font-bold text-white">{activeStudent.className}</span>. Ready to study?</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-jungle-deep border border-jungle-light/35 p-5 rounded-2xl text-center">
                   <span className="text-3xl block mb-1">⭐</span>
                   <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Experience XP</span>
@@ -1082,6 +1088,11 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   <span className="text-3xl block mb-1">🛡️</span>
                   <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Explorer Level</span>
                   <span className="font-adventure text-2xl font-bold text-gold">{activeStudent.level}</span>
+                </div>
+                <div className="bg-jungle-deep border border-jungle-light/35 p-5 rounded-2xl text-center">
+                  <span className="text-3xl block mb-1">⚔️</span>
+                  <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Matches Played</span>
+                  <span className="font-adventure text-2xl font-bold text-gold">{activeStudent.matchesPlayed || 0}</span>
                 </div>
               </div>
 
@@ -1578,6 +1589,8 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                     <div>Preferred Difficulty: <span className="text-white font-bold capitalize">{localStorage.getItem(`bytequest_student_diff_${activeStudent.id}`) || 'medium'}</span></div>
                     <div>XP: <span className="text-gold font-bold">⭐ {activeStudent.xp}</span></div>
                     <div>Coins: <span className="text-gold font-bold">🪙 {activeStudent.coins}</span></div>
+                    <div>Level: <span className="text-gold font-bold">🛡️ {activeStudent.level}</span></div>
+                    <div>Matches Played: <span className="text-gold font-bold">⚔️ {activeStudent.matchesPlayed || 0}</span></div>
                   </div>
                 ) : (
                   <form onSubmit={handleSaveProfile} className="space-y-4">
@@ -1934,6 +1947,21 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
       {gameState === 'playing' && syncState && (
         <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative">
+          {activeStudent && (
+            <div className="bg-jungle-medium border border-jungle-light px-6 py-3 rounded-2xl flex flex-wrap justify-between items-center gap-4 mb-6 shadow-lg text-xs font-bold font-adventure">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🛡️</span>
+                <span className="text-gold uppercase tracking-wide">HUD Controller:</span>
+                <span className="text-white">Level {activeStudent.level} Explorer</span>
+              </div>
+              <div className="flex gap-6 text-gold-light">
+                <div>Matches Played: <span className="text-white font-mono">{activeStudent.matchesPlayed || 0}</span></div>
+                <div>Experience XP: <span className="text-white font-mono">{activeStudent.xp}</span></div>
+                <div>Treasure Coins: <span className="text-white font-mono">{activeStudent.coins}</span></div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full items-start">
             
             <div className="lg:col-span-3 bg-jungle-medium border border-jungle-light p-4 rounded-3xl relative shadow-2xl overflow-hidden aspect-[4/3] flex items-center justify-center">
@@ -2236,6 +2264,11 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
           <div className="parchment-panel rounded-2xl p-8 text-jungle-deep shadow-2xl text-center space-y-6">
             <span className="text-8xl block">🏆</span>
             <h2 className="font-adventure text-4xl font-extrabold text-gold-dark mb-4">Adventure Completed!</h2>
+            {multiplayerLevelUp && (
+              <div className="bg-gradient-to-r from-amber-500 to-yellow-400 text-jungle-deep border border-yellow-300 px-6 py-3 rounded-2xl font-adventure text-lg font-bold mb-6 animate-bounce text-center shadow-lg inline-block">
+                🎉 LEVEL UP! You leveled up to a new milestone! 🎉
+              </div>
+            )}
             <p className="text-sm font-semibold text-jungle-light">All explorers finished the map. Standings compiled successfully.</p>
 
             <div className="bg-jungle-deep text-offwhite border border-jungle-light p-6 rounded-2xl max-w-lg mx-auto">

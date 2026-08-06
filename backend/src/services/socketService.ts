@@ -508,6 +508,43 @@ export class SocketService {
 
     if (activeTeam.position >= 17) {
       room.status = 'FINISHED';
+
+      // Increment matchesPlayed and update level for all players in room
+      const leveledUpMembers: string[] = [];
+      const allMembers = room.teams.flatMap(t => t.members);
+      for (const member of allMembers) {
+        try {
+          const profile = await prisma.studentProfile.findUnique({
+            where: { id: member.id }
+          });
+          if (profile) {
+            const nextMatches = profile.matchesPlayed + 1;
+            let nextLevel = 1;
+            if (nextMatches <= 5) nextLevel = 1;
+            else if (nextMatches <= 12) nextLevel = 2;
+            else if (nextMatches <= 21) nextLevel = 3;
+            else if (nextMatches <= 31) nextLevel = 4;
+            else nextLevel = 5;
+
+            const isLevelUp = nextLevel > profile.level;
+            if (isLevelUp) {
+              leveledUpMembers.push(profile.id);
+            }
+
+            await prisma.studentProfile.update({
+              where: { id: member.id },
+              data: {
+                matchesPlayed: nextMatches,
+                level: nextLevel
+              }
+            });
+            logger.info(`[LEVELING] Updated Student ID: ${member.id} - matches: ${nextMatches}, level: ${nextLevel}`);
+          }
+        } catch (err: any) {
+          logger.error(`[LEVELING ERROR] Failed to update stats for student ${member.id}: ${err.message}`);
+        }
+      }
+
       if (room.classId) {
         await db.updateSessionStatus(room.sessionId, 'FINISHED');
         const dbResults = room.teams.map((t, idx) => {
@@ -536,7 +573,7 @@ export class SocketService {
         });
         await db.saveSessionResults(room.sessionId, dbResults);
       }
-      this.io.to(roomCode).emit('game:victory', { winner: activeTeam, teams: room.teams });
+      this.io.to(roomCode).emit('game:victory', { winner: activeTeam, teams: room.teams, leveledUpMembers });
       this.sendRoomUpdate(roomCode);
       return;
     }

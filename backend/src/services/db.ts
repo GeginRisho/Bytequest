@@ -108,6 +108,7 @@ export class PostgresDatabase {
     });
 
     if (!user || !user.teacherProfile) return undefined;
+    if (!user.teacherProfile.isActive) return undefined;
 
     return {
       id: user.teacherProfile.id,

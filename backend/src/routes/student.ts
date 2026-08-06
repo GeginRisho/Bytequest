@@ -370,6 +370,43 @@ router.post('/profile/:id/rewards', async (req: Request, res: Response) => {
   }
 });
 
+// POST match completed (increments matchesPlayed, recalculates level)
+router.post('/profile/:id/match-completed', async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const student = await prisma.studentProfile.findUnique({ where: { id } });
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    const nextMatchesPlayed = student.matchesPlayed + 1;
+    let nextLevel = 1;
+    if (nextMatchesPlayed <= 5) nextLevel = 1;
+    else if (nextMatchesPlayed <= 12) nextLevel = 2;
+    else if (nextMatchesPlayed <= 21) nextLevel = 3;
+    else if (nextMatchesPlayed <= 31) nextLevel = 4;
+    else nextLevel = 5;
+
+    const updated = await prisma.studentProfile.update({
+      where: { id },
+      data: {
+        matchesPlayed: nextMatchesPlayed,
+        level: nextLevel
+      }
+    });
+
+    return res.json({
+      success: true,
+      matchesPlayed: updated.matchesPlayed,
+      level: updated.level,
+      leveledUp: updated.level > student.level
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT update student profile (name, password)
 router.put('/profile/:id', async (req: Request, res: Response) => {
   const { id } = req.params;

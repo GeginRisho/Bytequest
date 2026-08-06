@@ -75,7 +75,27 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
   const [teacherInfo, setTeacherInfo] = useState<any>(null);
 
   // Active Tab: Redesigned exact navigation items
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'classes' | 'students' | 'questions' | 'leaderboard' | 'reports' | 'settings' | 'profile' | 'requests'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'classes' | 'teachers' | 'students' | 'questions' | 'leaderboard' | 'reports' | 'settings' | 'profile' | 'requests'>('dashboard');
+
+  // Teacher Signup State
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [signupFirstName, setSignupFirstName] = useState('');
+  const [signupLastName, setSignupLastName] = useState('');
+  const [signupSchoolName, setSignupSchoolName] = useState('');
+
+  // Teacher Management State
+  const [teachersList, setTeachersList] = useState<any[]>([]);
+  const [showTeacherModal, setShowTeacherModal] = useState<'create' | 'edit' | 'reset-password' | null>(null);
+  const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+  const [teacherFormEmail, setTeacherFormEmail] = useState('');
+  const [teacherFormPassword, setTeacherFormPassword] = useState('');
+  const [teacherFormFirstName, setTeacherFormFirstName] = useState('');
+  const [teacherFormLastName, setTeacherFormLastName] = useState('');
+  const [teacherFormSchool, setTeacherFormSchool] = useState('');
+  const [teacherFormSubject, setTeacherFormSubject] = useState('');
+  const [teacherFormPhone, setTeacherFormPhone] = useState('');
+  const [teacherFormError, setTeacherFormError] = useState('');
+  const [teacherFormSuccess, setTeacherFormSuccess] = useState('');
 
   // Backend API Base URL
   const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
@@ -160,6 +180,7 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
       fetchClasses();
       fetchReports();
       fetchJoinRequests();
+      loadTeachersList();
     }
   }, [isAuthenticated, teacherInfo]);
 
@@ -194,6 +215,179 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
       }
     };
   }, [socket, activeSession]);
+
+  const clearTeacherForm = () => {
+    setTeacherFormEmail('');
+    setTeacherFormPassword('');
+    setTeacherFormFirstName('');
+    setTeacherFormLastName('');
+    setTeacherFormSchool('');
+    setTeacherFormSubject('');
+    setTeacherFormPhone('');
+    setTeacherFormError('');
+    setTeacherFormSuccess('');
+  };
+
+  const loadTeachersList = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/management/teachers`);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTeachersList(data.teachers);
+      }
+    } catch (err) {
+      console.error('Failed to load teachers list:', err);
+    }
+  };
+
+  const handleCreateTeacher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTeacherFormError('');
+    setTeacherFormSuccess('');
+    try {
+      const res = await fetch(`${API_BASE}/management/teachers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: teacherFormEmail,
+          password: teacherFormPassword,
+          firstName: teacherFormFirstName,
+          lastName: teacherFormLastName,
+          schoolName: teacherFormSchool,
+          subject: teacherFormSubject,
+          mobileNumber: teacherFormPhone
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTeacherFormSuccess('Teacher created successfully!');
+        loadTeachersList();
+        setTimeout(() => {
+          setShowTeacherModal(null);
+          clearTeacherForm();
+        }, 1500);
+      } else {
+        setTeacherFormError(data.error || 'Failed to create teacher.');
+      }
+    } catch (err: any) {
+      setTeacherFormError(err.message || 'Server error.');
+    }
+  };
+
+  const handleEditTeacher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTeacherFormError('');
+    setTeacherFormSuccess('');
+    try {
+      const res = await fetch(`${API_BASE}/management/teachers/${selectedTeacher.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: teacherFormEmail,
+          firstName: teacherFormFirstName,
+          lastName: teacherFormLastName,
+          schoolName: teacherFormSchool,
+          subject: teacherFormSubject,
+          mobileNumber: teacherFormPhone
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTeacherFormSuccess('Teacher details updated successfully!');
+        loadTeachersList();
+        setTimeout(() => {
+          setShowTeacherModal(null);
+          clearTeacherForm();
+        }, 1500);
+      } else {
+        setTeacherFormError(data.error || 'Failed to update details.');
+      }
+    } catch (err: any) {
+      setTeacherFormError(err.message || 'Server error.');
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTeacherFormError('');
+    setTeacherFormSuccess('');
+    try {
+      const res = await fetch(`${API_BASE}/management/teachers/${selectedTeacher.id}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword: teacherFormPassword })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTeacherFormSuccess('Password reset successfully!');
+        setTimeout(() => {
+          setShowTeacherModal(null);
+          clearTeacherForm();
+        }, 1500);
+      } else {
+        setTeacherFormError(data.error || 'Failed to reset password.');
+      }
+    } catch (err: any) {
+      setTeacherFormError(err.message || 'Server error.');
+    }
+  };
+
+  const handleToggleActive = async (teacher: any) => {
+    try {
+      const res = await fetch(`${API_BASE}/management/teachers/${teacher.id}/toggle-active`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !teacher.isActive })
+      });
+      if (res.ok) {
+        loadTeachersList();
+      }
+    } catch (err) {
+      console.error('Failed to toggle active status:', err);
+    }
+  };
+
+  const handleDeleteTeacher = async (teacherId: string) => {
+    if (!confirm('Are you sure you want to delete this teacher?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/management/teachers/${teacherId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        loadTeachersList();
+      }
+    } catch (err) {
+      console.error('Failed to delete teacher:', err);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    try {
+      const res = await fetch(`${API_BASE}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          firstName: signupFirstName,
+          lastName: signupLastName,
+          schoolName: signupSchoolName
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsAuthenticated(true);
+        setTeacherInfo(data.teacher);
+        localStorage.setItem('bytequest_teacher_id', data.teacher.id);
+      } else {
+        setAuthError(data.error || 'Signup failed.');
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Server connection error during signup');
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -722,8 +916,110 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
     return matchesSearch && matchesGrade && matchesDifficulty;
   });
 
-  // Render Login Panel if not authenticated
+  // Render Login/Signup Panel if not authenticated
   if (!isAuthenticated) {
+    if (authMode === 'signup') {
+      return (
+        <div className="max-w-md mx-auto px-6 py-16 flex flex-col justify-center min-h-[85vh]">
+          <div className="parchment-panel rounded-2xl p-8 text-jungle-deep shadow-2xl relative">
+            <div className="flex items-center gap-2 mb-4 justify-center">
+              <Compass className="w-8 h-8 text-gold-dark animate-spin-slow" />
+              <h2 className="font-adventure text-3xl font-bold tracking-wide">Teacher Signup</h2>
+            </div>
+            
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-jungle-light mb-1">First Name</label>
+                  <input 
+                    type="text" 
+                    value={signupFirstName}
+                    onChange={(e) => setSignupFirstName(e.target.value)}
+                    className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-jungle-light mb-1">Last Name</label>
+                  <input 
+                    type="text" 
+                    value={signupLastName}
+                    onChange={(e) => setSignupLastName(e.target.value)}
+                    className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-jungle-light mb-1">School Name</label>
+                <input 
+                  type="text" 
+                  value={signupSchoolName}
+                  onChange={(e) => setSignupSchoolName(e.target.value)}
+                  placeholder="e.g. Delhi Public School"
+                  className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-jungle-light mb-1">Email Address</label>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold uppercase text-jungle-light mb-1">Password</label>
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
+                  required
+                />
+              </div>
+
+              {authError && (
+                <div className="bg-red-50 text-red-700 text-xs p-2.5 rounded-lg font-semibold flex gap-1.5 items-center">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{authError}</span>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button 
+                  type="submit"
+                  className="w-full py-3 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg shadow-md transition-colors"
+                >
+                  Create Account
+                </button>
+              </div>
+            </form>
+
+            <button 
+              onClick={() => { setAuthMode('login'); setAuthError(''); }}
+              className="w-full mt-3 py-1 text-center text-xs text-gold-dark font-bold hover:text-jungle-deep transition-colors"
+            >
+              Already have an account? Log In
+            </button>
+
+            <button 
+              onClick={onBack}
+              className="w-full mt-2 py-1 text-center text-xs text-jungle-light font-bold hover:text-jungle-deep transition-colors"
+            >
+              ← Return to Selection
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-md mx-auto px-6 py-16 flex flex-col justify-center min-h-[85vh]">
         <div className="parchment-panel rounded-2xl p-8 text-jungle-deep shadow-2xl relative">
@@ -773,8 +1069,15 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
           </form>
 
           <button 
+            onClick={() => { setAuthMode('signup'); setAuthError(''); }}
+            className="w-full mt-3 py-1 text-center text-xs text-gold-dark font-bold hover:text-jungle-deep transition-colors"
+          >
+            Create Teacher Account
+          </button>
+
+          <button 
             onClick={onBack}
-            className="w-full mt-3 py-2 text-center text-xs text-jungle-light font-bold hover:text-jungle-deep transition-colors"
+            className="w-full mt-2 py-1 text-center text-xs text-jungle-light font-bold hover:text-jungle-deep transition-colors"
           >
             ← Return to Selection
           </button>
@@ -800,6 +1103,7 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
             {[
               { id: 'dashboard', label: 'Dashboard' },
               { id: 'classes', label: 'Classes' },
+              { id: 'teachers', label: 'Teachers' },
               { id: 'students', label: 'Students' },
               { id: 'questions', label: 'Questions' },
               { id: 'requests', label: `Join Requests ${joinRequests.length > 0 ? `(${joinRequests.length})` : ''}` },
@@ -906,6 +1210,255 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* TAB: TEACHERS MANAGEMENT */}
+        {activeTab === 'teachers' && (
+          <div className="space-y-6">
+            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-jungle-light pb-4 mb-4">
+                <div>
+                  <h3 className="font-adventure text-2xl font-bold text-gold">Teacher Profiles Controller</h3>
+                  <p className="text-gold-light text-xs">Create, edit, enable/disable, reset passwords, or delete teacher accounts.</p>
+                </div>
+                <button
+                  onClick={() => {
+                    clearTeacherForm();
+                    setShowTeacherModal('create');
+                  }}
+                  className="px-4 py-2 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg text-xs uppercase tracking-wide transition-colors"
+                >
+                  + Add Teacher
+                </button>
+              </div>
+
+              {/* Table of teachers */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-jungle-light text-gold font-bold">
+                      <th className="py-2.5">Name</th>
+                      <th className="py-2.5">Email</th>
+                      <th className="py-2.5">Subject</th>
+                      <th className="py-2.5">School</th>
+                      <th className="py-2.5">Mobile</th>
+                      <th className="py-2.5">Status</th>
+                      <th className="py-2.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {teachersList.map((t) => (
+                      <tr key={t.id} className="border-b border-jungle-light/40 text-offwhite hover:bg-jungle-deep/20">
+                        <td className="py-3 font-semibold">{t.firstName} {t.lastName}</td>
+                        <td className="py-3 font-mono">{t.email}</td>
+                        <td className="py-3">{t.subject || <span className="text-offwhite/40 italic">None</span>}</td>
+                        <td className="py-3">{t.schoolName}</td>
+                        <td className="py-3 font-mono">{t.mobileNumber || <span className="text-offwhite/40 italic">-</span>}</td>
+                        <td className="py-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            t.isActive ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-900'
+                          }`}>
+                            {t.isActive ? 'Active' : 'Disabled'}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right space-x-2">
+                          <button
+                            onClick={() => {
+                              clearTeacherForm();
+                              setSelectedTeacher(t);
+                              setTeacherFormEmail(t.email);
+                              setTeacherFormFirstName(t.firstName);
+                              setTeacherFormLastName(t.lastName);
+                              setTeacherFormSchool(t.schoolName);
+                              setTeacherFormSubject(t.subject);
+                              setTeacherFormPhone(t.mobileNumber);
+                              setShowTeacherModal('edit');
+                            }}
+                            className="px-2 py-1 bg-jungle-light hover:bg-jungle-deep text-gold rounded font-bold uppercase text-[9px] transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleToggleActive(t)}
+                            className={`px-2 py-1 rounded font-bold uppercase text-[9px] transition-colors ${
+                              t.isActive ? 'bg-amber-950 hover:bg-amber-900 text-amber-400 border border-amber-800' : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800'
+                            }`}
+                          >
+                            {t.isActive ? 'Disable' : 'Enable'}
+                          </button>
+                          <button
+                            onClick={() => {
+                              clearTeacherForm();
+                              setSelectedTeacher(t);
+                              setShowTeacherModal('reset-password');
+                            }}
+                            className="px-2 py-1 bg-purple-950 hover:bg-purple-900 text-purple-400 border border-purple-800 rounded font-bold uppercase text-[9px] transition-colors"
+                          >
+                            PW Reset
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTeacher(t.id)}
+                            className="px-2 py-1 bg-red-950 hover:bg-red-900 text-red-400 border border-red-800 rounded font-bold uppercase text-[9px] transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {teachersList.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="text-center py-6 text-offwhite/40 italic">No teachers found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal for Creating / Editing Teachers */}
+            {showTeacherModal && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                <div className="parchment-panel text-jungle-deep p-6 rounded-2xl w-full max-w-md shadow-2xl relative">
+                  <h3 className="font-adventure text-xl font-bold text-gold-dark mb-4 uppercase tracking-wide">
+                    {showTeacherModal === 'create' && 'Create Teacher Account'}
+                    {showTeacherModal === 'edit' && 'Edit Teacher Details'}
+                    {showTeacherModal === 'reset-password' && 'Reset Teacher Password'}
+                  </h3>
+
+                  <form onSubmit={
+                    showTeacherModal === 'create' ? handleCreateTeacher :
+                    showTeacherModal === 'edit' ? handleEditTeacher :
+                    handleResetPassword
+                  } className="space-y-4">
+                    {showTeacherModal !== 'reset-password' && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">First Name</label>
+                            <input
+                              type="text"
+                              value={teacherFormFirstName}
+                              onChange={(e) => setTeacherFormFirstName(e.target.value)}
+                              className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Last Name</label>
+                            <input
+                              type="text"
+                              value={teacherFormLastName}
+                              onChange={(e) => setTeacherFormLastName(e.target.value)}
+                              className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={teacherFormEmail}
+                            onChange={(e) => setTeacherFormEmail(e.target.value)}
+                            className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
+                            required
+                          />
+                        </div>
+
+                        {showTeacherModal === 'create' && (
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Password</label>
+                            <input
+                              type="password"
+                              value={teacherFormPassword}
+                              onChange={(e) => setTeacherFormPassword(e.target.value)}
+                              className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
+                              required
+                            />
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">School</label>
+                          <input
+                            type="text"
+                            value={teacherFormSchool}
+                            onChange={(e) => setTeacherFormSchool(e.target.value)}
+                            placeholder="e.g. Delhi Public School"
+                            className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Subject</label>
+                            <input
+                              type="text"
+                              value={teacherFormSubject}
+                              onChange={(e) => setTeacherFormSubject(e.target.value)}
+                              placeholder="e.g. Computer Science"
+                              className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Mobile Number</label>
+                            <input
+                              type="text"
+                              value={teacherFormPhone}
+                              onChange={(e) => setTeacherFormPhone(e.target.value)}
+                              placeholder="e.g. 9876543210"
+                              className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {showTeacherModal === 'reset-password' && (
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">New Password</label>
+                        <input
+                          type="password"
+                          value={teacherFormPassword}
+                          onChange={(e) => setTeacherFormPassword(e.target.value)}
+                          className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
+                          required
+                        />
+                      </div>
+                    )}
+
+                    {teacherFormError && (
+                      <p className="text-red-600 text-xs font-semibold">{teacherFormError}</p>
+                    )}
+                    {teacherFormSuccess && (
+                      <p className="text-emerald-600 text-xs font-semibold">{teacherFormSuccess}</p>
+                    )}
+
+                    <div className="flex gap-4 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowTeacherModal(null);
+                          clearTeacherForm();
+                        }}
+                        className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-jungle-deep font-bold rounded text-xs uppercase"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 py-2 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded text-xs uppercase shadow"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

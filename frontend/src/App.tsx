@@ -120,6 +120,7 @@ export default function App() {
   // LOCAL GAME MODE STATE MACHINE (PHASE 1)
   // ==========================================
   const [localScreen, setLocalScreen] = useState<'setup' | 'board' | 'handoff' | 'victory'>('setup');
+  const [localLevelUpTo, setLocalLevelUpTo] = useState<number | null>(null);
   
   // Local Player Setup
   const [localPlayerCount, setLocalPlayerCount] = useState<1 | 2 | 3 | 4>(1);
@@ -873,6 +874,26 @@ export default function App() {
   const localTriggerVictory = () => {
     sounds.playChest();
     
+    // Reset local level up state
+    setLocalLevelUpTo(null);
+
+    // Report match completion to backend database if student is logged in
+    const studentId = localStorage.getItem('bytequest_student_id');
+    if (studentId) {
+      const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
+      fetch(`${baseApi}/api/v1/student/profile/${studentId}/match-completed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.leveledUp) {
+          setLocalLevelUpTo(data.level);
+        }
+      })
+      .catch(err => console.error("Error reporting local match completed:", err));
+    }
+
     const end = Date.now() + 3000;
     const interval = setInterval(() => {
       if (Date.now() > end) {
@@ -1384,6 +1405,12 @@ export default function App() {
               <span className="text-7xl block mb-2">🏆</span>
               <h2 className="font-adventure text-4xl font-extrabold text-gold mb-8">Victory Achieved!</h2>
               
+              {localLevelUpTo !== null && (
+                <div className="bg-gradient-to-r from-amber-500 to-yellow-400 text-jungle-deep border border-yellow-300 px-6 py-3 rounded-2xl font-adventure text-lg font-bold mb-6 animate-bounce text-center shadow-lg">
+                  🎉 LEVEL UP! You are now Level {localLevelUpTo}! 🎉
+                </div>
+              )}
+
               <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl w-full mb-8">
                 <table className="w-full text-left text-xs border-collapse font-semibold">
                   <thead>

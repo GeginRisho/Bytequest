@@ -115,6 +115,7 @@ model StudentProfile {
   isSuspended       Boolean           @default(false)
   minutesPlayed     Int               @default(0)
   grade             Int               @default(10)
+  matchesPlayed     Int               @default(0)
   deletedAt         DateTime?
 
   // Relationships
@@ -138,6 +139,9 @@ model TeacherProfile {
   schoolId       String
   school         School           @relation(fields: [schoolId], references: [id])
   isApproved     Boolean          @default(false)
+  isActive       Boolean          @default(true)
+  subject        String?
+  mobileNumber   String?
   classes        Class[]
   questionDrafts Question[]
   deletedAt      DateTime?

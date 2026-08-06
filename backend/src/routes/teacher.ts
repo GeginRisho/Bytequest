@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcrypt';
 import { db, prisma } from '../services/db';
 
 const router = express.Router();
@@ -33,6 +34,280 @@ router.post('/auth/login', async (req, res) => {
       },
       token: `token_${teacher.id}_${Date.now()}`
     });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ------------------------------------------
+// TEACHER SELF SIGNUP & MANAGEMENT
+// ------------------------------------------
+router.post('/auth/signup', async (req, res) => {
+  const { email, password, firstName, lastName, schoolName } = req.body;
+  if (!email || !password || !firstName || !lastName || !schoolName) {
+    return res.status(400).json({ error: 'All fields (email, password, firstName, lastName, schoolName) are required' });
+  }
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    // Resolve or create school
+    const trimmedSchool = schoolName.trim();
+    let school = await prisma.school.findFirst({
+      where: { name: { equals: trimmedSchool, mode: 'insensitive' } }
+    });
+    if (!school) {
+      school = await prisma.school.create({
+        data: {
+          name: trimmedSchool,
+          district: 'Local District',
+          state: 'State'
+        }
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        role: 'TEACHER',
+        firstName,
+        lastName,
+        isVerified: true
+      }
+    });
+
+    const teacher = await prisma.teacherProfile.create({
+      data: {
+        userId: user.id,
+        schoolId: school.id,
+        isApproved: true,
+        isActive: true
+      }
+    });
+
+    return res.status(201).json({
+      success: true,
+      teacher: {
+        id: teacher.id,
+        userId: user.id,
+        email: user.email,
+        name: `${user.firstName} ${user.lastName}`
+      }
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all teachers
+router.get('/management/teachers', async (req, res) => {
+  try {
+    const teachers = await prisma.teacherProfile.findMany({
+      where: { deletedAt: null },
+      include: {
+        user: true,
+        school: true
+      }
+    });
+
+    const mapped = teachers.map(t => ({
+      id: t.id,
+      userId: t.userId,
+      firstName: t.user.firstName,
+      lastName: t.user.lastName,
+      email: t.user.email,
+      subject: t.subject || '',
+      mobileNumber: t.mobileNumber || '',
+      schoolName: t.school.name,
+      schoolId: t.schoolId,
+      isActive: t.isActive
+    }));
+
+    return res.json({ success: true, teachers: mapped });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST Create Teacher by another teacher
+router.post('/management/teachers', async (req, res) => {
+  const { email, password, firstName, lastName, schoolName, schoolId, subject, mobileNumber } = req.body;
+  if (!email || !password || !firstName || !lastName || (!schoolName && !schoolId)) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    let targetSchoolId = schoolId;
+    if (!targetSchoolId && schoolName) {
+      const trimmed = schoolName.trim();
+      let school = await prisma.school.findFirst({
+        where: { name: { equals: trimmed, mode: 'insensitive' } }
+      });
+      if (!school) {
+        school = await prisma.school.create({
+          data: {
+            name: trimmed,
+            district: 'Local District',
+            state: 'State'
+          }
+        });
+      }
+      targetSchoolId = school.id;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        role: 'TEACHER',
+        firstName,
+        lastName,
+        isVerified: true
+      }
+    });
+
+    const teacher = await prisma.teacherProfile.create({
+      data: {
+        userId: user.id,
+        schoolId: targetSchoolId,
+        isApproved: true,
+        isActive: true,
+        subject,
+        mobileNumber
+      }
+    });
+
+    return res.status(201).json({ success: true, teacher });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT Edit Teacher Details
+router.put('/management/teachers/:id', async (req, res) => {
+  const { id } = req.params;
+  const { firstName, lastName, email, subject, mobileNumber, schoolName, schoolId } = req.body;
+
+  try {
+    const teacher = await prisma.teacherProfile.findUnique({
+      where: { id },
+      include: { user: true }
+    });
+    if (!teacher) {
+      return res.status(404).json({ error: 'Teacher not found' });
+    }
+
+    if (email && email.toLowerCase() !== teacher.user.email.toLowerCase()) {
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+    }
+
+    let targetSchoolId = schoolId;
+    if (schoolName) {
+      const trimmed = schoolName.trim();
+      let school = await prisma.school.findFirst({
+        where: { name: { equals: trimmed, mode: 'insensitive' } }
+      });
+      if (!school) {
+        school = await prisma.school.create({
+          data: {
+            name: trimmed,
+            district: 'Local District',
+            state: 'State'
+          }
+        });
+      }
+      targetSchoolId = school.id;
+    }
+
+    await prisma.user.update({
+      where: { id: teacher.userId },
+      data: {
+        firstName,
+        lastName,
+        email
+      }
+    });
+
+    const updatedProfile = await prisma.teacherProfile.update({
+      where: { id },
+      data: {
+        schoolId: targetSchoolId || undefined,
+        subject,
+        mobileNumber
+      }
+    });
+
+    return res.json({ success: true, teacher: updatedProfile });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST Enable/Disable Teacher
+router.post('/management/teachers/:id/toggle-active', async (req, res) => {
+  const { id } = req.params;
+  const { isActive } = req.body;
+
+  try {
+    const updated = await prisma.teacherProfile.update({
+      where: { id },
+      data: { isActive: Boolean(isActive) }
+    });
+    return res.json({ success: true, isActive: updated.isActive });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST Reset Teacher Password
+router.post('/management/teachers/:id/reset-password', async (req, res) => {
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  try {
+    const teacher = await prisma.teacherProfile.findUnique({ where: { id } });
+    if (!teacher) {
+      return res.status(404).json({ error: 'Teacher not found' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: teacher.userId },
+      data: { passwordHash }
+    });
+
+    return res.json({ success: true, message: 'Password reset successful' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE Soft Delete Teacher
+router.delete('/management/teachers/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await prisma.teacherProfile.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+    return res.json({ success: true, message: 'Teacher deleted successfully' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
