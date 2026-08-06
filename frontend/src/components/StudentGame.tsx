@@ -761,7 +761,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
             
             {authMode === 'login' && (
               <>
-                <h3 className="font-adventure text-3xl font-bold text-center text-gold-dark mb-1">Explorer Sign In</h3>
+                <h3 className="font-adventure text-2xl md:text-3xl font-bold text-center text-gold-dark mb-1">Explorer Sign In</h3>
                 <p className="text-center text-xs font-semibold text-jungle-light mb-6">Enter your student credentials to continue</p>
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
@@ -811,7 +811,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
             {authMode === 'signup' && (
               <>
-                <h3 className="font-adventure text-3xl font-bold text-center text-gold-dark mb-1">New Explorer Profile</h3>
+                <h3 className="font-adventure text-2xl md:text-3xl font-bold text-center text-gold-dark mb-1">New Explorer Profile</h3>
                 <p className="text-center text-xs font-semibold text-jungle-light mb-6">Create your account to start the quest</p>
                 <form onSubmit={handleSignupSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
@@ -897,7 +897,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
             {authMode === 'wizard' && (
               <>
-                <h3 className="font-adventure text-3xl font-bold text-center text-gold-dark mb-1">Select Your Class</h3>
+                <h3 className="font-adventure text-2xl md:text-3xl font-bold text-center text-gold-dark mb-1">Select Your Class</h3>
                 <p className="text-center text-xs font-semibold text-jungle-light mb-6">Choose your school and class section to enroll</p>
                 <form onSubmit={handleEnrollSubmit} className="space-y-4">
                   <div>
@@ -983,8 +983,9 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
     const pendingAssignments = activeStudent.assignments ? activeStudent.assignments.filter((a: any) => !a.isCompleted) : [];
 
     return (
-      <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full px-4 py-8 gap-8 select-text">
-        <aside className="w-full md:w-64 bg-jungle-medium border border-jungle-light rounded-2xl p-6 flex flex-col justify-between">
+      <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full px-4 py-4 md:py-8 gap-4 md:gap-8 select-text pb-20 md:pb-8">
+        {/* DESKTOP SIDEBAR */}
+        <aside className="hidden md:flex md:w-64 bg-jungle-medium border border-jungle-light rounded-2xl p-6 flex-col justify-between">
           <div className="space-y-6">
             <div className="flex items-center gap-2 border-b border-jungle-light pb-4">
               <Compass className="text-gold w-6 h-6" />
@@ -1065,48 +1066,123 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
           </div>
         </aside>
 
+        {/* MOBILE BOTTOM NAVIGATION BAR */}
+        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-jungle-medium border-t border-jungle-light flex md:hidden items-center justify-around z-50 px-2 shadow-2xl pb-safe">
+          <button
+            onClick={() => { playBeep(350, 'sine', 0.05); setActiveTab('dashboard'); }}
+            className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] font-bold ${activeTab === 'dashboard' ? 'text-gold' : 'text-offwhite/60'}`}
+          >
+            <span className="text-lg">🏠</span>
+            <span className="mt-0.5">Home</span>
+          </button>
+          <button
+            onClick={() => { playBeep(390, 'sine', 0.05); setActiveTab('new_adventure'); }}
+            className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] font-bold ${activeTab === 'new_adventure' ? 'text-gold' : 'text-offwhite/60'}`}
+          >
+            <span className="text-lg">🎮</span>
+            <span className="mt-0.5">Play</span>
+          </button>
+          <button
+            onClick={() => { playBeep(450, 'sine', 0.05); setActiveTab('leaderboard'); }}
+            className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] font-bold ${activeTab === 'leaderboard' ? 'text-gold' : 'text-offwhite/60'}`}
+          >
+            <span className="text-lg">🏆</span>
+            <span className="mt-0.5">Rankings</span>
+          </button>
+          <button
+            onClick={() => { playBeep(470, 'sine', 0.05); setActiveTab('profile'); }}
+            className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] font-bold ${activeTab === 'profile' ? 'text-gold' : 'text-offwhite/60'}`}
+          >
+            <span className="text-lg">👤</span>
+            <span className="mt-0.5">Profile</span>
+          </button>
+        </nav>
+
         <section className="flex-1 min-h-[50vh]">
           {activeTab === 'dashboard' && (
-            <div className="space-y-6">
-              <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-                <h2 className="font-adventure text-3xl font-bold text-gold mb-2">Welcome Back, Explorer!</h2>
-                <p className="text-gold-light text-sm">You are logged into class roster: <span className="font-bold text-white">{activeStudent.className}</span>. Ready to study?</p>
+            <div className="space-y-4 md:space-y-6">
+              {/* PROFILE CARD */}
+              <div className="bg-jungle-medium border border-jungle-light p-4 rounded-2xl flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-jungle-deep border border-gold/45 flex items-center justify-center text-3xl overflow-hidden shrink-0">
+                  {localStorage.getItem(`bytequest_student_pic_${activeStudent.id}`) ? (
+                    <img src={localStorage.getItem(`bytequest_student_pic_${activeStudent.id}`)!} alt="profile" className="w-full h-full object-cover" />
+                  ) : (
+                    localStorage.getItem(`bytequest_student_avatar_${activeStudent.id}`) || '👾'
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-adventure text-lg font-bold text-gold truncate">{activeStudent.name}</h3>
+                      <p className="text-[10px] text-gold-light font-semibold">{activeStudent.className || 'Roster Class'}</p>
+                    </div>
+                    <span className="bg-gold/15 text-gold text-[9px] font-bold px-2 py-0.5 rounded border border-gold/30">LVL {activeStudent.level}</span>
+                  </div>
+                  {/* XP Progress Bar */}
+                  <div className="mt-2">
+                    <div className="flex justify-between text-[8px] font-bold text-offwhite/50 mb-0.5">
+                      <span>XP PROGRESS</span>
+                      <span>{activeStudent.xp} XP</span>
+                    </div>
+                    <div className="w-full h-2 bg-jungle-deep rounded-full overflow-hidden border border-jungle-light/20">
+                      <div className="h-full bg-gold rounded-full" style={{ width: `${Math.min(100, (activeStudent.xp / 1000) * 100)}%` }}></div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-jungle-deep border border-jungle-light/35 p-5 rounded-2xl text-center">
-                  <span className="text-3xl block mb-1">⭐</span>
-                  <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Experience XP</span>
-                  <span className="font-adventure text-2xl font-bold text-gold">{activeStudent.xp}</span>
+              {/* THREE STATISTICS CARDS (Level, Matches, Coins in 1 row) */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-jungle-deep border border-jungle-light/35 p-3 rounded-xl text-center">
+                  <span className="text-xl block mb-0.5">🛡️</span>
+                  <span className="text-[9px] block text-offwhite/50 font-bold uppercase tracking-wider">Level</span>
+                  <span className="font-adventure text-sm font-bold text-gold">{activeStudent.level}</span>
                 </div>
-                <div className="bg-jungle-deep border border-jungle-light/35 p-5 rounded-2xl text-center">
-                  <span className="text-3xl block mb-1">🪙</span>
-                  <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Treasure Coins</span>
-                  <span className="font-adventure text-2xl font-bold text-gold">{activeStudent.coins}</span>
+                <div className="bg-jungle-deep border border-jungle-light/35 p-3 rounded-xl text-center">
+                  <span className="text-xl block mb-0.5">⚔️</span>
+                  <span className="text-[9px] block text-offwhite/50 font-bold uppercase tracking-wider">Matches</span>
+                  <span className="font-adventure text-sm font-bold text-gold">{activeStudent.matchesPlayed || 0}</span>
                 </div>
-                <div className="bg-jungle-deep border border-jungle-light/35 p-5 rounded-2xl text-center">
-                  <span className="text-3xl block mb-1">🛡️</span>
-                  <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Explorer Level</span>
-                  <span className="font-adventure text-2xl font-bold text-gold">{activeStudent.level}</span>
-                </div>
-                <div className="bg-jungle-deep border border-jungle-light/35 p-5 rounded-2xl text-center">
-                  <span className="text-3xl block mb-1">⚔️</span>
-                  <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Matches Played</span>
-                  <span className="font-adventure text-2xl font-bold text-gold">{activeStudent.matchesPlayed || 0}</span>
+                <div className="bg-jungle-deep border border-jungle-light/35 p-3 rounded-xl text-center">
+                  <span className="text-xl block mb-0.5">🪙</span>
+                  <span className="text-[9px] block text-offwhite/50 font-bold uppercase tracking-wider">Coins</span>
+                  <span className="font-adventure text-sm font-bold text-gold">{activeStudent.coins}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <button onClick={() => setActiveTab('new_adventure')} className="parchment-panel rounded-2xl p-6 text-center hover:scale-105 transition-all text-jungle-deep">
-                  <span className="text-4xl block mb-2">🗺️</span>
-                  <h3 className="font-adventure text-xl font-bold text-gold-dark mb-1">Start Adventure</h3>
-                  <p className="text-[10px] text-jungle-light">Solo offline or classroom lobbies</p>
-                </button>
-                <button onClick={() => setActiveTab('daily_challenge')} className="parchment-panel rounded-2xl p-6 text-center hover:scale-105 transition-all text-jungle-deep">
-                  <span className="text-4xl block mb-2">⚡</span>
-                  <h3 className="font-adventure text-xl font-bold text-gold-dark mb-1">Daily Challenge</h3>
-                  <p className="text-[10px] text-jungle-light">Reset at midnight, earn coins</p>
-                </button>
+              {/* QUICK ACTIONS (2x2 Grid) */}
+              <div>
+                <h4 className="font-adventure text-xs font-bold text-gold uppercase tracking-wider mb-2">Quick Actions</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => { playBeep(370, 'sine', 0.05); setActiveTab('continue'); }}
+                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-jungle-deep hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
+                  >
+                    <span className="text-2xl mb-1">⏳</span>
+                    <span className="text-[11px] font-bold leading-tight">Continue Adventure</span>
+                  </button>
+                  <button
+                    onClick={() => { playBeep(390, 'sine', 0.05); setActiveTab('new_adventure'); }}
+                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-jungle-deep hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
+                  >
+                    <span className="text-2xl mb-1">🎲</span>
+                    <span className="text-[11px] font-bold leading-tight">New Adventure</span>
+                  </button>
+                  <button
+                    onClick={() => { playBeep(460, 'sine', 0.05); setActiveTab('join_classroom'); }}
+                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-jungle-deep hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
+                  >
+                    <span className="text-2xl mb-1">🏫</span>
+                    <span className="text-[11px] font-bold leading-tight">Join Classroom</span>
+                  </button>
+                  <button
+                    onClick={() => { playBeep(410, 'sine', 0.05); setActiveTab('practice_quiz'); }}
+                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-jungle-deep hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
+                  >
+                    <span className="text-2xl mb-1">📝</span>
+                    <span className="text-[11px] font-bold leading-tight">Practice Quiz</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1165,75 +1241,100 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
           )}
 
           {activeTab === 'new_adventure' && (
-            <div className="space-y-6">
-              <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-                <h3 className="font-adventure text-2xl font-bold text-gold mb-2">Explorer Launchpad</h3>
-                <p className="text-gold-light text-xs">Launch a solo training game or create/join custom multiplayer lobbies</p>
+            <div className="space-y-4">
+              <div className="bg-jungle-medium border border-jungle-light p-4 rounded-xl">
+                <h3 className="font-adventure text-lg font-bold text-gold uppercase tracking-wider">Explorer Launchpad</h3>
+                <p className="text-gold-light text-[10px]">Select a game mode to begin your CS learning campaign.</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="parchment-panel rounded-2xl p-6 flex flex-col justify-between text-jungle-deep h-80">
-                  <div>
-                    <span className="text-4xl block mb-2">🤖</span>
-                    <h4 className="font-adventure text-lg font-bold text-gold-dark mb-2">Solo Sandbox</h4>
-                    <p className="text-[10px] font-semibold text-jungle-light leading-relaxed">
-                      Fight compilation bots in a completely local, offline practice match. Zero socket dependency.
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* CARD 1: SOLO SANDBOX */}
+                <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-xl">🤖</span>
+                      <h4 className="font-adventure text-xs font-bold text-gold-dark truncate">Solo Sandbox</h4>
+                    </div>
+                    <p className="text-[9px] font-semibold text-jungle-light leading-tight line-clamp-3">
+                      Fight compilation bots in a completely local, offline practice match.
                     </p>
                   </div>
                   <button 
                     onClick={onStartSoloPractice}
-                    className="w-full py-2 bg-jungle-medium text-offwhite font-bold text-xs rounded-lg uppercase mt-4"
+                    className="w-full py-1 bg-jungle-medium hover:bg-jungle-deep text-offwhite font-bold text-[9px] rounded uppercase transition-colors"
                   >
-                    Start Offline
+                    Start Solo
                   </button>
                 </div>
 
-                <div className="parchment-panel rounded-2xl p-6 flex flex-col justify-between text-jungle-deep h-80">
-                  <div>
-                    <span className="text-4xl block mb-2">🤝</span>
-                    <h4 className="font-adventure text-lg font-bold text-gold-dark mb-2">Join Lobby</h4>
-                    <p className="text-[10px] font-semibold text-jungle-light leading-relaxed mb-4">
-                      Enter a 5-digit room code to join your classroom matches or a friend's practice room.
-                    </p>
-
+                {/* CARD 2: JOIN LOBBY */}
+                <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-xl">🤝</span>
+                      <h4 className="font-adventure text-xs font-bold text-gold-dark truncate">Join Lobby</h4>
+                    </div>
                     {!rosterClass ? (
-                      <form onSubmit={handleResolveCode} className="space-y-2">
+                      <form onSubmit={handleResolveCode} className="space-y-1 mt-1">
                         <input 
                           type="text" 
                           value={roomCode}
                           onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                          placeholder="Room Code"
+                          placeholder="Code"
                           maxLength={6}
-                          className="w-full bg-parchment-light border border-gold-dark/45 rounded px-2.5 py-1.5 text-xs text-center font-bold font-mono tracking-wider"
+                          className="w-full bg-parchment-light border border-gold-dark/45 rounded px-2 py-0.5 text-[10px] text-center font-bold font-mono tracking-wider focus:outline-none"
+                          required
                         />
-                        {joinError && <p className="text-[9px] text-red-700 text-center font-bold">{joinError}</p>}
-                        <button type="submit" className="w-full py-1.5 bg-gold text-jungle-deep font-bold text-[10px] rounded uppercase">Verify Code</button>
+                        {joinError && <p className="text-[8px] text-red-700 text-center font-bold truncate">{joinError}</p>}
+                        <button type="submit" className="w-full py-1 bg-gold text-jungle-deep font-bold text-[8px] rounded uppercase tracking-wide">Verify</button>
                       </form>
                     ) : (
-                      <div className="space-y-2 text-[10px]">
-                        <p className="text-center font-bold">Room Class: {rosterClass.className}</p>
-                        <button onClick={handleSelectNameAndJoin} className="w-full py-2 bg-indigo-600 text-white font-bold rounded uppercase">Join Room</button>
+                      <div className="space-y-1 mt-1 text-[9px] text-center">
+                        <p className="font-bold truncate">{rosterClass.className}</p>
+                        <button onClick={handleSelectNameAndJoin} className="w-full py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded uppercase">Join</button>
                       </div>
                     )}
                   </div>
                   {rosterClass && (
-                    <button onClick={() => setRosterClass(null)} className="text-center text-[10px] text-jungle-light font-bold">Clear Code</button>
+                    <button onClick={() => setRosterClass(null)} className="text-center text-[8px] text-jungle-light font-bold">Clear</button>
                   )}
                 </div>
 
-                <div className="parchment-panel rounded-2xl p-6 flex flex-col justify-between text-jungle-deep h-80">
-                  <div>
-                    <span className="text-4xl block mb-2">🔑</span>
-                    <h4 className="font-adventure text-lg font-bold text-gold-dark mb-2">Create Room</h4>
-                    <p className="text-[10px] font-semibold text-jungle-light leading-relaxed">
-                      Launch a custom multiplayer practice room! Share your room code so other students can join.
+                {/* CARD 3: DAILY CHALLENGE */}
+                <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-xl">⚡</span>
+                      <h4 className="font-adventure text-xs font-bold text-gold-dark truncate">Daily Challenge</h4>
+                    </div>
+                    <p className="text-[9px] font-semibold text-jungle-light leading-tight line-clamp-3">
+                      Complete daily challenges to earn bonus coins and experience XP!
                     </p>
                   </div>
                   <button 
-                    onClick={handleCreatePracticeRoom}
-                    className="w-full py-2 bg-emerald-600 text-white font-bold text-xs rounded-lg uppercase mt-4"
+                    onClick={() => { playBeep(430, 'sine', 0.05); setActiveTab('daily_challenge'); }}
+                    className="w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[9px] rounded uppercase transition-colors"
                   >
-                    Host Practice
+                    Play Daily
+                  </button>
+                </div>
+
+                {/* CARD 4: TREASURE HUNT */}
+                <div className="parchment-panel rounded-xl p-3 flex flex-col justify-between text-jungle-deep min-h-[160px] max-h-[170px]">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-xl">👑</span>
+                      <h4 className="font-adventure text-xs font-bold text-gold-dark truncate">Treasure Hunt</h4>
+                    </div>
+                    <p className="text-[9px] font-semibold text-jungle-light leading-tight line-clamp-3">
+                      Join teacher lobbies or classroom events to compete for rewards.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => { playBeep(460, 'sine', 0.05); setActiveTab('join_classroom'); }}
+                    className="w-full py-1 bg-gold hover:bg-gold-light text-jungle-deep font-bold text-[9px] rounded uppercase transition-colors border border-gold-dark/30 shadow-sm"
+                  >
+                    Enter Hunt
                   </button>
                 </div>
               </div>
@@ -1948,26 +2049,23 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
       {gameState === 'playing' && syncState && (
         <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative">
           {activeStudent && (
-            <div className="bg-jungle-medium border border-jungle-light px-6 py-3 rounded-2xl flex flex-wrap justify-between items-center gap-4 mb-6 shadow-lg text-xs font-bold font-adventure">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🛡️</span>
-                <span className="text-gold uppercase tracking-wide">HUD Controller:</span>
-                <span className="text-white">Level {activeStudent.level} Explorer</span>
-              </div>
-              <div className="flex gap-6 text-gold-light">
-                <div>Matches Played: <span className="text-white font-mono">{activeStudent.matchesPlayed || 0}</span></div>
-                <div>Experience XP: <span className="text-white font-mono">{activeStudent.xp}</span></div>
-                <div>Treasure Coins: <span className="text-white font-mono">{activeStudent.coins}</span></div>
-              </div>
+            <div className="bg-jungle-medium border border-jungle-light px-4 py-2 rounded-xl flex items-center justify-between gap-2 mb-4 shadow-lg text-[10px] md:text-xs font-bold font-adventure text-gold-light">
+              <div>🛡️ LVL <span className="text-white font-mono">{activeStudent.level}</span></div>
+              <div className="hidden sm:inline">|</div>
+              <div>⭐ XP <span className="text-white font-mono">{activeStudent.xp}</span></div>
+              <div>|</div>
+              <div>🪙 COINS <span className="text-white font-mono">{activeStudent.coins}</span></div>
+              <div>|</div>
+              <div>⚔️ MATCHES <span className="text-white font-mono">{activeStudent.matchesPlayed || 0}</span></div>
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full items-start">
             
-            <div className="lg:col-span-3 bg-jungle-medium border border-jungle-light p-4 rounded-3xl relative shadow-2xl overflow-hidden aspect-[4/3] flex items-center justify-center">
+            <div className="lg:col-span-3 bg-jungle-medium border border-jungle-light p-2 md:p-4 rounded-2xl md:rounded-3xl relative shadow-2xl overflow-hidden aspect-[4/3] w-full flex items-center justify-center">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#1a3d30,transparent_70%)]"></div>
               
-              <div className="relative w-[90%] h-[90%] border border-gold/15 rounded-2xl bg-jungle-deep/45">
+              <div className="relative w-[96%] h-[96%] md:w-[90%] md:h-[90%] border border-gold/15 rounded-2xl bg-jungle-deep/45">
                 
                 <svg className="absolute inset-0 w-full h-full pointer-events-none">
                   <path 
@@ -2054,10 +2152,36 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   );
                 })}
               </div>
+
+              {/* FLOATING TURN PANEL & DICE CONTROLS FOR MOBILE */}
+              <div className="absolute bottom-3 right-3 bg-jungle-medium/95 backdrop-blur border border-gold/30 p-2 rounded-xl flex items-center gap-2 shadow-2xl z-30 select-none">
+                <div className="text-[10px] text-offwhite min-w-[70px] leading-tight">
+                  <span className="block text-gold font-bold font-adventure truncate max-w-[80px]" title={getActivePlayerName()}>
+                    {getActivePlayerName()}
+                  </span>
+                  <span className="block text-[8px] text-offwhite/50 font-sans uppercase">Active Turn</span>
+                  {localRollResult !== null && (
+                    <span className="block text-gold-glow font-bold font-mono text-[8px] mt-0.5">Rolled: {localRollResult} 🎲</span>
+                  )}
+                </div>
+                
+                <button
+                  onClick={handleRollClick}
+                  disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
+                  className={`h-9 px-2.5 bg-gold border border-gold-dark hover:scale-105 active:scale-95 transition-all text-jungle-deep rounded-lg flex items-center gap-1 shadow-md font-bold disabled:opacity-50 disabled:pointer-events-none ${
+                    diceRolling ? 'animate-dice-roll' : ''
+                  }`}
+                >
+                  <Dices className="w-3.5 h-3.5" />
+                  <span className="text-[8px] uppercase tracking-wider">
+                    {diceRolling ? 'Spin' : 'Roll'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col gap-6">
-              <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl flex flex-col items-center justify-center text-center shadow-xl">
+              <div className="hidden md:flex bg-jungle-medium border border-jungle-light p-6 rounded-2xl flex-col items-center justify-center text-center shadow-xl">
                 <span className="text-[10px] block font-bold text-gold-light uppercase tracking-wider mb-2">Turn Information</span>
                 <div className="mb-4">
                   <span className="font-adventure text-lg font-bold text-white block">
