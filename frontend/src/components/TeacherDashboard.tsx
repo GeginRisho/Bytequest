@@ -64,9 +64,20 @@ interface DbTeam {
 interface TeacherDashboardProps {
   onBack: () => void;
   socket: any;
+  activeTab: 'dashboard' | 'classes' | 'teachers' | 'students' | 'questions' | 'leaderboard' | 'reports' | 'settings' | 'profile' | 'requests';
+  setActiveTab: (tab: 'dashboard' | 'classes' | 'teachers' | 'students' | 'questions' | 'leaderboard' | 'reports' | 'settings' | 'profile' | 'requests') => void;
+  showTeacherModal: 'create' | 'edit' | 'reset-password' | null;
+  setShowTeacherModal: (modal: 'create' | 'edit' | 'reset-password' | null) => void;
 }
 
-export default function TeacherDashboard({ onBack, socket }: TeacherDashboardProps) {
+export default function TeacherDashboard({ 
+  onBack, 
+  socket,
+  activeTab,
+  setActiveTab,
+  showTeacherModal,
+  setShowTeacherModal
+}: TeacherDashboardProps) {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [email, setEmail] = useState<string>('');
@@ -75,13 +86,39 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
   const [teacherInfo, setTeacherInfo] = useState<any>(null);
 
   // Active Tab: Redesigned exact navigation items
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'classes' | 'teachers' | 'students' | 'questions' | 'leaderboard' | 'reports' | 'settings' | 'profile' | 'requests'>('dashboard');
-
   // Teacher Signup State (Public self-registration disabled; accounts created via Teacher Management only)
 
   // Teacher Management State
   const [teachersList, setTeachersList] = useState<any[]>([]);
-  const [showTeacherModal, setShowTeacherModal] = useState<'create' | 'edit' | 'reset-password' | null>(null);
+
+  const playBeep = (freq: number, type: OscillatorType, duration: number, vol: number = 0.08) => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch (e) {}
+  };
+
+  const handleGoBack = () => {
+    playBeep(430, 'sine', 0.05);
+    if (showTeacherModal) {
+      setShowTeacherModal(null);
+      return;
+    }
+    if (activeTab !== 'dashboard') {
+      setActiveTab('dashboard');
+      return;
+    }
+    onBack();
+  };
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
   const [teacherFormEmail, setTeacherFormEmail] = useState('');
   const [teacherFormPassword, setTeacherFormPassword] = useState('');
@@ -1078,9 +1115,17 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
           <div className="space-y-6">
             <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-jungle-light pb-4 mb-4">
-                <div>
-                  <h3 className="font-adventure text-2xl font-bold text-gold">Teacher Profiles Controller</h3>
-                  <p className="text-gold-light text-xs">Create, edit, enable/disable, reset passwords, or delete teacher accounts.</p>
+                <div className="flex items-start gap-3">
+                  <button
+                    onClick={handleGoBack}
+                    className="mt-1 px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                  >
+                    ← Back
+                  </button>
+                  <div>
+                    <h3 className="font-adventure text-2xl font-bold text-gold">Teacher Profiles Controller</h3>
+                    <p className="text-gold-light text-xs">Create, edit, enable/disable, reset passwords, or delete teacher accounts.</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => {
@@ -1327,7 +1372,15 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
           <div className="space-y-6">
             {/* Create Class Form */}
             <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-              <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2 mb-4">Register New Class</h3>
+              <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-4">
+                <button
+                  onClick={handleGoBack}
+                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                >
+                  ← Back
+                </button>
+                <h3 className="font-adventure text-lg font-bold text-gold">Register New Class</h3>
+              </div>
               <form onSubmit={handleCreateClass} className="grid grid-cols-1 md:grid-cols-5 gap-4 text-xs">
                 <div>
                   <label className="block font-bold text-gold-light mb-1">Classroom Name</label>
@@ -1563,7 +1616,15 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
           <div className="space-y-6">
             <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-jungle-light pb-2 mb-4">
-                <h3 className="font-adventure text-lg font-bold text-gold">Student Profiles Controller</h3>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleGoBack}
+                    className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                  >
+                    ← Back
+                  </button>
+                  <h3 className="font-adventure text-lg font-bold text-gold">Student Profiles Controller</h3>
+                </div>
                 {selectedStudentClassId && (
                   <button
                     onClick={() => {
@@ -1835,9 +1896,17 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
           <div className="space-y-6">
             {/* Importer trigger */}
             <div className="flex justify-between items-center bg-jungle-medium border border-jungle-light p-4 rounded-2xl">
-              <div>
-                <h3 className="font-adventure text-lg font-bold text-gold">Curriculum Syllabus Pool</h3>
-                <span className="text-[10px] text-gold-light block">Create MCQ entries or upload CSV questions</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleGoBack}
+                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                >
+                  ← Back
+                </button>
+                <div>
+                  <h3 className="font-adventure text-lg font-bold text-gold">Curriculum Syllabus Pool</h3>
+                  <span className="text-[10px] text-gold-light block">Create MCQ entries or upload CSV questions</span>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button
@@ -2171,7 +2240,15 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
         {activeTab === 'requests' && (
           <div className="space-y-6">
             <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-              <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2 mb-4">Join Requests</h3>
+              <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-4">
+                <button
+                  onClick={handleGoBack}
+                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                >
+                  ← Back
+                </button>
+                <h3 className="font-adventure text-lg font-bold text-gold">Join Requests</h3>
+              </div>
               <p className="text-xs text-gold-light mb-6">Review pending requests from students seeking to join your classrooms.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2216,7 +2293,15 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
         {/* TAB 6: CLASS LEADERBOARD STANDINGS */}
         {activeTab === 'leaderboard' && (
           <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-4">
-            <h3 className="font-adventure text-xl font-bold text-gold border-b border-jungle-light pb-2">Student Standings Leaderboard</h3>
+            <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-2">
+              <button
+                onClick={handleGoBack}
+                className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+              >
+                ← Back
+              </button>
+              <h3 className="font-adventure text-xl font-bold text-gold">Student Standings Leaderboard</h3>
+            </div>
             <p className="text-gold-light text-xs">Overview rank standings compiled across classes</p>
 
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 text-xs">
@@ -2248,7 +2333,15 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
           <div className="space-y-6">
             {/* List past games */}
             <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-              <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2 mb-4">Completed Game Session Reports</h3>
+              <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-4">
+                <button
+                  onClick={handleGoBack}
+                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                >
+                  ← Back
+                </button>
+                <h3 className="font-adventure text-lg font-bold text-gold">Completed Game Session Reports</h3>
+              </div>
               <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2 text-xs">
                 {pastReports.map(report => (
                   <button 
@@ -2358,7 +2451,15 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
         {/* TAB 8: SETTINGS PANEL */}
         {activeTab === 'settings' && (
           <div className="parchment-panel rounded-2xl p-8 text-jungle-deep max-w-md mx-auto space-y-4">
-            <h3 className="font-adventure text-2xl font-bold text-gold-dark border-b border-gold-dark/25 pb-2">Console Settings</h3>
+            <div className="flex items-center gap-3 border-b border-gold-dark/25 pb-2 mb-2">
+              <button
+                onClick={handleGoBack}
+                className="px-3 py-1.5 rounded-lg bg-gold/25 border border-gold-dark/30 hover:bg-gold/45 text-jungle-deep font-bold text-xs uppercase font-adventure transition-all"
+              >
+                ← Back
+              </button>
+              <h3 className="font-adventure text-2xl font-bold text-gold-dark">Console Settings</h3>
+            </div>
             
             <div className="flex justify-between items-center py-2 border-b border-gold-dark/10">
               <span className="text-xs font-bold text-jungle-light">Sidebar Theme Layout</span>
@@ -2387,7 +2488,15 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
         {activeTab === 'profile' && (
           <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl text-xs space-y-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="font-adventure text-xl font-bold text-gold">Teacher Profile Details</h3>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleGoBack}
+                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                >
+                  ← Back
+                </button>
+                <h3 className="font-adventure text-xl font-bold text-gold">Teacher Profile Details</h3>
+              </div>
               <button
                 onClick={() => {
                   setEditingProfile(!editingProfile);

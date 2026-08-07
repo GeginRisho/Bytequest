@@ -128,6 +128,191 @@ export default function App() {
 
   // Navigation Router: selection, local, student, teacher
   const [viewMode, setViewMode] = useState<'selection' | 'local' | 'student' | 'teacher'>('selection');
+  const [localScreen, setLocalScreen] = useState<'setup' | 'board' | 'handoff' | 'victory'>('setup');
+
+  // Lifted Student Navigation States
+  const [studentGameState, setStudentGameState] = useState<'dashboard' | 'lobby' | 'playing' | 'victory'>('dashboard');
+  const [studentActiveTab, setStudentActiveTab] = useState<'dashboard' | 'continue' | 'new_adventure' | 'practice_quiz' | 'daily_challenge' | 'leaderboard' | 'profile' | 'settings' | 'join_classroom'>('dashboard');
+  const [studentShowLobbyConfigModal, setStudentShowLobbyConfigModal] = useState<boolean>(false);
+
+  // Lifted Teacher Navigation States
+  const [teacherActiveTab, setTeacherActiveTab] = useState<'dashboard' | 'classes' | 'teachers' | 'students' | 'questions' | 'leaderboard' | 'reports' | 'settings' | 'profile' | 'requests'>('dashboard');
+  const [teacherShowModal, setTeacherShowModal] = useState<'create' | 'edit' | 'reset-password' | null>(null);
+
+  const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
+  const [pendingExitCallback, setPendingExitCallback] = useState<(() => void) | null>(null);
+
+  interface ByteQuestState {
+    viewMode: 'selection' | 'local' | 'student' | 'teacher';
+    localScreen: 'setup' | 'board' | 'handoff' | 'victory';
+    studentGameState: 'dashboard' | 'lobby' | 'playing' | 'victory';
+    studentActiveTab: 'dashboard' | 'continue' | 'new_adventure' | 'practice_quiz' | 'daily_challenge' | 'leaderboard' | 'profile' | 'settings' | 'join_classroom';
+    studentShowLobbyConfigModal: boolean;
+    teacherActiveTab: 'dashboard' | 'classes' | 'teachers' | 'students' | 'questions' | 'leaderboard' | 'reports' | 'settings' | 'profile' | 'requests';
+    teacherShowModal: 'create' | 'edit' | 'reset-password' | null;
+  }
+
+  const navigateTo = (updates: Partial<ByteQuestState>) => {
+    const nextState: ByteQuestState = {
+      viewMode: updates.viewMode ?? viewMode,
+      localScreen: updates.localScreen ?? localScreen,
+      studentGameState: updates.studentGameState ?? studentGameState,
+      studentActiveTab: updates.studentActiveTab ?? studentActiveTab,
+      studentShowLobbyConfigModal: updates.studentShowLobbyConfigModal ?? studentShowLobbyConfigModal,
+      teacherActiveTab: updates.teacherActiveTab ?? teacherActiveTab,
+      teacherShowModal: updates.teacherShowModal !== undefined ? updates.teacherShowModal : teacherShowModal,
+    };
+
+    if (updates.viewMode !== undefined) setViewMode(updates.viewMode);
+    if (updates.localScreen !== undefined) setLocalScreen(updates.localScreen);
+    if (updates.studentGameState !== undefined) setStudentGameState(updates.studentGameState);
+    if (updates.studentActiveTab !== undefined) setStudentActiveTab(updates.studentActiveTab);
+    if (updates.studentShowLobbyConfigModal !== undefined) setStudentShowLobbyConfigModal(updates.studentShowLobbyConfigModal);
+    if (updates.teacherActiveTab !== undefined) setTeacherActiveTab(updates.teacherActiveTab);
+    if (updates.teacherShowModal !== undefined) setTeacherShowModal(updates.teacherShowModal);
+
+    window.history.pushState(nextState, '');
+  };
+
+  const handleStudentActiveTab = (tab: any) => navigateTo({ studentActiveTab: tab });
+  const handleStudentGameState = (state: any) => navigateTo({ studentGameState: state });
+  const handleStudentShowLobbyConfigModal = (show: boolean) => navigateTo({ studentShowLobbyConfigModal: show });
+
+  const handleTeacherActiveTab = (tab: any) => navigateTo({ teacherActiveTab: tab });
+  const handleTeacherShowModal = (modal: any) => navigateTo({ teacherShowModal: modal });
+
+  useEffect(() => {
+    const initialState: ByteQuestState = {
+      viewMode: 'selection',
+      localScreen: 'setup',
+      studentGameState: 'dashboard',
+      studentActiveTab: 'dashboard',
+      studentShowLobbyConfigModal: false,
+      teacherActiveTab: 'dashboard',
+      teacherShowModal: null
+    };
+    if (!window.history.state) {
+      window.history.replaceState(initialState, '');
+    }
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state as ByteQuestState;
+      if (!state) return;
+
+      const isCurrentlyInActiveGame = 
+        (viewMode === 'local' && localScreen === 'board') ||
+        (viewMode === 'student' && studentGameState === 'playing');
+
+      const poppedStateIsActiveGame = 
+        (state.viewMode === 'local' && state.localScreen === 'board') ||
+        (state.viewMode === 'student' && state.studentGameState === 'playing');
+
+      if (isCurrentlyInActiveGame && !poppedStateIsActiveGame) {
+        const currentGameState: ByteQuestState = {
+          viewMode,
+          localScreen,
+          studentGameState,
+          studentActiveTab,
+          studentShowLobbyConfigModal,
+          teacherActiveTab,
+          teacherShowModal
+        };
+        window.history.pushState(currentGameState, '');
+
+        setPendingExitCallback(() => () => {
+          setViewMode(state.viewMode);
+          setLocalScreen(state.localScreen);
+          setStudentGameState(state.studentGameState);
+          setStudentActiveTab(state.studentActiveTab);
+          setStudentShowLobbyConfigModal(state.studentShowLobbyConfigModal);
+          setTeacherActiveTab(state.teacherActiveTab);
+          setTeacherShowModal(state.teacherShowModal);
+          window.history.replaceState(state, '');
+        });
+        setShowExitConfirm(true);
+        return;
+      }
+
+      setViewMode(state.viewMode);
+      setLocalScreen(state.localScreen);
+      setStudentGameState(state.studentGameState);
+      setStudentActiveTab(state.studentActiveTab);
+      setStudentShowLobbyConfigModal(state.studentShowLobbyConfigModal);
+      setTeacherActiveTab(state.teacherActiveTab);
+      setTeacherShowModal(state.teacherShowModal);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [viewMode, localScreen, studentGameState, studentActiveTab, studentShowLobbyConfigModal, teacherActiveTab, teacherShowModal]);
+
+  const handleGlobalBack = () => {
+    if (viewMode === 'local' && localScreen === 'board') {
+      setPendingExitCallback(() => () => {
+        navigateTo({ viewMode: 'selection', localScreen: 'setup' });
+      });
+      setShowExitConfirm(true);
+      return;
+    }
+    if (viewMode === 'student' && studentGameState === 'playing') {
+      setPendingExitCallback(() => () => {
+        if ((window as any).ByteQuestLeaveRoom) {
+          (window as any).ByteQuestLeaveRoom();
+        }
+        navigateTo({ viewMode: 'student', studentGameState: 'dashboard', studentActiveTab: 'new_adventure' });
+      });
+      setShowExitConfirm(true);
+      return;
+    }
+
+    if (viewMode === 'local' && localScreen === 'setup') {
+      window.history.back();
+      return;
+    }
+
+    if (viewMode === 'student') {
+      if (studentShowLobbyConfigModal) {
+        navigateTo({ studentShowLobbyConfigModal: false });
+        return;
+      }
+      if (studentGameState === 'lobby') {
+        if ((window as any).ByteQuestLeaveRoom) {
+          (window as any).ByteQuestLeaveRoom();
+        }
+        navigateTo({ studentGameState: 'dashboard', studentActiveTab: 'new_adventure' });
+        return;
+      }
+      if (studentGameState === 'dashboard') {
+        if (studentActiveTab === 'dashboard') {
+          navigateTo({ viewMode: 'selection' });
+        } else if (studentActiveTab === 'daily_challenge' || studentActiveTab === 'practice_quiz') {
+          navigateTo({ studentActiveTab: 'new_adventure' });
+        } else if (studentActiveTab === 'profile' || studentActiveTab === 'settings' || studentActiveTab === 'leaderboard') {
+          navigateTo({ studentActiveTab: 'dashboard' });
+        } else {
+          navigateTo({ studentActiveTab: 'dashboard' });
+        }
+        return;
+      }
+    }
+
+    if (viewMode === 'teacher') {
+      if (teacherShowModal) {
+        navigateTo({ teacherShowModal: null });
+        return;
+      }
+      if (teacherActiveTab !== 'dashboard') {
+        navigateTo({ teacherActiveTab: 'dashboard' });
+        return;
+      }
+      navigateTo({ viewMode: 'selection' });
+      return;
+    }
+
+    window.history.back();
+  };
 
   // Audio globally
   const [audioOn, setAudioOn] = useState<boolean>(true);
@@ -140,7 +325,6 @@ export default function App() {
   // ==========================================
   // LOCAL GAME MODE STATE MACHINE (PHASE 1)
   // ==========================================
-  const [localScreen, setLocalScreen] = useState<'setup' | 'board' | 'handoff' | 'victory'>('setup');
   const [localLevelUpTo, setLocalLevelUpTo] = useState<number | null>(null);
   
   // Local Player Setup
@@ -245,7 +429,7 @@ export default function App() {
     setLocalPlayerSolvedQuestionIds(savedState.playerSolved || []);
     setLocalBotSolvedQuestionIds(savedState.botSolved || []);
     
-    setViewMode('local');
+    navigateTo({ viewMode: 'local', localScreen: savedState.screen || 'board' });
     setLocalQuizPhase('answering');
     setLocalActiveQuestion(null);
     setLocalSelectedOptIdx(null);
@@ -965,9 +1149,28 @@ export default function App() {
       
       {/* Dynamic Hub Navbar */}
       <header className="border-b border-jungle-light bg-jungle-deep/85 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setViewMode('selection')}>
-          <Compass className="text-gold w-8 h-8 animate-pulse-slow" />
-          <h1 className="font-adventure text-2xl font-bold text-gold tracking-wide">ByteQuest: Treasure Hunt</h1>
+        <div className="flex items-center gap-3">
+          {viewMode !== 'selection' && (
+            <button
+              onClick={handleGlobalBack}
+              className="mr-2 px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 text-gold hover:bg-gold/25 active:scale-95 transition-all text-xs font-bold font-adventure flex items-center gap-1.5 shadow-md"
+            >
+              ← Back
+            </button>
+          )}
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => {
+            if (viewMode !== 'selection') {
+              if ((viewMode === 'local' && localScreen === 'board') || (viewMode === 'student' && studentGameState === 'playing')) {
+                setPendingExitCallback(() => () => navigateTo({ viewMode: 'selection' }));
+                setShowExitConfirm(true);
+              } else {
+                navigateTo({ viewMode: 'selection' });
+              }
+            }
+          }}>
+            <Compass className="text-gold w-8 h-8 animate-pulse-slow shrink-0" />
+            <h1 className="font-adventure text-xl sm:text-2xl font-bold text-gold tracking-wide truncate max-w-[180px] sm:max-w-none">ByteQuest</h1>
+          </div>
         </div>
         
         <div className="flex items-center gap-4">
@@ -993,7 +1196,7 @@ export default function App() {
             
             {/* Mode 1: Local */}
             <button
-              onClick={() => { sounds.playBeep(440, 'sine', 0.1); setViewMode('local'); setLocalScreen('setup'); }}
+              onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'local', localScreen: 'setup' }); }}
               className="parchment-panel rounded-2xl p-6 text-center hover:scale-105 active:scale-95 transition-all text-jungle-deep flex flex-col items-center justify-between h-72 shadow-lg"
             >
               <div className="my-auto space-y-3">
@@ -1010,7 +1213,7 @@ export default function App() {
 
             {/* Mode 2: Student Sync */}
             <button
-              onClick={() => { sounds.playBeep(480, 'sine', 0.1); setViewMode('student'); }}
+              onClick={() => { sounds.playBeep(480, 'sine', 0.1); navigateTo({ viewMode: 'student' }); }}
               className="parchment-panel rounded-2xl p-6 text-center hover:scale-105 active:scale-95 transition-all text-jungle-deep flex flex-col items-center justify-between h-72 shadow-lg"
             >
               <div className="my-auto space-y-3">
@@ -1027,7 +1230,7 @@ export default function App() {
 
             {/* Mode 3: Teacher Portal */}
             <button
-              onClick={() => { sounds.playBeep(520, 'sine', 0.1); setViewMode('teacher'); }}
+              onClick={() => { sounds.playBeep(520, 'sine', 0.1); navigateTo({ viewMode: 'teacher' }); }}
               className="parchment-panel rounded-2xl p-6 text-center hover:scale-105 active:scale-95 transition-all text-jungle-deep flex flex-col items-center justify-between h-72 shadow-lg"
             >
               <div className="my-auto space-y-3">
@@ -1049,16 +1252,29 @@ export default function App() {
 
       {/* R2: TEACHER DASHBOARD PORTAL */}
       {viewMode === 'teacher' && (
-        <TeacherDashboard onBack={() => setViewMode('selection')} socket={socket} />
+        <TeacherDashboard 
+          onBack={() => navigateTo({ viewMode: 'selection' })} 
+          socket={socket} 
+          activeTab={teacherActiveTab}
+          setActiveTab={handleTeacherActiveTab}
+          showTeacherModal={teacherShowModal}
+          setShowTeacherModal={handleTeacherShowModal}
+        />
       )}
 
       {/* R3: STUDENT LOBBY / LIVE GAMEPLAY */}
       {viewMode === 'student' && (
         <StudentGame 
-          onBack={() => setViewMode('selection')} 
+          onBack={() => navigateTo({ viewMode: 'selection' })} 
           socket={socket} 
-          onStartSoloPractice={() => { sounds.playBeep(440, 'sine', 0.1); setViewMode('local'); setLocalScreen('setup'); }}
+          onStartSoloPractice={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'local', localScreen: 'setup' }); }}
           onResumeLocalPractice={resumeLocalPracticeGame}
+          gameState={studentGameState}
+          setGameState={handleStudentGameState}
+          activeTab={studentActiveTab}
+          setActiveTab={handleStudentActiveTab}
+          showLobbyConfigModal={studentShowLobbyConfigModal}
+          setShowLobbyConfigModal={handleStudentShowLobbyConfigModal}
         />
       )}
 
@@ -1540,18 +1756,65 @@ export default function App() {
                 </table>
               </div>
 
-              <button 
-                onClick={() => { sounds.playBeep(440, 'sine', 0.1); setLocalScreen('setup'); }}
-                className="px-10 py-4 bg-gold text-jungle-deep rounded-full font-bold text-base shadow-xl"
-              >
-                Restart Session
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                <button 
+                  onClick={() => { sounds.playBeep(440, 'sine', 0.1); setLocalScreen('setup'); }}
+                  className="px-6 py-3 bg-gold text-jungle-deep font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
+                >
+                  Play Again
+                </button>
+                <button 
+                  onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'student', studentGameState: 'dashboard', studentActiveTab: 'new_adventure' }); }}
+                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
+                >
+                  Back to Explorer Launchpad
+                </button>
+                <button 
+                  onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'student', studentGameState: 'dashboard', studentActiveTab: 'dashboard' }); }}
+                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
+                >
+                  Return to Dashboard
+                </button>
+              </div>
             </main>
           )}
         </div>
       )}
 
-
+      {/* Leave Game Confirmation Dialog */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[999999] animate-fade-in select-text">
+          <div className="parchment-panel text-jungle-deep p-6 rounded-2xl w-full max-w-sm shadow-2xl relative border border-gold-dark/30">
+            <h3 className="font-adventure text-2xl font-bold text-red-700 mb-2 uppercase tracking-wide">
+              Leave Game?
+            </h3>
+            <p className="text-xs font-semibold text-jungle-light mb-6">
+              Current match progress will be lost.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowExitConfirm(false);
+                  setPendingExitCallback(null);
+                }}
+                className="flex-1 py-2.5 bg-gray-200 hover:bg-gray-300 text-jungle-deep font-bold rounded-lg text-xs uppercase transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowExitConfirm(false);
+                  if (pendingExitCallback) pendingExitCallback();
+                  setPendingExitCallback(null);
+                }}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-xs uppercase shadow-md transition-colors"
+              >
+                Leave Game
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

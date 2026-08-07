@@ -183,7 +183,7 @@ export class SocketService {
           currentRoll: null,
           activeQuestion: null,
           questionTimer: null,
-          timerRemaining: 20,
+          timerRemaining: 15,
           askedQuestionIds: [],
           wasInLastPlace: {},
           studentStats: {},
@@ -307,12 +307,12 @@ export class SocketService {
         const q = room.pendingRetryQuestion;
         room.pendingRetryQuestion = null; // Clear it immediately
         room.activeQuestion = q;
-        room.timerRemaining = 20;
+        room.timerRemaining = 15;
 
         // Emit question to the room
         this.io.to(roomCode).emit('game:question_pushed', {
           question: q,
-          timerRemaining: 20
+          timerRemaining: 15
         });
 
         // Start countdown
@@ -322,7 +322,7 @@ export class SocketService {
           if (room.timerRemaining <= 0) {
             clearInterval(room.questionTimer);
             room.questionTimer = null;
-            this.handleAnswerSubmit(roomCode, '', -1, 20); // Time out
+            this.handleAnswerSubmit(roomCode, '', -1, 15); // Time out
           }
         }, 1000);
         return;
@@ -400,12 +400,12 @@ export class SocketService {
       const q = unasked[Math.floor(Math.random() * unasked.length)] || pool[0];
       room.askedQuestionIds.push(q.id);
       room.activeQuestion = q;
-      room.timerRemaining = 20;
+      room.timerRemaining = 15;
 
       // Emit question to the room
       this.io.to(roomCode).emit('game:question_pushed', {
         question: q,
-        timerRemaining: 20
+        timerRemaining: 15
       });
 
       // Start countdown
@@ -415,7 +415,7 @@ export class SocketService {
         if (room.timerRemaining <= 0) {
           clearInterval(room.questionTimer);
           room.questionTimer = null;
-          this.handleAnswerSubmit(roomCode, '', -1, 20); // Time out
+          this.handleAnswerSubmit(roomCode, '', -1, 15); // Time out
         }
       }, 1000);
     } catch (err: any) {

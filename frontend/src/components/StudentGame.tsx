@@ -44,9 +44,26 @@ interface StudentGameProps {
   socket: any;
   onStartSoloPractice: () => void;
   onResumeLocalPractice: (savedState: any) => void;
+  gameState: 'dashboard' | 'lobby' | 'playing' | 'victory';
+  setGameState: (state: 'dashboard' | 'lobby' | 'playing' | 'victory') => void;
+  activeTab: 'dashboard' | 'continue' | 'new_adventure' | 'practice_quiz' | 'daily_challenge' | 'leaderboard' | 'profile' | 'settings' | 'join_classroom';
+  setActiveTab: (tab: 'dashboard' | 'continue' | 'new_adventure' | 'practice_quiz' | 'daily_challenge' | 'leaderboard' | 'profile' | 'settings' | 'join_classroom') => void;
+  showLobbyConfigModal: boolean;
+  setShowLobbyConfigModal: (show: boolean) => void;
 }
 
-export default function StudentGame({ onBack, socket, onStartSoloPractice, onResumeLocalPractice }: StudentGameProps) {
+export default function StudentGame({ 
+  onBack, 
+  socket, 
+  onStartSoloPractice, 
+  onResumeLocalPractice,
+  gameState,
+  setGameState,
+  activeTab,
+  setActiveTab,
+  showLobbyConfigModal,
+  setShowLobbyConfigModal
+}: StudentGameProps) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -88,24 +105,17 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
   const [wClassId, setWClassId] = useState('');
 
   // Dashboard Nav States
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'continue' | 'new_adventure' | 'practice_quiz' | 'daily_challenge' | 'leaderboard' | 'profile' | 'settings' | 'join_classroom'>('dashboard');
   const [joinCodeInput, setJoinCodeInput] = useState<string>('');
   const [joinClassroomStatus, setJoinClassroomStatus] = useState<string>('');
   const [joinClassroomError, setJoinClassroomError] = useState<string>('');
   
-  // Navigation History
-  const [tabHistory, setTabHistory] = useState<string[]>([]);
-  const [prevTab, setPrevTab] = useState<string>('dashboard');
-
   // Lobby Config States
   const [lobbyConfigName, setLobbyConfigName] = useState<string>('');
   const [lobbyConfigGrade, setLobbyConfigGrade] = useState<string>('mixed');
   const [lobbyConfigMaxPlayers, setLobbyConfigMaxPlayers] = useState<number>(4);
   const [lobbyConfigPrivate, setLobbyConfigPrivate] = useState<boolean>(false);
-  const [showLobbyConfigModal, setShowLobbyConfigModal] = useState<boolean>(false);
 
   // Active Game State controls
-  const [gameState, setGameState] = useState<'dashboard' | 'lobby' | 'playing' | 'victory'>('dashboard');
   const [roomCode, setRoomCode] = useState<string>('');
   const [joinError, setJoinError] = useState<string>('');
   const [multiplayerLevelUp, setMultiplayerLevelUp] = useState<boolean>(false);
@@ -120,8 +130,38 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
   // Synced Quiz State
   const [activeQuestion, setActiveQuestion] = useState<any>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [timerRemaining, setTimerRemaining] = useState<number>(20);
+  const [timerRemaining, setTimerRemaining] = useState<number>(15);
   const [quizResult, setQuizResult] = useState<any>(null);
+
+  // Synced 15-second Turn Countdown Effect
+  useEffect(() => {
+    if (gameState !== 'playing' || !activeQuestion) {
+      setTimerRemaining(15);
+      return;
+    }
+    const interval = setInterval(() => {
+      setTimerRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activeQuestion, gameState]);
+
+  // Expose socket room leave logic to global window object
+  useEffect(() => {
+    (window as any).ByteQuestLeaveRoom = () => {
+      if (socket && syncState) {
+        socket.emit('room:leave', { roomCode: syncState.roomCode });
+      }
+    };
+    return () => {
+      delete (window as any).ByteQuestLeaveRoom;
+    };
+  }, [socket, syncState]);
 
   // Audio Config
   const [audioOn, setAudioOn] = useState<boolean>(true);
@@ -589,27 +629,36 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
     }
   };
 
-  useEffect(() => {
-    if (activeTab !== prevTab) {
-      setTabHistory(prev => {
-        if (prev[prev.length - 1] === prevTab) return prev;
-        return [...prev, prevTab];
-      });
-      setPrevTab(activeTab);
-    }
-  }, [activeTab, prevTab]);
-
   const handleGoBack = () => {
     playBeep(430, 'sine', 0.05);
-    if (tabHistory.length > 0) {
-      const nextHistory = [...tabHistory];
-      const lastTab = (nextHistory.pop() || 'dashboard') as any;
-      setTabHistory(nextHistory);
-      setPrevTab(lastTab);
-      setActiveTab(lastTab);
+    if (showLobbyConfigModal) {
+      setShowLobbyConfigModal(false);
+      return;
+    }
+    if (gameState === 'lobby') {
+      if (socket) socket.emit('room:leave', { roomCode: syncState?.roomCode });
+      setGameState('dashboard');
+      setActiveTab('new_adventure');
+      return;
+    }
+    if (gameState === 'playing') {
+      onBack();
+      return;
+    }
+    if (activeTab === 'profile' || activeTab === 'settings' || activeTab === 'leaderboard') {
+      setActiveTab('dashboard');
+    } else if (activeTab === 'daily_challenge' || activeTab === 'practice_quiz') {
+      setActiveTab('new_adventure');
     } else {
       setActiveTab('dashboard');
     }
+  };
+
+  const getTimerColorClass = (seconds: number, hasQuestion: boolean) => {
+    if (!hasQuestion) return 'text-gold-light/40';
+    if (seconds === 5) return 'text-orange-500 animate-pulse';
+    if (seconds < 5) return 'text-red-500 animate-pulse font-extrabold';
+    return 'text-emerald-500';
   };
 
   const handleSelectNameAndJoin = () => {
@@ -1277,6 +1326,14 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
           {activeTab === 'continue' && (
             <div className="space-y-6 max-w-xl mx-auto">
+              <div className="flex justify-start">
+                <button
+                  onClick={handleGoBack}
+                  className="px-4 py-2 bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold rounded-lg text-xs uppercase font-adventure transition-all"
+                >
+                  ← Back
+                </button>
+              </div>
               {/* Option A: Reconnect Live Match */}
               {roomCode && (
                 <div className="parchment-panel rounded-2xl p-8 text-jungle-deep text-center space-y-4 shadow-xl">
@@ -1330,9 +1387,19 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
           {activeTab === 'new_adventure' && (
             <div className="space-y-4">
-              <div className="bg-jungle-medium border border-jungle-light p-4 rounded-xl">
-                <h3 className="font-adventure text-lg font-bold text-gold uppercase tracking-wider">Explorer Launchpad</h3>
-                <p className="text-gold-light text-[10px]">Select a game mode to begin your CS learning campaign.</p>
+              <div className="bg-jungle-medium border border-jungle-light p-4 rounded-xl flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleGoBack}
+                    className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                  >
+                    ← Back
+                  </button>
+                  <div>
+                    <h3 className="font-adventure text-lg font-bold text-gold uppercase tracking-wider">Explorer Launchpad</h3>
+                    <p className="text-gold-light text-[10px]">Select a game mode to begin your CS learning campaign.</p>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -1548,6 +1615,16 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
           {activeTab === 'practice_quiz' && (
             <div className="space-y-6">
+              {!quizActive && (
+                <div className="max-w-lg mx-auto flex justify-start">
+                  <button
+                    onClick={handleGoBack}
+                    className="px-4 py-2 bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold rounded-lg text-xs uppercase font-adventure transition-all"
+                  >
+                    ← Back
+                  </button>
+                </div>
+              )}
               {!quizActive ? (
                 <div className="parchment-panel rounded-2xl p-8 text-jungle-deep max-w-lg mx-auto space-y-4">
                   <h3 className="font-adventure text-2xl font-bold text-center text-gold-dark">Practice Quiz Mode</h3>
@@ -1656,6 +1733,16 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
           {activeTab === 'daily_challenge' && (
             <div className="space-y-6">
+              {!dailyActive && (
+                <div className="max-w-lg mx-auto flex justify-start">
+                  <button
+                    onClick={handleGoBack}
+                    className="px-4 py-2 bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold rounded-lg text-xs uppercase font-adventure transition-all"
+                  >
+                    ← Back
+                  </button>
+                </div>
+              )}
               {!dailyActive ? (
                 <div className="parchment-panel rounded-2xl p-8 text-jungle-deep max-w-lg mx-auto space-y-4 text-center">
                   <span className="text-6xl block">⚡</span>
@@ -1737,7 +1824,15 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
           {activeTab === 'leaderboard' && (
             <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-4">
-              <h3 className="font-adventure text-xl font-bold text-gold border-b border-jungle-light pb-2">Class Leaderboard</h3>
+              <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-2">
+                <button
+                  onClick={handleGoBack}
+                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                >
+                  ← Back
+                </button>
+                <h3 className="font-adventure text-xl font-bold text-gold">Class Leaderboard</h3>
+              </div>
               <p className="text-gold-light text-xs">Standings of other students in: <span className="font-bold text-white">{activeStudent.className}</span></p>
 
               <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
@@ -1769,7 +1864,15 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
           {activeTab === 'join_classroom' && (
             <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-6">
-              <h3 className="font-adventure text-xl font-bold text-gold border-b border-jungle-light pb-2">Join Classroom</h3>
+              <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-2">
+                <button
+                  onClick={handleGoBack}
+                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                >
+                  ← Back
+                </button>
+                <h3 className="font-adventure text-xl font-bold text-gold">Join Classroom</h3>
+              </div>
               <p className="text-gold-light text-xs">Enter a unique Join Code provided by your teacher to connect with your class.</p>
 
               <form onSubmit={handleJoinCodeSubmit} className="space-y-4 max-w-md">
@@ -1845,7 +1948,15 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
             <div className="space-y-6">
               <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-adventure text-xl font-bold text-gold">Explorer Profile</h3>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleGoBack}
+                      className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                    >
+                      ← Back
+                    </button>
+                    <h3 className="font-adventure text-xl font-bold text-gold">Explorer Profile</h3>
+                  </div>
                   <button
                     onClick={() => {
                       setEditingProfile(!editingProfile);
@@ -2101,7 +2212,15 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
           {activeTab === 'settings' && (
             <div className="parchment-panel rounded-2xl p-8 text-jungle-deep max-w-md mx-auto space-y-4">
-              <h3 className="font-adventure text-2xl font-bold text-gold-dark border-b border-gold-dark/25 pb-2">Audio & Themes</h3>
+              <div className="flex items-center gap-3 border-b border-gold-dark/25 pb-2 mb-2">
+                <button
+                  onClick={handleGoBack}
+                  className="px-3 py-1.5 rounded-lg bg-gold/25 border border-gold-dark/30 hover:bg-gold/45 text-jungle-deep font-bold text-xs uppercase font-adventure transition-all"
+                >
+                  ← Back
+                </button>
+                <h3 className="font-adventure text-2xl font-bold text-gold-dark">Audio & Themes</h3>
+              </div>
               
               <div className="flex justify-between items-center py-2 border-b border-gold-dark/10">
                 <span className="text-xs font-bold text-jungle-light">Sound Effects</span>
@@ -2400,8 +2519,14 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   <span className="text-[9px] bg-gold/15 text-gold px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block font-sans">
                     Active Turn
                   </span>
+                  <div className="mt-1 flex items-center justify-center gap-1.5 font-sans">
+                    <span className="text-[8px] text-gold-light/75 font-bold uppercase tracking-wider">⏱ Time:</span>
+                    <span className={`text-[10px] font-bold font-mono tracking-tight ${getTimerColorClass(timerRemaining, activeQuestion !== null)}`}>
+                      {activeQuestion ? `${timerRemaining}s` : '15s'}
+                    </span>
+                  </div>
                   {localRollResult !== null && (
-                    <p className="text-gold-glow font-bold font-mono text-[10px] mt-1.5">
+                    <p className="text-gold-glow font-bold font-mono text-[10px] mt-1">
                       Rolled: {localRollResult} 🎲
                     </p>
                   )}
@@ -2428,6 +2553,13 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   </span>
                   <span className="text-[10px] bg-gold/15 text-gold px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block">
                     Active Turn
+                  </span>
+                </div>
+
+                <div className="mb-4 border-t border-b border-jungle-light/20 py-3 w-full flex flex-col items-center gap-1 font-sans">
+                  <span className="text-[10px] text-gold-light/75 font-bold uppercase tracking-wider">⏱ Time Remaining</span>
+                  <span className={`text-xl font-bold font-mono tracking-tight ${getTimerColorClass(timerRemaining, activeQuestion !== null)}`}>
+                    {activeQuestion ? `${timerRemaining}s` : '15s'}
                   </span>
                 </div>
 
@@ -2546,9 +2678,11 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
               {!quizResult && (
                 <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-sm border-2 ${
-                  timerRemaining <= 5 
-                    ? 'bg-rose-100 text-rose-700 border-rose-400 animate-pulse' 
-                    : 'bg-amber-50 text-amber-800 border-amber-300'
+                  timerRemaining === 5 
+                    ? 'bg-orange-100 text-orange-700 border-orange-400 animate-pulse' 
+                    : timerRemaining < 5
+                      ? 'bg-rose-100 text-rose-700 border-rose-400 animate-pulse' 
+                      : 'bg-amber-50 text-amber-800 border-amber-300'
                 }`}>
                   <Clock className="w-4 h-4" />
                   <span>{timerRemaining}s</span>
@@ -2650,12 +2784,34 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
               </table>
             </div>
 
-            <button 
-              onClick={() => setGameState('dashboard')}
-              className="px-8 py-3.5 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg border border-gold-dark shadow-md"
-            >
-              Return to Dashboard
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
+              <button 
+                onClick={() => {
+                  setLobbyConfigName(`${activeStudent.name}'s Party`);
+                  setLobbyConfigGrade('mixed');
+                  setLobbyConfigMaxPlayers(4);
+                  setLobbyConfigPrivate(false);
+                  setGameState('dashboard');
+                  setActiveTab('new_adventure');
+                  setShowLobbyConfigModal(true);
+                }}
+                className="px-6 py-3 bg-gold text-jungle-deep font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
+              >
+                Play Again
+              </button>
+              <button 
+                onClick={() => { setGameState('dashboard'); setActiveTab('new_adventure'); }}
+                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
+              >
+                Back to Explorer Launchpad
+              </button>
+              <button 
+                onClick={() => { setGameState('dashboard'); setActiveTab('dashboard'); }}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
+              >
+                Return to Dashboard
+              </button>
+            </div>
           </div>
         </main>
       )}
