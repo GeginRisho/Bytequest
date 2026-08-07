@@ -23,7 +23,7 @@ import {
   Loader,
   Flag
 } from 'lucide-react';
-import { Tile, BOARD_TILES, TILE_COORDS, SAFE_TILES, PRESET_COLORS, PRESET_AVATARS } from '../config';
+import { Tile, BOARD_TILES, TILE_COORDS_DESKTOP, TILE_COORDS_MOBILE, SAFE_TILES, PRESET_COLORS, PRESET_AVATARS } from '../config';
 import { questionBank, Question } from '../questions';
 import confetti from 'canvas-confetti';
 
@@ -47,6 +47,16 @@ interface StudentGameProps {
 }
 
 export default function StudentGame({ onBack, socket, onStartSoloPractice, onResumeLocalPractice }: StudentGameProps) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const TILE_COORDS = isMobile ? TILE_COORDS_MOBILE : TILE_COORDS_DESKTOP;
+
   // Authentication & Profile States
   const [activeStudent, setActiveStudent] = useState<any>(null);
   const [classList, setClassList] = useState<any[]>([]);
@@ -2268,7 +2278,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
       {gameState === 'playing' && syncState && (
         <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative">
           {activeStudent && (
-            <div className="sticky top-14 md:top-0 z-30 bg-jungle-medium/95 backdrop-blur border border-jungle-light px-4 py-2 rounded-xl flex items-center justify-between gap-2 mb-4 shadow-lg text-[10px] md:text-xs font-bold font-adventure text-gold-light">
+            <div className="sticky top-14 md:top-0 z-30 bg-jungle-medium/95 backdrop-blur border border-jungle-light px-2 py-1 md:px-4 md:py-2 rounded-xl flex items-center justify-between gap-1 md:gap-2 mb-4 shadow-lg text-[9px] md:text-xs font-bold font-adventure text-gold-light whitespace-nowrap overflow-x-auto scrollbar-none">
               <div>🛡️ LVL <span className="text-white font-mono">{activeStudent.level}</span></div>
               <div className="hidden sm:inline">|</div>
               <div>⭐ XP <span className="text-white font-mono">{activeStudent.xp}</span></div>
@@ -2281,11 +2291,11 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full items-start">
             
-            <div className="lg:col-span-3 bg-jungle-medium border border-jungle-light p-3 md:p-4 rounded-2xl md:rounded-3xl relative shadow-2xl w-full flex flex-col gap-3">
+            <div className="lg:col-span-3 bg-jungle-medium border border-jungle-light p-2 md:p-4 rounded-2xl md:rounded-3xl relative shadow-2xl w-full flex flex-col gap-3">
               <div className="relative aspect-[4/3] w-full bg-jungle-deep/45 border border-gold/15 rounded-xl md:rounded-2xl flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#1a3d30,transparent_70%)]"></div>
                 
-                <div className="relative w-[78%] h-[78%] md:w-[90%] md:h-[90%]">
+                <div className="relative w-[82%] h-[82%] md:w-[90%] md:h-[90%]">
                   
                   <svg className="absolute inset-0 w-full h-full pointer-events-none">
                     <path 
@@ -2332,7 +2342,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                     return (
                       <div 
                         key={tIdx}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-[30px] h-[30px] sm:w-[52px] sm:h-[52px] rounded-full border-2 flex items-center justify-center text-[10px] sm:text-lg font-bold transition-all duration-300 shadow-md group ${tileColor} ${destinationClass} ${safeClass}`}
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 border-[1.5px] text-[10px] sm:w-14 sm:h-14 sm:border-2 sm:text-xl rounded-full flex items-center justify-center font-bold transition-all duration-300 shadow-md group ${tileColor} ${destinationClass} ${safeClass}`}
                         style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                       >
                         <span>{tileSymbol}</span>
@@ -2341,7 +2351,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                             <Shield className="w-2 h-2" />
                           </div>
                         )}
-                        <span className="absolute -bottom-1 -right-1 text-[6px] sm:text-[8px] w-3 h-3 sm:w-4 sm:h-4 bg-jungle-deep text-gold rounded-full flex items-center justify-center border border-gold/40">
+                        <span className="absolute -bottom-1 -right-1 text-[6px] w-3 h-3 sm:text-[8px] sm:w-4 sm:h-4 bg-jungle-deep text-gold rounded-full flex items-center justify-center border border-gold/40">
                           {tIdx}
                         </span>
                       </div>
@@ -2357,7 +2367,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                     return (
                       <div
                         key={t.id}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-[26px] h-[26px] sm:w-[38px] sm:h-[38px] rounded-full border-2 flex items-center justify-center text-[9px] sm:text-xs font-extrabold shadow-lg transition-all duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] z-20 ${t.color} ${
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 border-[1.5px] text-[9px] sm:w-10 sm:h-10 sm:border-2 sm:text-xs rounded-full flex items-center justify-center font-extrabold shadow-lg transition-all duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] z-20 ${t.color} ${
                           syncState.activeTeamIdx === idx ? 'ring-3 sm:ring-4 ring-gold animate-bounce-slow' : ''
                         }`}
                         style={{ 
@@ -2382,7 +2392,7 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
               </div>
 
               {/* MOBILE DOCKED TURN PANEL - MERGED & DOCKED OUTSIDE PATH */}
-              <div className="flex md:hidden bg-jungle-deep/40 border border-gold/20 p-3 rounded-xl flex-col items-center justify-center gap-2.5 shadow-md select-none text-center">
+              <div className="flex md:hidden bg-jungle-deep/40 border border-gold/20 p-2 rounded-xl flex-col items-center justify-center gap-1.5 shadow-md select-none text-center w-full max-w-[280px] mx-auto">
                 <div>
                   <h4 className="text-gold font-adventure text-sm font-bold block truncate max-w-[200px]" title={getActivePlayerName()}>
                     {getActivePlayerName()}
@@ -2401,9 +2411,9 @@ export default function StudentGame({ onBack, socket, onStartSoloPractice, onRes
                   <button
                     onClick={handleRollClick}
                     disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
-                    className="w-14 h-14 bg-gold hover:bg-gold-light border border-gold-dark text-jungle-deep rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-90 disabled:opacity-40 disabled:pointer-events-none transition-all duration-150"
+                    className="w-12 h-12 bg-gold hover:bg-gold-light border border-gold-dark text-jungle-deep rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-90 disabled:opacity-40 disabled:pointer-events-none transition-all duration-150"
                   >
-                    <Dices className={`w-6 h-6 ${diceRolling ? 'animate-bounce' : ''}`} />
+                    <Dices className={`w-5 h-5 ${diceRolling ? 'animate-bounce' : ''}`} />
                   </button>
                 </div>
               </div>

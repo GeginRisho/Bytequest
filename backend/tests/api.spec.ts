@@ -68,7 +68,8 @@ describe('ByteQuest Teacher API Tests', () => {
       role: 'TEACHER',
       teacherProfile: {
         id: 'teacher-123',
-        schoolId: 'school-123'
+        schoolId: 'school-123',
+        isActive: true
       }
     };
 

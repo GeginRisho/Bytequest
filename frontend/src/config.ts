@@ -30,7 +30,28 @@ export const BOARD_TILES: Tile[] = [
   { index: 17, type: 'finish', label: 'Final Treasure', description: 'The Golden Cup of CS Mastery!' }
 ];
 
-export const TILE_COORDS = [
+export const TILE_COORDS_DESKTOP = [
+  { x: 10, y: 15 },
+  { x: 23, y: 12 },
+  { x: 36, y: 17 },
+  { x: 49, y: 13 },
+  { x: 62, y: 19 },
+  { x: 75, y: 14 },
+  { x: 88, y: 22 },
+  { x: 86, y: 43 },
+  { x: 73, y: 49 },
+  { x: 59, y: 41 },
+  { x: 45, y: 47 },
+  { x: 31, y: 40 },
+  { x: 17, y: 48 },
+  { x: 13, y: 70 },
+  { x: 26, y: 81 },
+  { x: 43, y: 74 },
+  { x: 63, y: 83 },
+  { x: 83, y: 76 }
+];
+
+export const TILE_COORDS_MOBILE = [
   { x: 8, y: 10 },
   { x: 23, y: 8 },
   { x: 38, y: 10 },

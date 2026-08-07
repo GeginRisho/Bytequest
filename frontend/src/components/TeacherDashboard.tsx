@@ -77,11 +77,7 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
   // Active Tab: Redesigned exact navigation items
   const [activeTab, setActiveTab] = useState<'dashboard' | 'classes' | 'teachers' | 'students' | 'questions' | 'leaderboard' | 'reports' | 'settings' | 'profile' | 'requests'>('dashboard');
 
-  // Teacher Signup State
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [signupFirstName, setSignupFirstName] = useState('');
-  const [signupLastName, setSignupLastName] = useState('');
-  const [signupSchoolName, setSignupSchoolName] = useState('');
+  // Teacher Signup State (Public self-registration disabled; accounts created via Teacher Management only)
 
   // Teacher Management State
   const [teachersList, setTeachersList] = useState<any[]>([]);
@@ -361,33 +357,6 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    try {
-      const res = await fetch(`${API_BASE}/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password,
-          firstName: signupFirstName,
-          lastName: signupLastName,
-          schoolName: signupSchoolName
-        })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setIsAuthenticated(true);
-        setTeacherInfo(data.teacher);
-        localStorage.setItem('bytequest_teacher_id', data.teacher.id);
-      } else {
-        setAuthError(data.error || 'Signup failed.');
-      }
-    } catch (err: any) {
-      setAuthError(err.message || 'Server connection error during signup');
-    }
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -916,110 +885,8 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
     return matchesSearch && matchesGrade && matchesDifficulty;
   });
 
-  // Render Login/Signup Panel if not authenticated
+  // Render Login Panel if not authenticated
   if (!isAuthenticated) {
-    if (authMode === 'signup') {
-      return (
-        <div className="max-w-md mx-auto px-6 py-16 flex flex-col justify-center min-h-[85vh]">
-          <div className="parchment-panel rounded-2xl p-8 text-jungle-deep shadow-2xl relative">
-            <div className="flex items-center gap-2 mb-4 justify-center">
-              <Compass className="w-8 h-8 text-gold-dark animate-spin-slow" />
-              <h2 className="font-adventure text-3xl font-bold tracking-wide">Teacher Signup</h2>
-            </div>
-            
-            <form onSubmit={handleSignup} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-jungle-light mb-1">First Name</label>
-                  <input 
-                    type="text" 
-                    value={signupFirstName}
-                    onChange={(e) => setSignupFirstName(e.target.value)}
-                    className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-jungle-light mb-1">Last Name</label>
-                  <input 
-                    type="text" 
-                    value={signupLastName}
-                    onChange={(e) => setSignupLastName(e.target.value)}
-                    className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase text-jungle-light mb-1">School Name</label>
-                <input 
-                  type="text" 
-                  value={signupSchoolName}
-                  onChange={(e) => setSignupSchoolName(e.target.value)}
-                  placeholder="e.g. Delhi Public School"
-                  className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase text-jungle-light mb-1">Email Address</label>
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-bold uppercase text-jungle-light mb-1">Password</label>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                  required
-                />
-              </div>
-
-              {authError && (
-                <div className="bg-red-50 text-red-700 text-xs p-2.5 rounded-lg font-semibold flex gap-1.5 items-center">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{authError}</span>
-                </div>
-              )}
-
-              <div className="pt-2">
-                <button 
-                  type="submit"
-                  className="w-full py-3 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg shadow-md transition-colors"
-                >
-                  Create Account
-                </button>
-              </div>
-            </form>
-
-            <button 
-              onClick={() => { setAuthMode('login'); setAuthError(''); }}
-              className="w-full mt-3 py-1 text-center text-xs text-gold-dark font-bold hover:text-jungle-deep transition-colors"
-            >
-              Already have an account? Log In
-            </button>
-
-            <button 
-              onClick={onBack}
-              className="w-full mt-2 py-1 text-center text-xs text-jungle-light font-bold hover:text-jungle-deep transition-colors"
-            >
-              ← Return to Selection
-            </button>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="max-w-md mx-auto px-6 py-16 flex flex-col justify-center min-h-[85vh]">
         <div className="parchment-panel rounded-2xl p-8 text-jungle-deep shadow-2xl relative">
@@ -1041,7 +908,7 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
             </div>
             
             <div>
-              <label className="block text-xs font-bold uppercase text-jungle-light mb-1">Access Password</label>
+              <label className="block text-xs font-bold uppercase text-jungle-light mb-1">Password</label>
               <input 
                 type="password" 
                 value={password}
@@ -1069,15 +936,8 @@ export default function TeacherDashboard({ onBack, socket }: TeacherDashboardPro
           </form>
 
           <button 
-            onClick={() => { setAuthMode('signup'); setAuthError(''); }}
-            className="w-full mt-3 py-1 text-center text-xs text-gold-dark font-bold hover:text-jungle-deep transition-colors"
-          >
-            Create Teacher Account
-          </button>
-
-          <button 
             onClick={onBack}
-            className="w-full mt-2 py-1 text-center text-xs text-jungle-light font-bold hover:text-jungle-deep transition-colors"
+            className="w-full mt-4 py-1 text-center text-xs text-jungle-light font-bold hover:text-jungle-deep transition-colors"
           >
             ← Return to Selection
           </button>
