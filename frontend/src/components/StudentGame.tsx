@@ -39,6 +39,22 @@ const getTokenOffset = (indexOnTile: number, totalOnTile: number) => {
   };
 };
 
+const getCurvedPath = (coords: { x: number; y: number }[]) => {
+  if (coords.length === 0) return '';
+  let d = `M ${coords[0].x} ${coords[0].y}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i];
+    const p1 = coords[i + 1];
+    if (p0.y !== p1.y) {
+      const cpX = p0.x + (p0.x > 50 ? 7 : -7);
+      d += ` C ${cpX} ${p0.y}, ${cpX} ${p1.y}, ${p1.x} ${p1.y}`;
+    } else {
+      d += ` L ${p1.x} ${p1.y}`;
+    }
+  }
+  return d;
+};
+
 interface StudentGameProps {
   onBack: () => void;
   socket: any;
@@ -2193,113 +2209,136 @@ export default function StudentGame({
       {gameState === 'playing' && syncState && (
         <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative">
           {activeStudent && (
-            <div className="sticky top-14 md:top-0 z-30 bg-jungle-medium/95 backdrop-blur border border-jungle-light px-2 py-1 md:px-4 md:py-2 rounded-xl flex items-center justify-between gap-1 md:gap-2 mb-4 shadow-lg text-[9px] md:text-xs font-bold font-adventure text-gold-light whitespace-nowrap overflow-x-auto scrollbar-none">
-              <div>🛡️ LVL <span className="text-white font-mono">{activeStudent.level}</span></div>
-              <div className="hidden sm:inline">|</div>
-              <div>⭐ XP <span className="text-white font-mono">{activeStudent.xp}</span></div>
-              <div>|</div>
-              <div>🪙 COINS <span className="text-white font-mono">{activeStudent.coins}</span></div>
-              <div>|</div>
-              <div>⚔️ MATCHES <span className="text-white font-mono">{activeStudent.matchesPlayed || 0}</span></div>
+            <div className="sticky top-14 md:top-[60px] z-30 bg-[#3B0F0F] border-3 border-[#D4AF37] px-4 py-3 rounded-2xl flex items-center justify-between gap-4 mb-4 shadow-[0_5px_15px_rgba(0,0,0,0.5)] text-white select-none animate-fade-in">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">👤</span>
+                <div>
+                  <span className="text-[#FFD700] font-adventure text-sm font-extrabold block leading-none">{activeStudent.name}</span>
+                  <span className="text-[9px] text-amber-200/70 font-bold uppercase tracking-wider">Level {activeStudent.level} Explorer</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-amber-200 uppercase tracking-widest">XP</span>
+                <div className="bg-stone-950 border border-[#D4AF37]/30 rounded-full h-3.5 w-24 md:w-40 p-0.5 overflow-hidden flex items-center relative shadow-inner">
+                  <div 
+                    className="bg-gradient-to-r from-[#D4AF37] to-[#FFD700] h-full rounded-full transition-all duration-1000 shadow-[0_0_8px_#FFD700]"
+                    style={{ width: `${Math.max(15, Math.min(100, (activeStudent.xp % 100)))}%` }}
+                  ></div>
+                  <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold font-mono text-white">
+                    {activeStudent.xp}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-[#523B0B] border-2 border-[#D4AF37] px-3 py-1.5 rounded-full shadow-md">
+                <span className="text-base">🪙</span>
+                <span className="font-adventure text-sm font-extrabold text-[#FFD700] tracking-wider font-mono">
+                  {activeStudent.coins}
+                </span>
+              </div>
             </div>
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full items-start">
             
-            <div className="lg:col-span-3 bg-jungle-medium border border-jungle-light p-2 md:p-4 rounded-2xl md:rounded-3xl relative shadow-2xl w-full flex flex-col gap-3">
-              <div className="relative aspect-[4/3] w-full bg-jungle-deep/45 border border-gold/15 rounded-xl md:rounded-2xl flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#1a3d30,transparent_70%)]"></div>
-                
-                <div className="relative w-[82%] h-[82%] md:w-[90%] md:h-[90%]">
+            <div className="lg:col-span-3 bg-[#3B0F0F] border-3 border-[#D4AF37] p-3 md:p-5 rounded-3xl relative w-full flex flex-col gap-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
+              <div className="relative w-full board-bg border-2 border-[#D4AF37]/50 rounded-2xl overflow-visible shadow-inner" style={{ paddingBottom: '75%' }}>
+                <div className="absolute inset-3">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(211,47,47,0.04),transparent_70%)] pointer-events-none rounded-xl"></div>
                   
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                    <path 
-                      d={`M ${TILE_COORDS.map(coord => `${coord.x}%,${coord.y}%`).join(' L ')}`}
-                      fill="none"
-                      className="map-connector"
-                    />
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="goldPathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#D4AF37" />
+                        <stop offset="50%" stopColor="#F6E27A" />
+                        <stop offset="100%" stopColor="#D4AF37" />
+                      </linearGradient>
+                    </defs>
+                    <path d={getCurvedPath(TILE_COORDS)} fill="none" className="gold-energy-connector" stroke="url(#goldPathGrad)" strokeWidth="6" strokeLinecap="round" />
                   </svg>
 
+                  {/* Plinth Tiles rendering */}
                   {BOARD_TILES.map((tile, tIdx) => {
                     const coord = TILE_COORDS[tIdx];
                     const isSafe = SAFE_TILES.includes(tIdx);
                     const activeTeam = syncState.teams[syncState.activeTeamIdx];
                     const isDestination = activeTeam && activeTeam.position === tIdx;
-                    const isOccupied = syncState.teams.some((te: any) => te.position === tIdx);
-                    
-                    let tileSymbol = '📜';
-                    let tileColor = 'bg-[#E5D6B3] border-gold-dark text-jungle-deep';
-                    
-                    if (tile.type === 'start') {
-                      tileSymbol = '⛺';
-                      tileColor = 'bg-teal-700 border-teal-500 text-white';
-                    } else if (tile.type === 'finish') {
-                      tileSymbol = '👑';
-                      tileColor = 'bg-amber-600 border-amber-400 text-white animate-pulse';
-                    } else if (tile.type === 'trap') {
-                      tileSymbol = '🕸️';
-                      tileColor = 'bg-rose-900 border-rose-600 text-rose-100';
-                    } else if (tile.type === 'treasure') {
-                      tileSymbol = '🎁';
-                      tileColor = isOccupied 
-                        ? 'bg-amber-700 border-gold text-gold-glow shadow-[0_0_20px_#f59e0b] ring-2 ring-gold/60' 
-                        : 'bg-amber-700 border-gold text-gold-glow';
-                    } else if (tile.type === 'boss') {
-                      tileSymbol = '🐉';
-                      tileColor = isOccupied 
-                        ? 'bg-indigo-950 border-indigo-400 text-indigo-200 shadow-[0_0_20px_#6366f1] ring-2 ring-indigo-500/60' 
-                        : 'bg-indigo-950 border-indigo-500 text-indigo-200';
-                    }
+                    const isCompleted = syncState.teams.some((te: any) => te.position > tIdx);
 
-                    const destinationClass = isDestination ? 'ring-4 ring-gold ring-offset-2 ring-offset-jungle-deep shadow-[0_0_25px_#f59e0b] border-gold' : '';
-                    const safeClass = isSafe ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#F3EAD3]' : '';
+                    // Icon symbols mapping matching visual description
+                    let symbol = '📜';
+                    if (tIdx === 0) symbol = '⛺';
+                    else if (tIdx === 17) symbol = '👑';
+                    else if ([2, 8, 10, 12].includes(tIdx)) symbol = '🛡️';
+                    else if ([5, 13, 14].includes(tIdx)) symbol = '📦';
+                    else if (tIdx === 16) symbol = '🐉';
+                    else if (tile.type === 'trap') symbol = '🕸️';
+                    else if (tile.type === 'treasure') symbol = '🎁';
+
+                    const destinationClass = isDestination ? 'active-tile' : '';
+                    const safeClass = isSafe ? 'ring-2 ring-[#FFD700] ring-offset-2 ring-offset-[#2A0F0F]' : '';
+                    const completedClass = isCompleted ? 'stone-plinth-completed' : '';
+
+                    let specialAuraClass = '';
+                    if (tile.type === 'boss') specialAuraClass = 'boss-tile-aura';
+                    else if (tile.type === 'treasure') specialAuraClass = 'treasure-tile';
+                    else if (tile.type === 'trap') specialAuraClass = 'trap-tile';
+                    else if (tile.type === 'finish') specialAuraClass = 'final-gold-glow';
 
                     return (
                       <div 
-                        key={tIdx}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 border-[1.5px] text-[10px] sm:w-14 sm:h-14 sm:border-2 sm:text-xl rounded-full flex items-center justify-center font-bold transition-all duration-300 shadow-md group ${tileColor} ${destinationClass} ${safeClass}`}
+                        key={tIdx} 
+                        className={`stone-plinth -translate-x-1/2 -translate-y-1/2 flex items-center justify-center font-bold group ${destinationClass} ${safeClass} ${completedClass} ${specialAuraClass}`} 
                         style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                       >
-                        <span>{tileSymbol}</span>
+                        <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#7F1D1D] to-[#2A0F0F] border border-[#D4AF37]/50 flex items-center justify-center text-[10px] sm:text-lg text-white">
+                          <span>{symbol}</span>
+                        </div>
                         {isSafe && (
-                          <div className="absolute -top-1 -left-1 bg-emerald-600 text-white p-0.5 rounded-full border border-white">
-                            <Shield className="w-2 h-2" />
+                          <div className="absolute -top-1 -left-1 bg-[#D4AF37] text-stone-950 p-0.5 rounded-full border border-stone-955">
+                            <Shield className="w-2.5 h-2.5" />
                           </div>
                         )}
-                        <span className="absolute -bottom-1 -right-1 text-[6px] w-3 h-3 sm:text-[8px] sm:w-4 sm:h-4 bg-jungle-deep text-gold rounded-full flex items-center justify-center border border-gold/40">
-                          {tIdx}
-                        </span>
+                        <span className="absolute -bottom-1 -right-1 text-[6px] w-3.5 h-3.5 sm:text-[8px] sm:w-5 sm:h-5 bg-stone-900 border border-[#D4AF37]/50 text-[#FFD700] rounded-full flex items-center justify-center font-bold shadow-md">{tIdx}</span>
                       </div>
                     );
                   })}
 
+                  {/* Active Player Glow Ring */}
+                  {syncState.teams[syncState.activeTeamIdx] && (() => {
+                    const activeT = syncState.teams[syncState.activeTeamIdx];
+                    const activeCoord = TILE_COORDS[activeT.position];
+                    return (
+                      <div 
+                        className="active-glow-ring" 
+                        style={{ left: `${activeCoord.x}%`, top: `${activeCoord.y}%` }}
+                      />
+                    );
+                  })()}
+
+                  {/* Characters standees */}
                   {syncState.teams.map((t: any, idx: number) => {
                     const coord = TILE_COORDS[t.position];
                     const teamsOnSameTile = syncState.teams.filter((te: any) => te.position === t.position);
                     const tIndexOnTile = teamsOnSameTile.findIndex((te: any) => te.id === t.id);
                     const offset = getTokenOffset(tIndexOnTile, teamsOnSameTile.length);
-
+                    const isActive = syncState.activeTeamIdx === idx;
+                    
                     return (
-                      <div
-                        key={t.id}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 border-[1.5px] text-[9px] sm:w-10 sm:h-10 sm:border-2 sm:text-xs rounded-full flex items-center justify-center font-extrabold shadow-lg transition-all duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] z-20 ${t.color} ${
-                          syncState.activeTeamIdx === idx ? 'ring-3 sm:ring-4 ring-gold animate-bounce-slow' : ''
-                        }`}
+                      <div 
+                        key={t.id} 
+                        className={`avatar-standee ${isActive ? 'active-token-bounce ring-3 ring-[#D4AF37]' : ''}`} 
                         style={{ 
-                          left: `calc(${coord.x}% + ${offset.x}px)`, 
-                          top: `calc(${coord.y}% + ${offset.y}px)`
+                          left: `${coord.x}%`, 
+                          top: `${coord.y}%`,
+                          transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px)`
                         }}
-                        title={t.name}
                       >
-                        <span className="relative">
-                          🏁
-                          {syncState.activeTeamIdx === idx && (
-                            <span className="absolute -top-1.5 -right-1.5 flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
-                            </span>
-                          )}
-                        </span>
+                        <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-base border-2 border-white shadow-md text-white ${t.color || 'bg-blue-600'}`}>
+                          👤
+                        </div>
+                        <span className="text-[6px] sm:text-[8px] font-sans font-bold text-white bg-black/60 px-1 py-0.5 rounded-md block truncate max-w-[48px] mt-0.5 leading-none text-center">{t.name}</span>
                       </div>
                     );
                   })}
@@ -2307,104 +2346,146 @@ export default function StudentGame({
               </div>
 
               {/* MOBILE DOCKED TURN PANEL - MERGED & DOCKED OUTSIDE PATH */}
-              <div className="flex md:hidden bg-jungle-deep/40 border border-gold/20 p-2 rounded-xl flex-col items-center justify-center gap-1.5 shadow-md select-none text-center w-full max-w-[280px] mx-auto">
+              <div className="flex md:hidden bg-[#3B0F0F] border-3 border-[#D4AF37] p-3 rounded-2xl flex-col items-center justify-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.5)] text-center w-full max-w-[280px] mx-auto text-white select-none">
                 <div>
-                  <h4 className="text-gold font-adventure text-sm font-bold block truncate max-w-[200px]" title={getActivePlayerName()}>
+                  <h4 className="text-[#FFD700] font-adventure text-sm font-bold block truncate max-w-[200px]" title={getActivePlayerName()}>
                     {getActivePlayerName()}
                   </h4>
-                  <span className="text-[9px] bg-gold/15 text-gold px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block font-sans">
-                    Active Turn
+                  <span className="text-[9px] bg-[#5A1A1A] border border-[#D4AF37]/30 text-amber-200 px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block">
+                    Active Explorer
                   </span>
                   <div className="mt-1 flex items-center justify-center gap-1.5 font-sans">
-                    <span className="text-[8px] text-gold-light/75 font-bold uppercase tracking-wider">⏱ Time:</span>
+                    <span className="text-[8px] text-amber-200/70 font-bold uppercase tracking-wider">⏱ Time:</span>
                     <span className={`text-[10px] font-bold font-mono tracking-tight ${getTimerColorClass(timerRemaining, activeQuestion !== null)}`}>
                       {activeQuestion ? `${timerRemaining}s` : '15s'}
                     </span>
                   </div>
-                  {localRollResult !== null && (
-                    <p className="text-gold-glow font-bold font-mono text-[10px] mt-1">
-                      Rolled: {localRollResult} 🎲
-                    </p>
-                  )}
                 </div>
 
-                <div className="flex justify-center items-center py-1">
+                {/* D6 Cube Die */}
+                <div className="relative w-20 h-20 flex items-center justify-center">
                   <button
                     onClick={handleRollClick}
                     disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
-                    className="w-12 h-12 bg-gold hover:bg-gold-light border border-gold-dark text-jungle-deep rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-90 disabled:opacity-40 disabled:pointer-events-none transition-all duration-150"
+                    className="relative w-16 h-16 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center"
+                    title="Roll Dice"
                   >
-                    <Dices className={`w-5 h-5 ${diceRolling ? 'animate-bounce' : ''}`} />
+                    <svg viewBox="0 0 100 100" className={`w-14 h-14 ${diceRolling ? 'dice-spin-shake' : ''}`} style={{ filter: 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
+                      {/* Top face */}
+                      <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2.5"/>
+                      {/* Left face */}
+                      <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
+                      {/* Right face */}
+                      <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
+                      {/* Top face pips */}
+                      <circle cx="38" cy="26" r="3.5" fill="#FFD700"/>
+                      <circle cx="50" cy="34" r="3.5" fill="#FFD700"/>
+                      <circle cx="62" cy="26" r="3.5" fill="#FFD700"/>
+                    </svg>
                   </button>
+
+                  {localRollResult !== null && !diceRolling && (
+                    <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[#D4AF37] shadow-lg">
+                      <span className="font-adventure text-3xl font-extrabold text-[#FFD700]">
+                        {localRollResult}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col gap-6">
-              <div className="hidden md:flex bg-jungle-medium border border-jungle-light p-6 rounded-2xl flex-col items-center justify-center text-center shadow-xl">
-                <span className="text-[10px] block font-bold text-gold-light uppercase tracking-wider mb-2">Turn Information</span>
+            <div className="flex flex-col gap-6 font-sans">
+              {/* DESKTOP TURN PANEL - HIDDEN ON MOBILE */}
+              <div className="hidden md:flex bg-[#3B0F0F] border-3 border-[#D4AF37] p-6 rounded-3xl flex-col items-center justify-center text-center shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white select-none">
+                <span className="text-[10px] block font-bold text-amber-300 uppercase tracking-wider mb-2 font-adventure">Turn Information</span>
                 <div className="mb-4">
-                  <span className="font-adventure text-lg font-bold text-white block">
+                  <span className="font-adventure text-lg font-extrabold text-[#FFD700] block uppercase tracking-wide">
                     {getActivePlayerName()}
                   </span>
-                  <span className="text-[10px] bg-gold/15 text-gold px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block">
-                    Active Turn
+                  <span className="text-[9px] bg-[#5A1A1A] border border-[#D4AF37]/30 text-amber-200 px-2.5 py-0.5 rounded-full font-bold uppercase mt-1 inline-block font-sans">
+                    Active Explorer
                   </span>
                 </div>
 
-                <div className="mb-4 border-t border-b border-jungle-light/20 py-3 w-full flex flex-col items-center gap-1 font-sans">
-                  <span className="text-[10px] text-gold-light/75 font-bold uppercase tracking-wider">⏱ Time Remaining</span>
+                <div className="mb-4 border-t border-b border-[#D4AF37]/20 py-3 w-full flex flex-col items-center gap-1 font-sans">
+                  <span className="text-[10px] text-amber-200/70 font-bold uppercase tracking-wider">⏱ Time Remaining</span>
                   <span className={`text-xl font-bold font-mono tracking-tight ${getTimerColorClass(timerRemaining, activeQuestion !== null)}`}>
                     {activeQuestion ? `${timerRemaining}s` : '15s'}
                   </span>
                 </div>
 
-                <button
-                  onClick={handleRollClick}
-                  disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
-                  className="w-16 h-16 bg-gold border-2 border-gold-dark hover:bg-gold-light text-jungle-deep rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-90 disabled:opacity-40 disabled:pointer-events-none transition-all duration-150"
-                >
-                  <Dices className={`w-8 h-8 ${diceRolling ? 'animate-bounce' : ''}`} />
-                </button>
+                {/* D6 Cube Die — Desktop */}
+                <div className="relative w-28 h-28 flex items-center justify-center mb-2">
+                  <button
+                    onClick={handleRollClick}
+                    disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
+                    className="relative w-24 h-24 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center"
+                    title="Click to Roll"
+                  >
+                    <svg viewBox="0 0 100 100" className={`w-20 h-20 ${diceRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: 'drop-shadow(0 3px 6px rgba(255,215,0,0.25))' }}>
+                      {/* Top face */}
+                      <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2"/>
+                      {/* Left face */}
+                      <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
+                      {/* Right face */}
+                      <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
+                      {/* Top face pips */}
+                      <circle cx="38" cy="25" r="4" fill="#FFD700"/>
+                      <circle cx="50" cy="33" r="4" fill="#FFD700"/>
+                      <circle cx="62" cy="25" r="4" fill="#FFD700"/>
+                      {/* Left face pip */}
+                      <circle cx="28" cy="60" r="3.5" fill="#FFD700"/>
+                      {/* Right face pips */}
+                      <circle cx="72" cy="58" r="3.5" fill="#FFD700"/>
+                      <circle cx="72" cy="72" r="3.5" fill="#FFD700"/>
+                    </svg>
+                  </button>
 
-                {localRollResult !== null && (
-                  <div className="mt-3 font-adventure text-gold text-lg font-bold">
-                    Rolled: {localRollResult} 🎲
-                  </div>
-                )}
+                  {localRollResult !== null && !diceRolling && (
+                    <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[#D4AF37] shadow-lg">
+                      <div className="text-center">
+                        <span className="block text-[8px] text-[#FFD700] uppercase font-extrabold tracking-widest leading-none mb-0.5 font-adventure">ROLLED</span>
+                        <span className="font-adventure text-5xl font-extrabold text-[#FFD700]">
+                          {localRollResult}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <span className="text-[9px] text-amber-200/50 block font-adventure tracking-wider uppercase">Roll Dice (1–6)</span>
               </div>
 
-
               {/* Roster leaderboard / Opponent Solving Handoff */}
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-6 w-full">
                 {activeQuestion && !checkIsMyTurn() ? (
-                  <div className="bg-jungle-medium border border-indigo-500/50 p-6 rounded-2xl shadow-2xl space-y-4 select-text">
-                    <div className="flex justify-between items-center border-b border-jungle-light pb-2">
+                  <div className="bg-[#3B0F0F] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white space-y-4 select-text">
+                    <div className="flex justify-between items-center border-b border-[#D4AF37]/35 pb-2">
                       <div>
-                        <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest block font-sans">Bot Thinking...</span>
-                        <span className="font-adventure text-lg font-bold text-white">🤖 {getActivePlayerName()}</span>
+                        <span className="text-[10px] font-bold text-amber-350 uppercase tracking-widest block font-sans">Explorer Solving...</span>
+                        <span className="font-adventure text-lg font-bold text-white">👤 {getActivePlayerName()}</span>
                       </div>
                       {!quizResult && (
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full border bg-jungle-deep border-jungle-light text-gold`}>
+                        <span className="text-xs font-bold px-2 py-1 rounded-full border bg-[#5A1A1A] border-[#D4AF37] text-[#FFD700] animate-pulse">
                           ⏰ {timerRemaining}s
                         </span>
                       )}
                     </div>
                     
                     <div>
-                      <span className="text-[9px] font-bold text-gold-light uppercase tracking-wider block mb-1">Question</span>
+                      <span className="text-[9px] font-bold text-amber-300 uppercase tracking-wider block mb-1">Question</span>
                       <p className="text-white text-xs font-semibold leading-relaxed font-sans">{activeQuestion.question}</p>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 font-sans">
                       {activeQuestion.options?.map((opt: string, oi: number) => {
-                        let chipStyle = 'bg-jungle-deep/60 border-jungle-light/30 text-offwhite/70';
+                        let chipStyle = 'bg-[#2A0F0F] border-white/10 text-white/75';
                         if (quizResult) {
-                          if (oi === activeQuestion.correctIndex) chipStyle = 'bg-emerald-950/80 border-emerald-500 text-emerald-200';
-                          else if (oi === quizResult.answerIndex) chipStyle = 'bg-rose-950/80 border-rose-500 text-rose-200';
+                          if (oi === activeQuestion.correctIndex) chipStyle = 'bg-emerald-950/80 border-emerald-500 text-emerald-200 font-bold';
+                          else if (oi === quizResult.answerIndex) chipStyle = 'bg-rose-950/80 border-rose-500 text-rose-200 font-bold';
                         }
                         return (
-                          <div key={oi} className={`w-full text-left px-3 py-2 rounded-lg border text-[10px] font-semibold ${chipStyle}`}>
+                          <div key={oi} className={`w-full text-left px-3 py-2 rounded-xl border text-[10px] font-semibold ${chipStyle}`}>
                             {String.fromCharCode(65 + oi)}. {opt}
                           </div>
                         );
@@ -2412,7 +2493,7 @@ export default function StudentGame({
                     </div>
 
                     {quizResult && (
-                      <div className={`p-2 rounded-lg text-[10px] font-bold text-center border ${
+                      <div className={`p-2 rounded-xl text-[10px] font-bold text-center border ${
                         quizResult.isCorrect ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300' : 'bg-rose-950/80 border-rose-500 text-rose-300'
                       }`}>
                         {quizResult.isCorrect ? `✓ Correct` : `✗ Wrong`}
@@ -2420,26 +2501,30 @@ export default function StudentGame({
                     )}
 
                     {quizResult && activeQuestion.explanation && (
-                      <div className="bg-jungle-deep/80 text-offwhite p-3 rounded-lg text-[10px] border border-jungle-light/20">
-                        <p className="font-bold text-gold mb-1 font-sans">Explanation:</p>
+                      <div className="bg-[#2A0F0F] text-white/80 p-3 rounded-xl text-[10px] border border-white/5 leading-relaxed font-semibold">
+                        <p className="font-bold text-[#FFD700] mb-1 font-sans uppercase tracking-wider">Explanation:</p>
                         {activeQuestion.explanation}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-                    <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2 mb-4">Leaderboard</h3>
+                  <div className="bg-[#3B0F0F] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white">
+                    <h3 className="font-adventure text-base font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 mb-4 uppercase tracking-wider">Standings</h3>
                     <div className="space-y-3 text-xs">
                       {syncState.teams.slice().sort((a:any, b:any)=>b.position - a.position || b.xp - a.xp).map((p: any, idx: number) => (
-                        <div key={p.id} className="p-3 bg-jungle-deep/50 border border-jungle-light/40 rounded-xl">
-                          <div className="flex justify-between font-bold mb-1.5">
-                            <span>#{idx+1} {p.name}</span>
-                            {p.streak >= 3 && <span className="text-rose-500">🔥 {p.streak}</span>}
+                        <div key={p.id} className="p-3 bg-[#2A0F0F] border-2 border-[#D4AF37]/30 rounded-2xl shadow-md text-white">
+                          <div className="flex justify-between items-center font-bold mb-2">
+                            <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
+                              <span className="font-adventure text-[#FFD700]">#{idx+1}</span>
+                              <span>👤</span>
+                              <span className="truncate max-w-[90px] text-amber-100">{p.name}</span>
+                            </span>
+                            {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
                           </div>
-                          <div className="grid grid-cols-3 gap-1 bg-jungle-medium/30 p-1.5 rounded font-mono text-center">
-                            <div><span className="text-[9px] block text-offwhite/50">XP</span><span className="font-bold">{p.xp}</span></div>
-                            <div><span className="text-[9px] block text-offwhite/50">Gold</span><span className="font-bold">{p.coins}</span></div>
-                            <div><span className="text-[9px] block text-offwhite/50">Tile</span><span className="font-bold">{p.position}</span></div>
+                          <div className="grid grid-cols-3 gap-1 bg-[#3B0F0F] border border-[#D4AF37]/35 p-1 rounded-xl text-center font-mono">
+                            <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">XP</span><span className="font-bold text-xs text-white">{p.xp}</span></div>
+                            <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-[#FFD700]/50 uppercase leading-none">Gold</span><span className="font-bold text-xs text-white">{p.coins}</span></div>
+                            <div><span className="text-[7px] block text-[#FFD700]/50 uppercase leading-none">Tile</span><span className="font-bold text-xs text-[#FFD700]">{p.position}</span></div>
                           </div>
                         </div>
                       ))}
@@ -2455,92 +2540,43 @@ export default function StudentGame({
       )}
 
       {gameState === 'playing' && activeQuestion && syncState && checkIsMyTurn() && (
-        <div className="fixed inset-0 bg-black/15 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="parchment-panel rounded-2xl max-w-2xl w-full p-6 text-jungle-deep shadow-2xl relative my-8">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto select-text animate-fade-in">
+          <div className="parchment-scroll max-w-xl w-full p-6 text-[#2D0B0B] relative shadow-2xl my-8">
             
-            <div className="flex justify-between items-start gap-4 border-b border-gold-dark/20 pb-3 mb-4 font-sans">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
-                    activeQuestion.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-800' :
-                    activeQuestion.difficulty === 'medium' ? 'bg-amber-100 text-amber-800' :
-                    'bg-indigo-100 text-indigo-800'
-                  }`}>
-                    {activeQuestion.difficulty} Question
-                  </span>
-                </div>
-                <h4 className="text-xs font-semibold text-jungle-light mt-1">Topic: {activeQuestion.topic}</h4>
-              </div>
-
-              {!quizResult && (
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-sm border-2 ${
-                  timerRemaining === 5 
-                    ? 'bg-orange-100 text-orange-700 border-orange-400 animate-pulse' 
-                    : timerRemaining < 5
-                      ? 'bg-rose-100 text-rose-700 border-rose-400 animate-pulse' 
-                      : 'bg-amber-50 text-amber-800 border-amber-300'
-                }`}>
-                  <Clock className="w-4 h-4" />
-                  <span>{timerRemaining}s</span>
-                </div>
-              )}
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#C49A45]/30 text-xs text-stone-500 font-sans font-bold">
+              <span>Topic: {activeQuestion.topic}</span>
+              {!quizResult && <span className="font-bold text-amber-800">⏱ {timerRemaining}s</span>}
             </div>
 
-            <div className="mb-6">
-              <p className="text-lg sm:text-xl font-medium text-jungle-deep leading-relaxed">
-                {activeQuestion.question}
-              </p>
-            </div>
+            <p className="text-lg font-bold mb-6 leading-relaxed text-[#2D0B0B] font-sans">{activeQuestion.question}</p>
 
             <div className="space-y-3 mb-6">
-              {activeQuestion.options.map((option: string, optionIdx: number) => {
-                const isSelected = selectedOption === optionIdx;
-                const isCorrect = optionIdx === activeQuestion.correctIndex;
-                
-                let buttonStyle = 'bg-parchment-light border-gold-dark/35 text-jungle-deep hover:bg-gold/10';
-                
+              {activeQuestion.options?.map((opt: string, oIdx: number) => {
+                const isSelected = selectedOption === oIdx;
+                let style = 'bg-[#FFFDF6] border-[#C49A45]/45 hover:bg-[#F2EBD9] hover:border-[#C49A45] text-[#2D0B0B]';
                 if (quizResult) {
-                  if (isCorrect) {
-                    buttonStyle = 'bg-emerald-100 border-emerald-500 text-emerald-950';
-                  } else if (isSelected) {
-                    buttonStyle = 'bg-rose-100 border-rose-500 text-rose-950';
-                  }
+                  if (oIdx === activeQuestion.correctIndex) style = 'bg-emerald-100 border-emerald-600 text-emerald-950 font-bold';
+                  else if (isSelected) style = 'bg-rose-100 border-rose-600 text-rose-950 font-bold';
                 } else if (isSelected) {
-                  buttonStyle = 'bg-indigo-50 border-indigo-500 text-indigo-950 ring-2 ring-indigo-500';
+                  style = 'border-amber-700 bg-[#F2EBD9] text-[#2D0B0B] ring-2 ring-amber-700/35';
                 }
-
                 return (
                   <button
-                    key={optionIdx}
-                    onClick={() => handleSubmitAnswer(optionIdx)}
+                    key={oIdx}
+                    onClick={() => handleSubmitAnswer(oIdx)}
                     disabled={quizResult !== null || !checkIsMyTurn()}
-                    className={`w-full text-left p-4 rounded-xl border font-semibold text-xs transition-all flex items-center justify-between ${buttonStyle}`}
+                    className={`w-full text-left p-4 rounded-xl border-2 font-bold text-xs transition-all shadow-sm active:translate-y-0.5 ${style}`}
                   >
-                    <span>{option}</span>
-                    {quizResult && isCorrect && <span className="text-emerald-700 font-bold">✔ Correct</span>}
-                    {quizResult && isSelected && !isCorrect && <span className="text-rose-700 font-bold">✘ Incorrect</span>}
+                    {String.fromCharCode(65 + oIdx)}. {opt}
                   </button>
                 );
               })}
             </div>
 
-            {quizResult && (
-              <div className="bg-jungle-deep text-offwhite p-4 rounded-xl border border-gold/40 animate-pulse-slow">
-                <p className="font-adventure text-gold font-bold mb-1">Explanation:</p>
-                <p className="text-sm text-offwhite/85 leading-relaxed">
-                  {activeQuestion.explanation}
-                </p>
-              </div>
-            )}
-
-            {!checkIsMyTurn() && !quizResult && (
-              <div className="absolute inset-0 bg-black/10 rounded-2xl flex items-center justify-center backdrop-blur-[1.5px]">
-                <div className="bg-jungle-deep text-gold font-bold px-5 py-4 rounded-lg border border-gold shadow-xl flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-gold rounded-full animate-bounce"></span>
-                  <span className="w-2.5 h-2.5 bg-gold rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></span>
-                  <span className="w-2.5 h-2.5 bg-gold rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></span>
-                  <span>{getActivePlayerName()} is solving question...</span>
-                </div>
+            {quizResult && activeQuestion.explanation && (
+              <div className="bg-[#FFFDF6] border border-[#C49A45]/40 p-4 rounded-xl text-xs text-stone-700">
+                <p className="font-adventure text-amber-800 font-bold mb-1 uppercase tracking-wider">Explanation:</p>
+                {activeQuestion.explanation}
               </div>
             )}
           </div>
@@ -2548,39 +2584,50 @@ export default function StudentGame({
       )}
 
       {gameState === 'victory' && syncState && (
-        <main className="max-w-4xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full">
-          <div className="parchment-panel rounded-2xl p-8 text-jungle-deep shadow-2xl text-center space-y-6">
-            <span className="text-8xl block">🏆</span>
-            <h2 className="font-adventure text-4xl font-extrabold text-gold-dark mb-4">Adventure Completed!</h2>
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 select-text animate-fade-in font-serif">
+          <div className="bg-[#3B0F0F] border-4 border-[#D4AF37] max-w-xl w-full p-8 text-center rounded-[2rem] relative shadow-[0_0_60px_rgba(255,215,0,0.4)] animate-scale-in flex flex-col items-center text-white">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(255,215,0,0.15),transparent_70%)] pointer-events-none"></div>
+            
+            <span className="text-7xl block mb-4 animate-bounce">🏆</span>
+            <h2 className="font-adventure text-4xl font-extrabold text-[#FFD700] mb-2 drop-shadow-[0_2px_5px_rgba(0,0,0,0.6)] uppercase tracking-widest">Victory!</h2>
+            <p className="text-amber-200/70 font-sans text-xs uppercase tracking-widest font-bold mb-6">Adventure Completed</p>
+            
             {multiplayerLevelUp && (
-              <div className="bg-gradient-to-r from-amber-500 to-yellow-400 text-jungle-deep border border-yellow-300 px-6 py-3 rounded-2xl font-adventure text-lg font-bold mb-6 animate-bounce text-center shadow-lg inline-block">
-                🎉 LEVEL UP! You leveled up to a new milestone! 🎉
+              <div className="bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 border border-yellow-300 px-6 py-2 rounded-2xl font-adventure text-sm font-bold mb-6 animate-pulse shadow-md">
+                🎉 LEVEL UP! You reached a new Explorer level! 🎉
               </div>
             )}
-            <p className="text-sm font-semibold text-jungle-light">All explorers finished the map. Standings compiled successfully.</p>
 
-            <div className="bg-jungle-deep text-offwhite border border-jungle-light p-6 rounded-2xl max-w-lg mx-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-jungle-light/30 text-gold font-bold uppercase">
-                    <th className="py-2">Explorer</th>
-                    <th className="py-2 text-center">XP</th>
-                    <th className="py-2 text-center">Gold</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {syncState.teams.map((t: any, idx: number) => (
-                    <tr key={t.id} className="border-b border-jungle-light/10">
-                      <td className="py-2.5 font-bold">#{idx+1} {t.name}</td>
-                      <td className="py-2.5 text-center text-gold font-bold">{t.xp}</td>
-                      <td className="py-2.5 text-center text-gold font-bold">{t.coins}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {syncState.teams.length > 0 && (() => {
+              const sorted = syncState.teams.slice().sort((a: any, b: any) => b.position - a.position || b.xp - a.xp);
+              const winner = sorted[0];
+              return (
+                <div className="bg-[#2A0F0F] border border-[#D4AF37]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
+                  <h4 className="text-xs font-extrabold text-[#FFD700] uppercase tracking-wider mb-3 text-center">Champion: 👤 {winner.name}</h4>
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div className="bg-[#3B0F0F] border border-[#D4AF37]/35 p-3 rounded-2xl">
+                      <span className="text-[10px] block text-amber-200/50 uppercase font-bold">XP Gained</span>
+                      <span className="text-lg font-bold text-white">+{winner.xp} XP</span>
+                    </div>
+                    <div className="bg-[#3B0F0F] border border-[#D4AF37]/35 p-3 rounded-2xl">
+                      <span className="text-[10px] block text-amber-200/50 uppercase font-bold">Coins Earned</span>
+                      <span className="text-lg font-bold text-white">+{winner.coins} Gold</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="w-full max-w-md max-h-48 overflow-y-auto scrollbar-none mb-8 space-y-2 font-sans">
+              {syncState.teams.slice().sort((a: any, b: any) => b.position - a.position || b.xp - a.xp).map((p: any, idx: number) => (
+                <div key={p.id} className="flex items-center justify-between p-3 bg-[#2A0F0F] border border-[#D4AF37]/30 rounded-xl text-xs text-white">
+                  <span className="font-bold">#{idx+1} 👤 {p.name}</span>
+                  <span className="font-semibold text-amber-200/80">{p.xp} XP | {p.coins} Coins</span>
+                </div>
+              ))}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-2 font-sans w-full max-w-xs">
               <button 
                 onClick={() => {
                   setLobbyConfigName('');
@@ -2589,19 +2636,19 @@ export default function StudentGame({
                   setLobbyConfigPrivate(false);
                   setShowLobbyConfigModal(true);
                 }}
-                className="px-6 py-3 bg-gold text-jungle-deep font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-stone-950 border border-yellow-300 font-adventure font-extrabold rounded-xl text-xs uppercase shadow-md active:scale-95 transition-all"
               >
                 Play Again
               </button>
               <button 
                 onClick={() => { onBack(); }}
-                className="px-6 py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
+                className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl text-xs uppercase shadow-md active:scale-95 transition-all border-b-4 border-[#991B1B]"
               >
-                Return to Main Menu
+                Main Menu
               </button>
             </div>
           </div>
-        </main>
+        </div>
       )}
 
 

@@ -1447,12 +1447,29 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    const isDark = (viewMode === 'local' && localScreen === 'board') || viewMode === 'student' || viewMode === 'selection';
+    if (isDark) {
+      document.body.style.backgroundColor = '#1A0505';
+      document.body.style.color = '#FFFFFF';
+    } else {
+      document.body.style.backgroundColor = '#FDFBF7';
+      document.body.style.color = '#1E293B';
+    }
+  }, [viewMode, localScreen]);
+
   // ==========================================
   // PRIMARY SELECTION & LAYOUT
   // ==========================================
 
+  const isDarkThemeActive = (viewMode === 'local' && localScreen === 'board') || viewMode === 'student' || viewMode === 'selection';
+
   return (
-    <div className="min-h-screen bg-jungle-deep text-[#0F172A] flex flex-col font-sans relative select-none">
+    <div className={`min-h-screen flex flex-col font-sans relative select-none ${
+      isDarkThemeActive 
+        ? 'bg-gradient-to-b from-[#2A0F0F] via-[#1A0505] to-[#000000] text-white' 
+        : 'bg-jungle-deep text-[#0F172A]'
+    }`}>
       {toastMessage && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-bounce pointer-events-none">
           <div className="bg-[#7A0C0C] border-2 border-[#D32F2F] text-white px-6 py-3 rounded-2xl font-adventure font-extrabold text-sm uppercase tracking-widest shadow-[0_5px_20px_rgba(0,0,0,0.8)] flex items-center gap-2">
@@ -1463,7 +1480,7 @@ export default function App() {
       
       {/* Header displayed ONLY when not on selection page */}
       {viewMode !== 'selection' && (() => {
-        const isGameBoardActive = (viewMode === 'local' && localScreen === 'board') || (viewMode === 'student' && studentGameState === 'playing');
+        const isGameBoardActive = (viewMode === 'local' && localScreen === 'board') || viewMode === 'student';
         return (
           <header className={`border-b-3 ${isGameBoardActive ? 'border-[#D4AF37] bg-[#2A0F0F] text-white' : 'border-[#D32F2F] bg-white/98 text-stone-900'} backdrop-blur px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-md`}>
             <div className="flex items-center gap-3">
