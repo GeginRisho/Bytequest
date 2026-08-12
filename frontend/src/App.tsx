@@ -191,14 +191,13 @@ export default function App() {
 
     window.history.pushState(nextState, '');
   };
-
   const navigateTo = (updates: Partial<ByteQuestState>) => {
     const isEnteringBoard = 
-      (updates.localScreen === 'board' && localScreen !== 'board') || 
+      (updates.localScreen === 'board' && localScreen !== 'board' && localScreen !== 'handoff') || 
       (updates.studentGameState === 'playing' && studentGameState !== 'playing');
       
     const isLeavingBoard = 
-      (localScreen === 'board' && updates.localScreen !== undefined && updates.localScreen !== 'board') ||
+      (localScreen === 'board' && updates.localScreen !== undefined && updates.localScreen !== 'board' && updates.localScreen !== 'handoff') ||
       (studentGameState === 'playing' && updates.studentGameState !== undefined && updates.studentGameState !== 'playing') ||
       (localScreen === 'board' && updates.viewMode === 'selection') ||
       (studentGameState === 'playing' && updates.viewMode === 'selection');
@@ -1138,28 +1137,40 @@ export default function App() {
       }
 
       if (tile.type === 'finish') {
-        const finishedCount = currentPlayers.filter(p => p.finished).length;
-        const newFinishedRank = finishedCount + 1;
+        const baseFinishedCount = currentPlayers.filter(p => p.finished).length;
+        const newFinishedRank = baseFinishedCount + 1;
         
-        updatedPlayers = currentPlayers.map((p, idx) => 
+        let newPlayers = currentPlayers.map((p, idx) => 
           idx === localTurnIdx ? { ...p, finished: true, finishedRank: newFinishedRank } : p
         );
 
         setLocalScorePopup({ text: `🏁 ${activeP.name} finished in Rank ${newFinishedRank}!`, success: true });
 
-        const allFinished = updatedPlayers.every(p => p.finished);
+        const finishedCount = newPlayers.filter(p => p.finished).length;
+        const isFinishedCondition = newPlayers.length <= 1 ? (finishedCount === 1) : (finishedCount === newPlayers.length - 1);
+
+        let finalPlayers = newPlayers;
+        if (isFinishedCondition) {
+          const remainingIndex = newPlayers.findIndex(p => !p.finished);
+          if (remainingIndex !== -1) {
+            finalPlayers = newPlayers.map((p, idx) => 
+              idx === remainingIndex ? { ...p, finished: true, finishedRank: newPlayers.length } : p
+            );
+          }
+        }
+
         setTimeout(() => {
           setLocalScorePopup(null);
           setLocalActiveQuestion(null);
           setLocalLandingTile(null);
-          if (allFinished) {
+          if (isFinishedCondition) {
             localTriggerVictory();
           } else {
             localPassTurn();
           }
         }, 2200);
 
-        return updatedPlayers;
+        return finalPlayers;
       }
 
       if (tile.type === 'boss') {
@@ -2195,30 +2206,31 @@ export default function App() {
             </main>
           )}
 
-          {/* S2: LOCAL HANDOFF */}
-          {localScreen === 'handoff' && (
-            <main className="max-w-md mx-auto px-6 py-20 flex-1 flex flex-col justify-center w-full">
-              <div className="bg-white border-4 border-[#D32F2F] rounded-[2rem] p-8 text-center text-slate-800 shadow-[6px_6px_0px_#991B1B]">
-                <span className="text-3xl block mb-2">📱</span>
-                <h3 className="font-adventure text-2xl font-extrabold text-[#D32F2F] mb-2 uppercase tracking-wider">Pass the Device</h3>
-                <p className="text-xs text-slate-500 font-semibold mb-6">Pass the screen to the next explorer:</p>
-                <div className="bg-red-50 text-[#D32F2F] border-2 border-[#D32F2F] p-4 rounded-2xl mb-8 flex items-center justify-center gap-3">
-                  <span className="text-3xl">{localPlayers[localTurnIdx]?.avatar}</span>
-                  <span className="font-adventure text-xl font-extrabold uppercase tracking-wide">{localPlayers[localTurnIdx]?.name}</span>
-                </div>
-                <button
-                  onClick={() => navigateTo({ localScreen: 'board' })}
-                  className="w-full py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white rounded-xl font-adventure font-extrabold border-b-4 border-[#991B1B] uppercase tracking-wider text-xs transition-colors"
-                >
-                  Ready!
-                </button>
-              </div>
-            </main>
-          )}
-
           {/* S3: LOCAL BOARD PLAY */}
-          {localScreen === 'board' && localPlayers.length > 0 && (
+          {(localScreen === 'board' || localScreen === 'handoff') && localPlayers.length > 0 && (
             <main className="max-w-7xl mx-auto px-4 py-4 w-full flex-1 flex flex-col justify-between relative pb-24">
+              
+              {/* S2: LOCAL HANDOFF OVERLAY */}
+              {localScreen === 'handoff' && (
+                <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                  <div className="bg-[#3B0F0F] border-4 border-[#D4AF37] rounded-[2rem] p-8 text-center text-white shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-sm w-full relative animate-scale-in">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(255,215,0,0.1),transparent_70%)] pointer-events-none"></div>
+                    <span className="text-3xl block mb-2 animate-bounce">📱</span>
+                    <h3 className="font-adventure text-2xl font-extrabold text-[#FFD700] mb-2 uppercase tracking-wider">Pass the Device</h3>
+                    <p className="text-xs text-amber-200/70 font-semibold mb-6">Pass the screen to the next explorer:</p>
+                    <div className="bg-[#2A0F0F] text-[#FFD700] border-2 border-[#D4AF37]/50 p-4 rounded-2xl mb-8 flex items-center justify-center gap-3">
+                      <span className="text-3xl">{localPlayers[localTurnIdx]?.avatar}</span>
+                      <span className="font-adventure text-xl font-extrabold uppercase tracking-wide">{localPlayers[localTurnIdx]?.name}</span>
+                    </div>
+                    <button
+                      onClick={() => navigateTo({ localScreen: 'board' })}
+                      className="w-full py-3.5 bg-gradient-to-r from-[#D4AF37] to-[#F6E27A] hover:from-[#F6E27A] hover:to-[#D4AF37] text-[#2A0F0F] rounded-xl font-adventure font-extrabold border-b-4 border-[#B8860B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                    >
+                      Ready!
+                    </button>
+                  </div>
+                </div>
+              )}
               {/* STICKY LOCAL PLAY HUD */}
               {localPlayers[localTurnIdx] && (
                 <div className="sticky top-14 md:top-[60px] z-30 bg-[#3B0F0F] border-3 border-[#D4AF37] px-4 py-3 rounded-2xl flex items-center justify-between gap-4 mb-4 shadow-[0_5px_15px_rgba(0,0,0,0.5)] text-white select-none animate-fade-in">
@@ -2379,7 +2391,7 @@ export default function App() {
                           <button
                             onClick={localTriggerDiceRoll}
                             disabled={!isMyTurnNow || localIsRolling || localIsMoving || localActiveQuestion !== null || localLandingTile !== null}
-                            className={`relative w-16 h-16 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse' : ''}`}
+                            className={`relative w-16 h-16 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[#5A1A1A] shadow-[0_0_20px_rgba(255,215,0,0.85)] border-2 border-[#FFD700]' : 'bg-[#2A0F0F] border-2 border-[#D4AF37]/40'}`}
                             title={isMyTurnNow ? 'Your Turn — Roll Dice!' : 'Not your turn'}
                           >
                             <svg viewBox="0 0 100 100" className={`w-14 h-14 ${localIsRolling ? 'dice-spin-shake' : ''}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 8px rgba(255,215,0,0.8))' : 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
@@ -2434,7 +2446,7 @@ export default function App() {
                           <button
                             onClick={localTriggerDiceRoll}
                             disabled={!isMyTurnNow || localIsRolling || localIsMoving || localActiveQuestion !== null || localLandingTile !== null}
-                            className={`relative w-24 h-24 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse' : ''}`}
+                            className={`relative w-24 h-24 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[#5A1A1A] shadow-[0_0_30px_rgba(255,215,0,0.95)] border-3 border-[#FFD700]' : 'bg-[#2A0F0F] border-2 border-[#D4AF37]/45'}`}
                             title={isMyTurnNow ? 'Your Turn — Click to Roll!' : 'Not your turn'}
                           >
                             <svg viewBox="0 0 100 100" className={`w-20 h-20 ${localIsRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 12px rgba(255,215,0,0.9))' : 'drop-shadow(0 3px 6px rgba(255,215,0,0.25))' }}>
@@ -2527,13 +2539,20 @@ export default function App() {
                     <div className="bg-[#3B0F0F] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white">
                       <h3 className="font-adventure text-base font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 mb-4 uppercase tracking-wider">Standings</h3>
                       <div className="space-y-3 text-xs">
-                        {localPlayers.slice().sort((a,b)=>b.position - a.position || b.xp - a.xp).map((p, idx) => (
-                          <div key={p.id} className="p-3 bg-[#2A0F0F] border-2 border-[#D4AF37]/30 rounded-2xl shadow-md text-white">
+                        {localPlayers.slice().sort((a, b) => {
+                          const rA = a.finishedRank || (a.finished ? 1 : 99);
+                          const rB = b.finishedRank || (b.finished ? 1 : 99);
+                          if (rA !== rB) return rA - rB;
+                          return b.position - a.position || b.xp - a.xp;
+                        }).map((p, idx) => (
+                          <div key={p.id} className={`p-3 bg-[#2A0F0F] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
                             <div className="flex justify-between items-center font-bold mb-2">
                               <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
-                                <span className="font-adventure text-[#FFD700]">#{idx+1}</span>
+                                <span className="font-adventure text-[#FFD700]">
+                                  {p.finished ? `🏆 #${p.finishedRank}` : `#${idx+1}`}
+                                </span>
                                 <span>{p.avatar}</span>
-                                <span className="truncate max-w-[90px] text-amber-100">{p.name}</span>
+                                <span className={`truncate max-w-[90px] ${p.finished ? 'text-emerald-300' : 'text-amber-100'}`}>{p.name} {p.finished && '🏁'}</span>
                               </span>
                               {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
                             </div>
@@ -2551,7 +2570,6 @@ export default function App() {
               </div>
             </main>
           )}
-
           {/* LOCAL ACTIVE QUIZ (Only for human turns) */}
           {localScreen === 'board' && localActiveQuestion && !localPlayers[localTurnIdx]?.isBot && (
             <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto select-text animate-fade-in">
@@ -2615,7 +2633,12 @@ export default function App() {
 
                 {/* Champion stats */}
                 {localPlayers.length > 0 && (() => {
-                  const sorted = localPlayers.slice().sort((a,b)=>b.position - a.position || b.xp - a.xp);
+                  const sorted = localPlayers.slice().sort((a, b) => {
+                    const rA = a.finishedRank || 999;
+                    const rB = b.finishedRank || 999;
+                    if (rA !== rB) return rA - rB;
+                    return b.position - a.position || b.xp - a.xp;
+                  });
                   const winner = sorted[0];
                   return (
                     <div className="bg-[#2A0F0F] border border-[#D4AF37]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
@@ -2711,10 +2734,10 @@ export default function App() {
       )}
       {/* Screen Transition Overlay */}
       {isTransitioning && (
-        <div className="fixed inset-0 z-[99999] bg-white/80 flex items-center justify-center pointer-events-auto backdrop-blur-md">
+        <div className="fixed inset-0 z-[99999] bg-[#1A0505]/90 flex items-center justify-center pointer-events-auto backdrop-blur-md">
           <div className="relative w-32 h-32 flex items-center justify-center">
-            <div className="w-28 h-28 rounded-full border-4 border-[#D32F2F]/20 animate-spin-slow border-dashed"></div>
-            <Compass className="absolute text-[#D32F2F] w-10 h-10 animate-pulse-slow" />
+            <div className="w-28 h-28 rounded-full border-4 border-[#D4AF37]/20 animate-spin-slow border-dashed"></div>
+            <Compass className="absolute text-[#D4AF37] w-10 h-10 animate-pulse-slow" />
           </div>
         </div>
       )}

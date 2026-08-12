@@ -531,9 +531,21 @@ export class SocketService {
       });
     }
 
-    const allFinished = room.teams.every(t => t.finished);
+    const currentFinishedCount = room.teams.filter(t => t.finished).length;
+    const isFinishedCondition = room.teams.length <= 1 
+      ? (currentFinishedCount === 1) 
+      : (currentFinishedCount === room.teams.length - 1);
 
-    if (allFinished) {
+    if (isFinishedCondition) {
+      // Auto-finish the last remaining team
+      const remainingTeam = room.teams.find(t => !t.finished);
+      if (remainingTeam) {
+        remainingTeam.finished = true;
+        remainingTeam.finishedRank = room.teams.length;
+        this.io.to(roomCode).emit('game:log', { 
+          message: `🏁 ${remainingTeam.name} automatically finished in Rank ${remainingTeam.finishedRank}!` 
+        });
+      }
       room.status = 'FINISHED';
 
       // Increment matchesPlayed and update level for all players in room

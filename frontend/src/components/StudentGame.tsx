@@ -2231,22 +2231,20 @@ export default function StudentGame({
 
   return (
     <div className="min-h-[85vh] flex flex-col relative select-none">
-      
-      {/* Connection Status Indicator */}
+            {/* Connection Status Indicator */}
       {!isConnected && (
         <div className="fixed top-2 right-2 z-[9999] flex items-center gap-1.5 bg-rose-900/90 border border-rose-500 text-rose-200 text-[10px] px-3 py-1.5 rounded-full shadow-lg font-bold">
           <span className="w-1.5 h-1.5 bg-rose-400 rounded-full animate-pulse"></span>
           Reconnecting...
         </div>
       )}
-      {isConnected && gameState === 'playing' && (
+      {isConnected && (gameState === 'playing' || gameState === 'victory') && (
         <div className="fixed top-2 right-2 z-[9999] flex items-center gap-1.5 bg-emerald-900/80 border border-emerald-600/50 text-emerald-300 text-[10px] px-3 py-1.5 rounded-full font-bold">
           <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
           Live
         </div>
       )}
 
-      {/* Spaced Repetition Retry Toast */}
       {showRetryToast && (
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 animate-bounce">
           <div className="px-5 py-2.5 bg-indigo-900 border border-indigo-400 text-indigo-100 rounded-xl shadow-2xl font-bold text-xs flex items-center gap-2">
@@ -2427,7 +2425,7 @@ export default function StudentGame({
         </main>
       )}
 
-      {gameState === 'playing' && syncState && (
+      {(gameState === 'playing' || gameState === 'victory') && syncState && (
         <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative">
           {activeStudent && (
             <div className="sticky top-14 md:top-[60px] z-30 bg-[#3B0F0F] border-3 border-[#D4AF37] px-4 py-3 rounded-2xl flex items-center justify-between gap-4 mb-4 shadow-[0_5px_15px_rgba(0,0,0,0.5)] text-white select-none animate-fade-in">
@@ -2603,7 +2601,7 @@ export default function StudentGame({
                       <button
                         onClick={handleRollClick}
                         disabled={!isMyTurnNow || diceRolling || activeQuestion !== null || isMovingOnline}
-                        className={`relative w-16 h-16 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse' : ''}`}
+                        className={`relative w-16 h-16 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[#5A1A1A] shadow-[0_0_20px_rgba(255,215,0,0.85)] border-2 border-[#FFD700]' : 'bg-[#2A0F0F] border-2 border-[#D4AF37]/40'}`}
                         title={isMyTurnNow ? 'Your Turn — Roll Dice!' : 'Not your turn'}
                       >
                         <svg viewBox="0 0 100 100" className={`w-14 h-14 ${diceRolling ? 'dice-spin-shake' : ''}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 8px rgba(255,215,0,0.8))' : 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
@@ -2663,7 +2661,7 @@ export default function StudentGame({
                       <button
                         onClick={handleRollClick}
                         disabled={!isMyTurnNow || diceRolling || activeQuestion !== null || isMovingOnline}
-                        className={`relative w-24 h-24 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse' : ''}`}
+                        className={`relative w-24 h-24 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[#5A1A1A] shadow-[0_0_30px_rgba(255,215,0,0.95)] border-3 border-[#FFD700]' : 'bg-[#2A0F0F] border-2 border-[#D4AF37]/45'}`}
                         title={isMyTurnNow ? 'Your Turn — Click to Roll!' : 'Not your turn'}
                       >
                         <svg viewBox="0 0 100 100" className={`w-20 h-20 ${diceRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 12px rgba(255,215,0,0.9))' : 'drop-shadow(0 3px 6px rgba(255,215,0,0.25))' }}>
@@ -2758,13 +2756,20 @@ export default function StudentGame({
                   <div className="bg-[#3B0F0F] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white">
                     <h3 className="font-adventure text-base font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 mb-4 uppercase tracking-wider">Standings</h3>
                     <div className="space-y-3 text-xs">
-                      {syncState.teams.slice().sort((a:any, b:any)=>b.position - a.position || b.xp - a.xp).map((p: any, idx: number) => (
-                        <div key={p.id} className="p-3 bg-[#2A0F0F] border-2 border-[#D4AF37]/30 rounded-2xl shadow-md text-white">
+                      {syncState.teams.slice().sort((a: any, b: any) => {
+                        const rA = a.finishedRank || (a.finished ? 1 : 99);
+                        const rB = b.finishedRank || (b.finished ? 1 : 99);
+                        if (rA !== rB) return rA - rB;
+                        return b.position - a.position || b.xp - a.xp;
+                      }).map((p: any, idx: number) => (
+                        <div key={p.id} className={`p-3 bg-[#2A0F0F] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
                           <div className="flex justify-between items-center font-bold mb-2">
                             <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
-                              <span className="font-adventure text-[#FFD700]">#{idx+1}</span>
+                              <span className="font-adventure text-[#FFD700]">
+                                {p.finished ? `🏆 #${p.finishedRank}` : `#${idx+1}`}
+                              </span>
                               <span>👤</span>
-                              <span className="truncate max-w-[90px] text-amber-100">{p.name}</span>
+                              <span className={`truncate max-w-[90px] ${p.finished ? 'text-emerald-300' : 'text-amber-100'}`}>{p.name} {p.finished && '🏁'}</span>
                             </span>
                             {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
                           </div>
@@ -2846,7 +2851,12 @@ export default function StudentGame({
             )}
 
             {syncState.teams.length > 0 && (() => {
-              const sorted = syncState.teams.slice().sort((a: any, b: any) => b.position - a.position || b.xp - a.xp);
+              const sorted = syncState.teams.slice().sort((a: any, b: any) => {
+                const rA = a.finishedRank || 999;
+                const rB = b.finishedRank || 999;
+                if (rA !== rB) return rA - rB;
+                return b.position - a.position || b.xp - a.xp;
+              });
               const winner = sorted[0];
               return (
                 <div className="bg-[#2A0F0F] border border-[#D4AF37]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
@@ -2866,14 +2876,18 @@ export default function StudentGame({
             })()}
 
             <div className="w-full max-w-md max-h-48 overflow-y-auto scrollbar-none mb-8 space-y-2 font-sans">
-              {syncState.teams.slice().sort((a: any, b: any) => b.position - a.position || b.xp - a.xp).map((p: any, idx: number) => (
+              {syncState.teams.slice().sort((a: any, b: any) => {
+                const rA = a.finishedRank || 999;
+                const rB = b.finishedRank || 999;
+                if (rA !== rB) return rA - rB;
+                return b.position - a.position || b.xp - a.xp;
+              }).map((p: any, idx: number) => (
                 <div key={p.id} className="flex items-center justify-between p-3 bg-[#2A0F0F] border border-[#D4AF37]/30 rounded-xl text-xs text-white">
-                  <span className="font-bold">#{idx+1} 👤 {p.name}</span>
+                  <span className="font-bold">#{idx+1} 👤 {p.name} {p.finished && '🏁'}</span>
                   <span className="font-semibold text-amber-200/80">{p.xp} XP | {p.coins} Coins</span>
                 </div>
               ))}
             </div>
-
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-2 font-sans w-full max-w-xs">
               <button 
                 onClick={() => {
