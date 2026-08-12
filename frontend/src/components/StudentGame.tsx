@@ -248,6 +248,20 @@ export default function StudentGame({
   const activeIntervalsRef = useRef<Record<string, any>>({});
   const previousPositionsRef = useRef<Record<string, number>>({});
 
+  // Auth/State refs for socket connect/reconnect stability
+  const syncStateRef = useRef<any>(null);
+  const rollPendingRef = useRef<boolean>(false);
+  const onlineIsSubmittingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    syncStateRef.current = syncState;
+  }, [syncState]);
+
+  // Reset answer submission guard when a new active question is received or cleared
+  useEffect(() => {
+    onlineIsSubmittingRef.current = false;
+  }, [activeQuestion]);
+
   // Animate teams from old positions to new positions one tile at a time
   const animateTeamMovement = (teamId: string, fromPos: number, toPos: number, onComplete?: () => void) => {
     if (fromPos === toPos) {
@@ -450,8 +464,9 @@ export default function StudentGame({
       // Auto-reconnect: on (re)connect, if we're in a game, rejoin
       const handleConnect = () => {
         setIsConnected(true);
-        if (syncState && syncState.roomCode && syncState.status === 'PLAYING') {
-          socket.emit('student:reconnect', { roomCode: syncState.roomCode, studentId: activeStudent.id });
+        const currentSync = syncStateRef.current;
+        if (currentSync && currentSync.roomCode && currentSync.status === 'PLAYING') {
+          socket.emit('student:reconnect', { roomCode: currentSync.roomCode, studentId: activeStudent.id });
         }
       };
       const handleDisconnect = () => setIsConnected(false);
@@ -473,6 +488,7 @@ export default function StudentGame({
         );
         setMyTeam(matchedTeam);
         setSyncState(data);
+        rollPendingRef.current = false;
       });
 
       socket.on('game:dice_rolled', (data: any) => {
@@ -586,7 +602,7 @@ export default function StudentGame({
         clearInterval(interval);
       });
     };
-  }, [socket, activeStudent, syncState]);
+  }, [socket, activeStudent]);
 
   // Clean active question overlays on screen transitions
   useEffect(() => {
@@ -750,6 +766,68 @@ export default function StudentGame({
     }
   };
 
+  const getOnlineTurnPhase = (): 'WAITING' | 'READY_TO_ROLL' | 'ROLLING' | 'MOVING' | 'QUESTION' | 'PROCESSING_ANSWER' | 'TURN_COMPLETE' => {
+    if (!syncState || syncState.status !== 'PLAYING') return 'WAITING';
+    if (diceRolling) return 'ROLLING';
+    if (isMovingOnline) return 'MOVING';
+    if (activeQuestion) {
+      if (quizResult) return 'PROCESSING_ANSWER';
+      return 'QUESTION';
+    }
+    if (checkIsMyTurn()) {
+      return 'READY_TO_ROLL';
+    }
+    return 'WAITING';
+  };
+
+  const renderDiceStatusArea = (phase: string, playerName: string, rollVal: number | null, isMobile: boolean) => {
+    const wrapperClass = isMobile ? "flex flex-col items-center justify-center text-center text-white font-sans gap-0.5" : "w-full text-center flex flex-col items-center gap-1 font-sans";
+    
+    switch (phase) {
+      case 'READY_TO_ROLL':
+        return (
+          <div className={wrapperClass}>
+            <span className="text-[#FFD700] font-adventure text-xs font-bold block uppercase animate-pulse">🎲 YOUR TURN</span>
+            <span className="text-[9px] text-amber-200 font-bold uppercase tracking-wider">ROLL THE DICE</span>
+          </div>
+        );
+      case 'ROLLING':
+        return (
+          <div className={wrapperClass}>
+            <span className="text-amber-200 font-adventure text-xs font-bold block uppercase animate-bounce">⚡ ROLLING...</span>
+          </div>
+        );
+      case 'MOVING':
+        return (
+          <div className={wrapperClass}>
+            <span className="text-amber-250 font-adventure text-xs font-bold block uppercase">🏃‍♂️ MOVING...</span>
+            {rollVal !== null && <span className="text-[9px] text-amber-300 font-bold uppercase tracking-wider">{rollVal} SPACES</span>}
+          </div>
+        );
+      case 'QUESTION':
+        return (
+          <div className={wrapperClass}>
+            <span className="text-red-400 font-adventure text-xs font-bold block uppercase animate-pulse">❓ QUESTION TIME</span>
+            <span className="text-[9px] text-amber-200 font-bold uppercase tracking-wider">ANSWER THE QUESTION</span>
+          </div>
+        );
+      case 'PROCESSING_ANSWER':
+        return (
+          <div className={wrapperClass}>
+            <span className="text-emerald-400 font-adventure text-xs font-bold block uppercase">📖 PROCESSING...</span>
+          </div>
+        );
+      case 'WAITING':
+      default:
+        return (
+          <div className={wrapperClass}>
+            <span className="text-stone-400 font-adventure text-xs font-bold block uppercase">⏳ WAITING FOR</span>
+            <span className="text-[10px] text-white font-extrabold truncate max-w-[150px] uppercase">{playerName}</span>
+          </div>
+        );
+    }
+  };
+
   const handleStartPracticeGame = () => {
     if (socket && syncState) {
       socket.emit('student:start_practice', { roomCode: syncState.roomCode });
@@ -757,13 +835,23 @@ export default function StudentGame({
   };
 
   const handleRollClick = () => {
-    if (socket && syncState && !diceRolling && !activeQuestion) {
+    const phase = getOnlineTurnPhase();
+    if (rollPendingRef.current || phase !== 'READY_TO_ROLL' || diceRolling || activeQuestion !== null || isMovingOnline) {
+      return;
+    }
+    rollPendingRef.current = true;
+    if (socket && syncState) {
       socket.emit('student:roll', { roomCode: syncState.roomCode, studentId: activeStudent.id });
     }
+    // Automatically reset roll lock after 3 seconds in case of lost network
+    setTimeout(() => {
+      rollPendingRef.current = false;
+    }, 3000);
   };
 
   const handleSubmitAnswer = (oIdx: number) => {
-    if (quizResult || !activeQuestion || !socket) return;
+    if (quizResult || !activeQuestion || !socket || onlineIsSubmittingRef.current) return;
+    onlineIsSubmittingRef.current = true;
     setSelectedOption(oIdx);
     
     const timeSpent = 20 - timerRemaining;
@@ -2493,116 +2581,127 @@ export default function StudentGame({
                 </div>
               </div>
 
-              {/* MOBILE DOCKED TURN PANEL - MERGED & DOCKED OUTSIDE PATH */}
-              <div className="flex md:hidden bg-[#3B0F0F] border-3 border-[#D4AF37] p-3 rounded-2xl flex-col items-center justify-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.5)] text-center w-full max-w-[280px] mx-auto text-white select-none">
-                <div>
-                  <h4 className="text-[#FFD700] font-adventure text-sm font-bold block truncate max-w-[200px]" title={getActivePlayerName()}>
-                    {getActivePlayerName()}
-                  </h4>
-                  <span className="text-[9px] bg-[#5A1A1A] border border-[#D4AF37]/30 text-amber-200 px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block">
-                    Active Explorer
-                  </span>
-                  <div className="mt-1 flex items-center justify-center gap-1.5 font-sans">
-                    <span className="text-[8px] text-amber-200/70 font-bold uppercase tracking-wider">⏱ Time:</span>
-                    <span className={`text-[10px] font-bold font-mono tracking-tight ${getTimerColorClass(timerRemaining, activeQuestion !== null)}`}>
-                      {activeQuestion ? `${timerRemaining}s` : '15s'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* D6 Cube Die */}
-                <div className="relative w-20 h-20 flex items-center justify-center">
-                  <button
-                    onClick={handleRollClick}
-                    disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null || isMovingOnline}
-                    className="relative w-16 h-16 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center"
-                    title="Roll Dice"
-                  >
-                    <svg viewBox="0 0 100 100" className={`w-14 h-14 ${diceRolling ? 'dice-spin-shake' : ''}`} style={{ filter: 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
-                      {/* Top face */}
-                      <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2.5"/>
-                      {/* Left face */}
-                      <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
-                      {/* Right face */}
-                      <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
-                      {/* Top face pips */}
-                      <circle cx="38" cy="26" r="3.5" fill="#FFD700"/>
-                      <circle cx="50" cy="34" r="3.5" fill="#FFD700"/>
-                      <circle cx="62" cy="26" r="3.5" fill="#FFD700"/>
-                    </svg>
-                  </button>
-
-                  {localRollResult !== null && !diceRolling && (
-                    <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[#D4AF37] shadow-lg">
-                      <span className="font-adventure text-3xl font-extrabold text-[#FFD700]">
-                        {localRollResult}
-                      </span>
+              {/* MOBILE DOCKED TURN PANEL - dynamic turn phase status */}
+              {(() => {
+                const phase = getOnlineTurnPhase();
+                const isMyTurnNow = phase === 'READY_TO_ROLL';
+                return (
+                  <div className={`flex md:hidden p-3 rounded-2xl flex-col items-center justify-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.5)] text-center w-full max-w-[280px] mx-auto text-white select-none transition-all ${isMyTurnNow ? 'bg-[#3B0F0F] border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'bg-[#3B0F0F] border-3 border-[#D4AF37]'}`}>
+                    {/* Dynamic status text */}
+                    <div className="w-full">
+                      {renderDiceStatusArea(phase, getActivePlayerName(), localRollResult, true)}
+                      {activeQuestion && (
+                        <div className="mt-1 flex items-center justify-center gap-1.5 font-sans">
+                          <span className="text-[8px] text-amber-200/70 font-bold uppercase tracking-wider">⏱</span>
+                          <span className={`text-[10px] font-bold font-mono ${getTimerColorClass(timerRemaining, true)}`}>{timerRemaining}s</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
+
+                    {/* D6 Cube Die */}
+                    <div className="relative w-20 h-20 flex items-center justify-center">
+                      <button
+                        onClick={handleRollClick}
+                        disabled={!isMyTurnNow || diceRolling || activeQuestion !== null || isMovingOnline}
+                        className={`relative w-16 h-16 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse' : ''}`}
+                        title={isMyTurnNow ? 'Your Turn — Roll Dice!' : 'Not your turn'}
+                      >
+                        <svg viewBox="0 0 100 100" className={`w-14 h-14 ${diceRolling ? 'dice-spin-shake' : ''}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 8px rgba(255,215,0,0.8))' : 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
+                          {/* Top face */}
+                          <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2.5"/>
+                          {/* Left face */}
+                          <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
+                          {/* Right face */}
+                          <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
+                          {/* Top face pips */}
+                          <circle cx="38" cy="26" r="3.5" fill="#FFD700"/>
+                          <circle cx="50" cy="34" r="3.5" fill="#FFD700"/>
+                          <circle cx="62" cy="26" r="3.5" fill="#FFD700"/>
+                        </svg>
+                      </button>
+
+                      {localRollResult !== null && !diceRolling && (
+                        <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[#D4AF37] shadow-lg">
+                          <span className="font-adventure text-3xl font-extrabold text-[#FFD700]">
+                            {localRollResult}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  );
+                })()}
             </div>
 
             <div className="flex flex-col gap-6 font-sans">
-              {/* DESKTOP TURN PANEL - HIDDEN ON MOBILE */}
-              <div className="hidden md:flex bg-[#3B0F0F] border-3 border-[#D4AF37] p-6 rounded-3xl flex-col items-center justify-center text-center shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white select-none">
-                <span className="text-[10px] block font-bold text-amber-300 uppercase tracking-wider mb-2 font-adventure">Turn Information</span>
-                <div className="mb-4">
-                  <span className="font-adventure text-lg font-extrabold text-[#FFD700] block uppercase tracking-wide">
-                    {getActivePlayerName()}
-                  </span>
-                  <span className="text-[9px] bg-[#5A1A1A] border border-[#D4AF37]/30 text-amber-200 px-2.5 py-0.5 rounded-full font-bold uppercase mt-1 inline-block font-sans">
-                    Active Explorer
-                  </span>
-                </div>
-
-                <div className="mb-4 border-t border-b border-[#D4AF37]/20 py-3 w-full flex flex-col items-center gap-1 font-sans">
-                  <span className="text-[10px] text-amber-200/70 font-bold uppercase tracking-wider">⏱ Time Remaining</span>
-                  <span className={`text-xl font-bold font-mono tracking-tight ${getTimerColorClass(timerRemaining, activeQuestion !== null)}`}>
-                    {activeQuestion ? `${timerRemaining}s` : '15s'}
-                  </span>
-                </div>
-
-                {/* D6 Cube Die — Desktop */}
-                <div className="relative w-28 h-28 flex items-center justify-center mb-2">
-                  <button
-                    onClick={handleRollClick}
-                    disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null || isMovingOnline}
-                    className="relative w-24 h-24 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center"
-                    title="Click to Roll"
-                  >
-                    <svg viewBox="0 0 100 100" className={`w-20 h-20 ${diceRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: 'drop-shadow(0 3px 6px rgba(255,215,0,0.25))' }}>
-                      {/* Top face */}
-                      <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2"/>
-                      {/* Left face */}
-                      <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
-                      {/* Right face */}
-                      <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
-                      {/* Top face pips */}
-                      <circle cx="38" cy="25" r="4" fill="#FFD700"/>
-                      <circle cx="50" cy="33" r="4" fill="#FFD700"/>
-                      <circle cx="62" cy="25" r="4" fill="#FFD700"/>
-                      {/* Left face pip */}
-                      <circle cx="28" cy="60" r="3.5" fill="#FFD700"/>
-                      {/* Right face pips */}
-                      <circle cx="72" cy="58" r="3.5" fill="#FFD700"/>
-                      <circle cx="72" cy="72" r="3.5" fill="#FFD700"/>
-                    </svg>
-                  </button>
-
-                  {localRollResult !== null && !diceRolling && (
-                    <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[#D4AF37] shadow-lg">
-                      <div className="text-center">
-                        <span className="block text-[8px] text-[#FFD700] uppercase font-extrabold tracking-widest leading-none mb-0.5 font-adventure">ROLLED</span>
-                        <span className="font-adventure text-5xl font-extrabold text-[#FFD700]">
-                          {localRollResult}
-                        </span>
-                      </div>
+              {/* DESKTOP TURN PANEL - dynamic phase-aware status */}
+              {(() => {
+                const phase = getOnlineTurnPhase();
+                const isMyTurnNow = phase === 'READY_TO_ROLL';
+                return (
+                  <div className={`hidden md:flex p-6 rounded-3xl flex-col items-center justify-center text-center shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white select-none transition-all ${isMyTurnNow ? 'bg-[#3B0F0F] border-3 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]' : 'bg-[#3B0F0F] border-3 border-[#D4AF37]'}`}>
+                    <span className="text-[10px] block font-bold text-amber-300 uppercase tracking-wider mb-2 font-adventure">Current Turn</span>
+                    <div className="mb-2">
+                      <span className="font-adventure text-lg font-extrabold text-[#FFD700] block uppercase tracking-wide truncate max-w-[140px]">
+                        {getActivePlayerName()}
+                      </span>
                     </div>
-                  )}
-                </div>
-                <span className="text-[9px] text-amber-200/50 block font-adventure tracking-wider uppercase">Roll Dice (1–6)</span>
-              </div>
+
+                    {/* Dynamic status area */}
+                    <div className="mb-3 border-t border-b border-[#D4AF37]/20 py-2 w-full">
+                      {renderDiceStatusArea(phase, getActivePlayerName(), localRollResult, false)}
+                      {activeQuestion && (
+                        <div className="flex items-center justify-center gap-1.5 mt-1 font-sans">
+                          <span className="text-[10px] text-amber-200/70 font-bold uppercase tracking-wider">⏱</span>
+                          <span className={`text-lg font-bold font-mono tracking-tight ${getTimerColorClass(timerRemaining, true)}`}>{timerRemaining}s</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* D6 Cube Die — Desktop */}
+                    <div className="relative w-28 h-28 flex items-center justify-center mb-2">
+                      <button
+                        onClick={handleRollClick}
+                        disabled={!isMyTurnNow || diceRolling || activeQuestion !== null || isMovingOnline}
+                        className={`relative w-24 h-24 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse' : ''}`}
+                        title={isMyTurnNow ? 'Your Turn — Click to Roll!' : 'Not your turn'}
+                      >
+                        <svg viewBox="0 0 100 100" className={`w-20 h-20 ${diceRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 12px rgba(255,215,0,0.9))' : 'drop-shadow(0 3px 6px rgba(255,215,0,0.25))' }}>
+                          {/* Top face */}
+                          <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2"/>
+                          {/* Left face */}
+                          <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
+                          {/* Right face */}
+                          <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
+                          {/* Top face pips */}
+                          <circle cx="38" cy="25" r="4" fill="#FFD700"/>
+                          <circle cx="50" cy="33" r="4" fill="#FFD700"/>
+                          <circle cx="62" cy="25" r="4" fill="#FFD700"/>
+                          {/* Left face pip */}
+                          <circle cx="28" cy="60" r="3.5" fill="#FFD700"/>
+                          {/* Right face pips */}
+                          <circle cx="72" cy="58" r="3.5" fill="#FFD700"/>
+                          <circle cx="72" cy="72" r="3.5" fill="#FFD700"/>
+                        </svg>
+                      </button>
+
+                      {localRollResult !== null && !diceRolling && (
+                        <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[#D4AF37] shadow-lg">
+                          <div className="text-center">
+                            <span className="block text-[8px] text-[#FFD700] uppercase font-extrabold tracking-widest leading-none mb-0.5 font-adventure">ROLLED</span>
+                            <span className="font-adventure text-5xl font-extrabold text-[#FFD700]">
+                              {localRollResult}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[9px] text-amber-200/50 block font-adventure tracking-wider uppercase">
+                      {isMyTurnNow ? '🎲 Your Turn' : 'Roll Dice (1–6)'}
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* Roster leaderboard / Opponent Solving Handoff */}
               <div className="flex flex-col gap-6 w-full">
