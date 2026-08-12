@@ -242,6 +242,32 @@ export default function StudentGame({
   const [hasPendingRetry, setHasPendingRetry] = useState<boolean>(false);
   const [showRetryToast, setShowRetryToast] = useState<boolean>(false);
 
+  // Online tile-by-tile movement animation state
+  const [displayPositions, setDisplayPositions] = useState<Record<string, number>>({});
+  const [isMovingOnline, setIsMovingOnline] = useState<boolean>(false);
+  const movementIntervalRef = useRef<any>(null);
+
+  // Animate teams from old positions to new positions one tile at a time
+  const animateTeamMovement = (teamId: string, fromPos: number, toPos: number, onComplete?: () => void) => {
+    if (fromPos === toPos) {
+      if (onComplete) onComplete();
+      return;
+    }
+    setIsMovingOnline(true);
+    let current = fromPos;
+    const step = toPos > fromPos ? 1 : -1;
+    const interval = setInterval(() => {
+      current += step;
+      setDisplayPositions(prev => ({ ...prev, [teamId]: current }));
+      if (current === toPos) {
+        clearInterval(interval);
+        setIsMovingOnline(false);
+        if (onComplete) onComplete();
+      }
+    }, 320);
+    movementIntervalRef.current = interval;
+  };
+
   // Profile Edit State
   const [editingProfile, setEditingProfile] = useState<boolean>(false);
   const [editFirstName, setEditFirstName] = useState<string>('');
@@ -397,7 +423,6 @@ export default function StudentGame({
       socket.on('disconnect', handleDisconnect);
 
       socket.on('room:updated', (data: any) => {
-        setSyncState(data);
         setHasPendingRetry(data.hasPendingRetry || false);
         if (data.status === 'PLAYING') {
           setGameState('playing');
@@ -410,6 +435,33 @@ export default function StudentGame({
           t.members.some((m: any) => m.id === activeStudent.id)
         );
         setMyTeam(matchedTeam);
+
+        // Animate tile-by-tile movement for each team before committing syncState
+        setSyncState((prevSync: any) => {
+          if (prevSync && prevSync.status === 'PLAYING' && data.status === 'PLAYING') {
+            data.teams.forEach((newTeam: any) => {
+              const oldTeam = prevSync.teams.find((t: any) => t.id === newTeam.id);
+              const oldPos = oldTeam ? oldTeam.position : newTeam.position;
+              if (oldPos !== newTeam.position) {
+                // Start animation from old to new position
+                setDisplayPositions(prev => ({ ...prev, [newTeam.id]: oldPos }));
+                animateTeamMovement(newTeam.id, oldPos, newTeam.position);
+              } else {
+                // Ensure displayPositions is initialized
+                setDisplayPositions(prev => {
+                  if (prev[newTeam.id] === undefined) return { ...prev, [newTeam.id]: newTeam.position };
+                  return prev;
+                });
+              }
+            });
+          } else {
+            // Initialize displayPositions when first entering playing state
+            const initialPositions: Record<string, number> = {};
+            data.teams.forEach((t: any) => { initialPositions[t.id] = t.position; });
+            setDisplayPositions(initialPositions);
+          }
+          return data;
+        });
       });
 
       socket.on('game:dice_rolled', (data: any) => {
@@ -517,6 +569,10 @@ export default function StudentGame({
         socket.off('game:victory');
         socket.off('room:error');
         socket.off('error');
+      }
+      // Clear any running movement interval on cleanup
+      if (movementIntervalRef.current) {
+        clearInterval(movementIntervalRef.current);
       }
     };
   }, [socket, activeStudent, syncState]);
@@ -2261,7 +2317,7 @@ export default function StudentGame({
               <button 
                 onClick={() => {
                   if (socket) socket.emit('room:leave', { roomCode: syncState.roomCode });
-                  setGameState('dashboard');
+                  onBack();
                 }}
                 className="px-6 py-3.5 bg-stone-800 border border-white/10 hover:bg-stone-750 text-white font-adventure font-extrabold rounded-lg text-xs uppercase transition-colors"
               >
@@ -2303,6 +2359,15 @@ export default function StudentGame({
                   {activeStudent.coins}
                 </span>
               </div>
+
+              {/* Exit Game button — always visible in playing state */}
+              <button
+                onClick={handleGoBack}
+                className="px-3 py-1.5 bg-[#5A1A1A] hover:bg-[#7F1D1D] text-white/80 hover:text-white font-adventure font-bold rounded-xl border border-[#D4AF37]/30 text-[9px] uppercase tracking-widest transition-all active:scale-95 shadow-md"
+                title="Exit Game"
+              >
+                ← Exit
+              </button>
             </div>
           )}
 
@@ -2371,10 +2436,11 @@ export default function StudentGame({
                     );
                   })}
 
-                  {/* Active Player Glow Ring */}
+                  {/* Active Player Glow Ring — follows display position during animation */}
                   {syncState.teams[syncState.activeTeamIdx] && (() => {
                     const activeT = syncState.teams[syncState.activeTeamIdx];
-                    const activeCoord = TILE_COORDS[activeT.position];
+                    const displayPos = displayPositions[activeT.id] ?? activeT.position;
+                    const activeCoord = TILE_COORDS[Math.min(17, Math.max(0, displayPos))];
                     return (
                       <div 
                         className="active-glow-ring" 
@@ -2383,10 +2449,15 @@ export default function StudentGame({
                     );
                   })()}
 
-                  {/* Characters standees */}
+                  {/* Characters standees — use displayPositions for smooth tile-by-tile movement */}
                   {syncState.teams.map((t: any, idx: number) => {
-                    const coord = TILE_COORDS[t.position];
-                    const teamsOnSameTile = syncState.teams.filter((te: any) => te.position === t.position);
+                    const displayPos = Math.min(17, Math.max(0, displayPositions[t.id] ?? t.position));
+                    const coord = TILE_COORDS[displayPos];
+                    // Group by display position for offset calculation
+                    const teamsOnSameTile = syncState.teams.filter((te: any) => {
+                      const teDisplayPos = Math.min(17, Math.max(0, displayPositions[te.id] ?? te.position));
+                      return teDisplayPos === displayPos;
+                    });
                     const tIndexOnTile = teamsOnSameTile.findIndex((te: any) => te.id === t.id);
                     const offset = getTokenOffset(tIndexOnTile, teamsOnSameTile.length);
                     const isActive = syncState.activeTeamIdx === idx;
@@ -2432,7 +2503,7 @@ export default function StudentGame({
                 <div className="relative w-20 h-20 flex items-center justify-center">
                   <button
                     onClick={handleRollClick}
-                    disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
+                    disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null || isMovingOnline}
                     className="relative w-16 h-16 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center"
                     title="Roll Dice"
                   >
@@ -2485,7 +2556,7 @@ export default function StudentGame({
                 <div className="relative w-28 h-28 flex items-center justify-center mb-2">
                   <button
                     onClick={handleRollClick}
-                    disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null}
+                    disabled={!checkIsMyTurn() || diceRolling || activeQuestion !== null || isMovingOnline}
                     className="relative w-24 h-24 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center"
                     title="Click to Roll"
                   >
