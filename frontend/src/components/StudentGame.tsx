@@ -245,13 +245,17 @@ export default function StudentGame({
   // Online tile-by-tile movement animation state
   const [displayPositions, setDisplayPositions] = useState<Record<string, number>>({});
   const [isMovingOnline, setIsMovingOnline] = useState<boolean>(false);
-  const movementIntervalRef = useRef<any>(null);
+  const activeIntervalsRef = useRef<Record<string, any>>({});
+  const previousPositionsRef = useRef<Record<string, number>>({});
 
   // Animate teams from old positions to new positions one tile at a time
   const animateTeamMovement = (teamId: string, fromPos: number, toPos: number, onComplete?: () => void) => {
     if (fromPos === toPos) {
       if (onComplete) onComplete();
       return;
+    }
+    if (activeIntervalsRef.current[teamId]) {
+      clearInterval(activeIntervalsRef.current[teamId]);
     }
     setIsMovingOnline(true);
     let current = fromPos;
@@ -261,12 +265,45 @@ export default function StudentGame({
       setDisplayPositions(prev => ({ ...prev, [teamId]: current }));
       if (current === toPos) {
         clearInterval(interval);
-        setIsMovingOnline(false);
+        delete activeIntervalsRef.current[teamId];
+        // Check if any other teams are still moving
+        const remainingMoves = Object.keys(activeIntervalsRef.current).length;
+        if (remainingMoves === 0) {
+          setIsMovingOnline(false);
+        }
         if (onComplete) onComplete();
       }
     }, 320);
-    movementIntervalRef.current = interval;
+    activeIntervalsRef.current[teamId] = interval;
   };
+
+  // Sync positions state hook
+  useEffect(() => {
+    if (gameState === 'playing' && syncState && syncState.teams) {
+      syncState.teams.forEach((t: any) => {
+        const oldPos = previousPositionsRef.current[t.id];
+        const newPos = t.position;
+        if (oldPos !== undefined) {
+          if (oldPos !== newPos) {
+            animateTeamMovement(t.id, oldPos, newPos);
+          }
+        } else {
+          // Initialize first time
+          setDisplayPositions(prev => ({ ...prev, [t.id]: newPos }));
+        }
+        previousPositionsRef.current[t.id] = newPos;
+      });
+    } else if (gameState === 'lobby' || !syncState) {
+      // Clear tracking when not playing
+      previousPositionsRef.current = {};
+      setDisplayPositions({});
+      Object.values(activeIntervalsRef.current).forEach((interval: any) => {
+        clearInterval(interval);
+      });
+      activeIntervalsRef.current = {};
+      setIsMovingOnline(false);
+    }
+  }, [syncState, gameState]);
 
   // Profile Edit State
   const [editingProfile, setEditingProfile] = useState<boolean>(false);
@@ -435,33 +472,7 @@ export default function StudentGame({
           t.members.some((m: any) => m.id === activeStudent.id)
         );
         setMyTeam(matchedTeam);
-
-        // Animate tile-by-tile movement for each team before committing syncState
-        setSyncState((prevSync: any) => {
-          if (prevSync && prevSync.status === 'PLAYING' && data.status === 'PLAYING') {
-            data.teams.forEach((newTeam: any) => {
-              const oldTeam = prevSync.teams.find((t: any) => t.id === newTeam.id);
-              const oldPos = oldTeam ? oldTeam.position : newTeam.position;
-              if (oldPos !== newTeam.position) {
-                // Start animation from old to new position
-                setDisplayPositions(prev => ({ ...prev, [newTeam.id]: oldPos }));
-                animateTeamMovement(newTeam.id, oldPos, newTeam.position);
-              } else {
-                // Ensure displayPositions is initialized
-                setDisplayPositions(prev => {
-                  if (prev[newTeam.id] === undefined) return { ...prev, [newTeam.id]: newTeam.position };
-                  return prev;
-                });
-              }
-            });
-          } else {
-            // Initialize displayPositions when first entering playing state
-            const initialPositions: Record<string, number> = {};
-            data.teams.forEach((t: any) => { initialPositions[t.id] = t.position; });
-            setDisplayPositions(initialPositions);
-          }
-          return data;
-        });
+        setSyncState(data);
       });
 
       socket.on('game:dice_rolled', (data: any) => {
@@ -570,10 +581,10 @@ export default function StudentGame({
         socket.off('room:error');
         socket.off('error');
       }
-      // Clear any running movement interval on cleanup
-      if (movementIntervalRef.current) {
-        clearInterval(movementIntervalRef.current);
-      }
+      // Clear all active movement intervals on unmount
+      Object.values(activeIntervalsRef.current).forEach((interval: any) => {
+        clearInterval(interval);
+      });
     };
   }, [socket, activeStudent, syncState]);
 
