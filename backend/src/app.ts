@@ -11,8 +11,22 @@ import studentRouter from './routes/student';
 
 const app = express();
 
-// Enable CORS with wildcard for development ease
-app.use(cors({ origin: '*' }));
+const allowedOrigins = [
+  'http://localhost:8081',
+  'http://localhost:8082',
+  'https://bytequest-livid.vercel.app'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 
 // Security headers config
 app.use(

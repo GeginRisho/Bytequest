@@ -131,6 +131,22 @@ export default function StudentGame({
   const [rosterClass, setRosterClass] = useState<any>(null);
   const [myTeam, setMyTeam] = useState<any>(null);
   const [syncState, setSyncState] = useState<any>(null);
+  const [lobbyTimeoutError, setLobbyTimeoutError] = useState<boolean>(false);
+  const [lastLobbyAction, setLastLobbyAction] = useState<{ type: 'create' | 'join'; code?: string } | null>(null);
+
+  useEffect(() => {
+    let timer: any;
+    if (gameState === 'lobby' && !syncState) {
+      setLobbyTimeoutError(false);
+      timer = setTimeout(() => {
+        setLobbyTimeoutError(true);
+      }, 12000);
+    } else {
+      setLobbyTimeoutError(false);
+    }
+    return () => clearTimeout(timer);
+  }, [gameState, syncState]);
+
   const [logMessages, setLogMessages] = useState<string[]>([]);
   const [scorePopup, setScorePopup] = useState<string | null>(null);
 
@@ -176,6 +192,7 @@ export default function StudentGame({
       const studentId = localStorage.getItem('bytequest_student_id');
       if (socket && studentId) {
         const studentName = propActiveStudent?.name || activeStudent?.name || 'Player';
+        setLastLobbyAction({ type: 'create' });
         socket.emit('student:create_practice', { studentId, studentName });
         setGameState('lobby');
       }
@@ -189,6 +206,7 @@ export default function StudentGame({
       const studentId = localStorage.getItem('bytequest_student_id');
       const studentName = propActiveStudent?.name || activeStudent?.name || 'Player';
       if (socket && studentId && code) {
+        setLastLobbyAction({ type: 'join', code });
         if (code.startsWith('BQ')) {
           socket.emit('student:join_practice', { roomCode: code, studentId, studentName });
         } else {
@@ -629,6 +647,7 @@ export default function StudentGame({
 
   const handleSelectNameAndJoin = () => {
     if (!activeStudent || !socket) return;
+    setLastLobbyAction({ type: 'join', code: roomCode });
     if (roomCode.startsWith('BQ')) {
       socket.emit('student:join_practice', { roomCode, studentId: activeStudent.id, studentName: activeStudent.name });
     } else {
@@ -639,8 +658,29 @@ export default function StudentGame({
 
   const handleCreatePracticeRoom = () => {
     if (!activeStudent || !socket) return;
+    setLastLobbyAction({ type: 'create' });
     socket.emit('student:create_practice', { studentId: activeStudent.id, studentName: activeStudent.name });
     setGameState('lobby');
+  };
+
+  const handleLobbyRetry = () => {
+    if (!lastLobbyAction || !socket || !activeStudent) return;
+    setLobbyTimeoutError(false);
+    
+    // Re-connect socket if disconnected
+    if (!socket.connected) {
+      socket.connect();
+    }
+    
+    if (lastLobbyAction.type === 'create') {
+      socket.emit('student:create_practice', { studentId: activeStudent.id, studentName: activeStudent.name });
+    } else if (lastLobbyAction.type === 'join' && lastLobbyAction.code) {
+      if (lastLobbyAction.code.startsWith('BQ')) {
+        socket.emit('student:join_practice', { roomCode: lastLobbyAction.code, studentId: activeStudent.id, studentName: activeStudent.name });
+      } else {
+        socket.emit('student:join', { roomCode: lastLobbyAction.code, studentId: activeStudent.id });
+      }
+    }
   };
 
   const handleStartPracticeGame = () => {
@@ -2074,20 +2114,46 @@ export default function StudentGame({
       {gameState === 'lobby' && !syncState && (
         <main className="max-w-4xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full font-sans animate-scale-in">
           <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] text-white rounded-[2.5rem] p-10 shadow-[0_10px_40px_rgba(0,0,0,0.8)] text-center">
-            <div className="text-6xl mb-6 animate-pulse">⚔️</div>
-            <h2 className="font-adventure text-2xl md:text-3xl font-extrabold text-[#D32F2F] uppercase tracking-widest mb-3">Setting Up Lobby...</h2>
-            <p className="text-white/60 text-sm font-semibold mb-8">Connecting to the ByteQuest multiplayer network.</p>
-            <div className="flex items-center justify-center gap-2">
-              <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-              <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-              <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
-            </div>
-            <button
-              onClick={() => { onBack(); }}
-              className="mt-10 px-6 py-3 bg-[#3B0F0F] hover:bg-[#5A1A1A] text-white/70 hover:text-white font-adventure font-bold rounded-xl border border-white/15 text-xs uppercase tracking-widest transition-all"
-            >
-              ← Cancel &amp; Return to Menu
-            </button>
+            {lobbyTimeoutError ? (
+              <>
+                <div className="text-6xl mb-6">⚠️</div>
+                <h2 className="font-adventure text-2xl md:text-3xl font-extrabold text-[#D32F2F] uppercase tracking-widest mb-3">Connection Timeout</h2>
+                <p className="text-white/70 text-sm font-semibold mb-8 max-w-md mx-auto leading-relaxed">
+                  Unable to connect to the ByteQuest multiplayer server. Please verify your internet connection or the status of the server.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button
+                    onClick={handleLobbyRetry}
+                    className="px-6 py-3 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-stone-950 font-adventure font-extrabold rounded-xl text-xs uppercase shadow-md active:scale-95 transition-all"
+                  >
+                    Retry Connection
+                  </button>
+                  <button
+                    onClick={() => { onBack(); }}
+                    className="px-6 py-3 bg-[#3B0F0F] hover:bg-[#5A1A1A] text-white/70 hover:text-white font-adventure font-bold rounded-xl border border-white/15 text-xs uppercase tracking-widest transition-all"
+                  >
+                    Return to Menu
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-6xl mb-6 animate-pulse">⚔️</div>
+                <h2 className="font-adventure text-2xl md:text-3xl font-extrabold text-[#D32F2F] uppercase tracking-widest mb-3">Setting Up Lobby...</h2>
+                <p className="text-white/60 text-sm font-semibold mb-8">Connecting to the ByteQuest multiplayer network.</p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                  <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                  <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                </div>
+                <button
+                  onClick={() => { onBack(); }}
+                  className="mt-10 px-6 py-3 bg-[#3B0F0F] hover:bg-[#5A1A1A] text-white/70 hover:text-white font-adventure font-bold rounded-xl border border-white/15 text-xs uppercase tracking-widest transition-all"
+                >
+                  ← Cancel &amp; Return to Menu
+                </button>
+              </>
+            )}
           </div>
         </main>
       )}

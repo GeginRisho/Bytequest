@@ -55,10 +55,17 @@ export class SocketService {
   private activeRooms: Map<string, LiveRoom> = new Map(); // roomCode -> LiveRoom
 
   constructor(server: any) {
+    const allowedOrigins = [
+      'http://localhost:8081',
+      'http://localhost:8082',
+      'https://bytequest-livid.vercel.app'
+    ];
+
     this.io = new Server(server, {
       cors: {
-        origin: '*',
+        origin: allowedOrigins,
         methods: ['GET', 'POST'],
+        credentials: true
       }
     });
 
