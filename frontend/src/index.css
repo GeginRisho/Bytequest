@@ -432,14 +432,6 @@
 /* Figurine standee base */
 .avatar-standee {
   position: absolute;
-  background: rgba(255, 255, 255, 0.97);
-  border: 2px solid #D32F2F;
-  border-bottom: 4px solid #991B1B;
-  box-shadow: 
-    0px 4px 10px rgba(0,0,0,0.18),
-    inset 0 0 4px rgba(211,47,47,0.1);
-  border-radius: 0.75rem;
-  padding: 2px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -2394,14 +2394,14 @@ export default function StudentGame({
                     return (
                       <div 
                         key={t.id} 
-                        className={`avatar-standee ${isActive ? 'active-token-bounce ring-3 ring-[#D4AF37]' : ''}`} 
+                        className={`avatar-standee ${isActive ? 'active-token-bounce' : ''}`} 
                         style={{ 
                           left: `${coord.x}%`, 
                           top: `${coord.y}%`,
                           transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px)`
                         }}
                       >
-                        <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-base border-2 border-white shadow-md text-white ${t.color || 'bg-blue-600'}`}>
+                        <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-base border-2 border-white shadow-md text-white ${t.color || 'bg-blue-600'} ${isActive ? 'ring-3 ring-[#D4AF37]' : ''}`}>
                           👤
                         </div>
                         <span className="text-[6px] sm:text-[8px] font-sans font-bold text-white bg-black/60 px-1 py-0.5 rounded-md block truncate max-w-[48px] mt-0.5 leading-none text-center">{t.name}</span>
