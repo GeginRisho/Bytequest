@@ -132,6 +132,7 @@ class SoundEffects {
 const sounds = new SoundEffects();
 
 export default function App() {
+  console.log("App Component Function Executing!");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
