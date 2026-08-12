@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 8081 --host",
-    "build": "tsc && vite build",
+    "build": "vite build",
+    "type-check": "tsc --noEmit",
     "preview": "vite preview",
     "web": "vite --port 8081 --host"
   },

@@ -8,27 +8,28 @@ export default {
     extend: {
       colors: {
         jungle: {
-          deep: '#16352A',
-          medium: '#1F4A38',
-          light: '#2E6F54',
-          pale: '#449673',
+          deep: '#FDFBF7',      // Warm off-white page background
+          medium: '#FFFFFF',    // Content card backgrounds
+          light: '#E2E8F0',     // Inactive borders / dividers
+          pale: '#64748B',      // Dim slate text labels
         },
         gold: {
-          dark: '#B88E2F',
-          DEFAULT: '#D4A93A',
-          light: '#E8CD82',
-          glow: '#FFECA1',
+          dark: '#991B1B',      // Crimson dark red accent (error / active state)
+          DEFAULT: '#D32F2F',   // Main brand scarlet red (decorative elements / buttons)
+          light: '#EF4444',     // Bright red hover state
+          glow: '#D32F2F',
         },
         parchment: {
-          DEFAULT: '#F3EAD3',
-          dark: '#E5D6B3',
-          light: '#FAF6ED',
+          DEFAULT: '#FFFFFF',
+          dark: '#F5F5F5',
+          light: '#FAFAFA',
         },
-        offwhite: '#F6F1E3',
+        offwhite: '#1E293B',    // High-contrast slate-900 text for light surfaces
       },
       fontFamily: {
-        adventure: ['"Playfair Display"', 'Georgia', 'serif'],
-        sans: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
+        adventure: ['"Space Grotesk"', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+        code: ['"Fira Code"', 'monospace'],
       },
       animation: {
         'bounce-slow': 'bounce 2s infinite',

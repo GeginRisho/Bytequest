@@ -85,7 +85,13 @@ export default function TeacherDashboard({
   const [authError, setAuthError] = useState<string>('');
   const [teacherInfo, setTeacherInfo] = useState<any>(null);
 
-  // Active Tab: Redesigned exact navigation items
+  useEffect(() => {
+    const cachedTeacher = localStorage.getItem('bytequest_teacher_info');
+    if (cachedTeacher) {
+      setTeacherInfo(JSON.parse(cachedTeacher));
+      setIsAuthenticated(true);
+    }
+  }, []);
   // Teacher Signup State (Public self-registration disabled; accounts created via Teacher Management only)
 
   // Teacher Management State
@@ -411,6 +417,8 @@ export default function TeacherDashboard({
         return;
       }
 
+      localStorage.setItem('bytequest_teacher_info', JSON.stringify(data.teacher));
+      localStorage.setItem('bytequest_role', 'teacher');
       setTeacherInfo(data.teacher);
       setIsAuthenticated(true);
     } catch (err: any) {
@@ -926,38 +934,38 @@ export default function TeacherDashboard({
   if (!isAuthenticated) {
     return (
       <div className="max-w-md mx-auto px-6 py-16 flex flex-col justify-center min-h-[85vh]">
-        <div className="parchment-panel rounded-2xl p-8 text-jungle-deep shadow-2xl relative">
-          <div className="flex items-center gap-2 mb-4 justify-center">
-            <Compass className="w-8 h-8 text-gold-dark animate-spin-slow" />
-            <h2 className="font-adventure text-3xl font-bold tracking-wide">Teacher Portal</h2>
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-slate-800 shadow-xl relative">
+          <div className="flex items-center gap-2 mb-6 justify-center">
+            <Compass className="w-8 h-8 text-[#D32F2F] animate-spin-slow" />
+            <h2 className="font-adventure text-3xl font-bold tracking-wide text-slate-900">Teacher Portal</h2>
           </div>
           
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase text-jungle-light mb-1">Teacher Email</label>
+              <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1.5 tracking-wider">Teacher Email</label>
               <input 
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold text-sm"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-xs font-bold uppercase text-jungle-light mb-1">Password</label>
+              <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1.5 tracking-wider">Password</label>
               <input 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold text-sm"
                 required
               />
             </div>
 
             {authError && (
-              <div className="bg-red-50 text-red-700 text-xs p-2.5 rounded-lg font-semibold flex gap-1.5 items-center">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="bg-red-50 text-red-700 text-xs p-2.5 rounded-xl border border-red-150 font-bold flex gap-1.5 items-center justify-center">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
                 <span>{authError}</span>
               </div>
             )}
@@ -965,7 +973,7 @@ export default function TeacherDashboard({
             <div className="pt-2">
               <button 
                 type="submit"
-                className="w-full py-3 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg shadow-md transition-colors"
+                className="w-full py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl shadow-md transition-colors"
               >
                 Log In
               </button>
@@ -974,7 +982,7 @@ export default function TeacherDashboard({
 
           <button 
             onClick={onBack}
-            className="w-full mt-4 py-1 text-center text-xs text-jungle-light font-bold hover:text-jungle-deep transition-colors"
+            className="w-full mt-4 py-1 text-center text-xs text-slate-450 font-bold hover:text-slate-800 transition-colors"
           >
             ← Return to Selection
           </button>
@@ -989,50 +997,58 @@ export default function TeacherDashboard({
   return (
     <div className="flex flex-col md:flex-row max-w-7xl mx-auto w-full px-4 py-8 gap-8">
       {/* Redesigned exact 9 tab items sidebar */}
-      <aside className="w-full md:w-64 bg-jungle-medium border border-jungle-light rounded-2xl p-6 flex flex-col justify-between select-none">
+      <aside className="w-full md:w-64 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-xl shrink-0 select-none">
         <div className="space-y-6">
-          <div className="flex items-center gap-2 border-b border-jungle-light pb-4">
-            <Compass className="text-gold w-6 h-6" />
-            <span className="font-adventure text-lg font-bold text-gold">Teacher Console</span>
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+            <Compass className="text-[#D32F2F] w-6 h-6" />
+            <span className="font-adventure text-lg font-bold text-slate-900">Teacher Console</span>
           </div>
 
-          <nav className="flex flex-col gap-2">
+          <nav className="flex flex-col gap-1.5">
             {[
-              { id: 'dashboard', label: 'Dashboard' },
-              { id: 'classes', label: 'Classes' },
-              { id: 'teachers', label: 'Teachers' },
-              { id: 'students', label: 'Students' },
-              { id: 'questions', label: 'Questions' },
-              { id: 'requests', label: `Join Requests ${joinRequests.length > 0 ? `(${joinRequests.length})` : ''}` },
-              { id: 'leaderboard', label: 'Leaderboard' },
-              { id: 'reports', label: 'Reports' },
-              { id: 'settings', label: 'Settings' },
-              { id: 'profile', label: 'Profile' }
+              { id: 'dashboard', label: 'Dashboard', emoji: '📊' },
+              { id: 'classes', label: 'Classes', emoji: '🏫' },
+              { id: 'teachers', label: 'Teachers', emoji: '🧑‍🏫' },
+              { id: 'students', label: 'Students', emoji: '👨‍🎓' },
+              { id: 'questions', label: 'Questions', emoji: '📁' },
+              { id: 'requests', label: `Join Requests ${joinRequests.length > 0 ? `(${joinRequests.length})` : ''}`, emoji: '🔔' },
+              { id: 'leaderboard', label: 'Leaderboard', emoji: '🏆' },
+              { id: 'reports', label: 'Reports', emoji: '📋' },
+              { id: 'settings', label: 'Settings', emoji: '⚙️' },
+              { id: 'profile', label: 'Profile', emoji: '👤' }
             ].map(t => (
               <button 
                 key={t.id}
                 onClick={() => setActiveTab(t.id as any)}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTab === t.id ? 'bg-gold text-jungle-deep shadow-md' : 'text-offwhite hover:bg-jungle-deep/40'
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  activeTab === t.id 
+                    ? 'bg-[#D32F2F] text-white shadow-md shadow-red-600/10' 
+                    : 'text-slate-550 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
-                {t.label}
+                <span>{t.emoji}</span>
+                <span>{t.label}</span>
               </button>
             ))}
           </nav>
         </div>
 
-        <div className="pt-4 border-t border-jungle-light space-y-2">
-          <div className="flex items-center gap-2 px-2 text-offwhite/70 text-[10px] font-bold uppercase">
-            <User className="w-3.5 h-3.5 text-gold" />
-            <span>{teacherInfo.name}</span>
+        <div className="pt-4 border-t border-slate-100 space-y-2">
+          <div className="flex items-center gap-2 px-2 text-slate-450 text-[10px] font-bold uppercase tracking-wider">
+            <User className="w-3.5 h-3.5 text-[#D32F2F]" />
+            <span className="truncate">{teacherInfo?.name || 'Teacher User'}</span>
           </div>
           <button 
-            onClick={() => { setIsAuthenticated(false); onBack(); }}
-            className="w-full flex items-center justify-between text-left px-4 py-2 rounded-lg text-xs font-bold text-rose-400 hover:bg-rose-950/40 transition-colors"
+            onClick={() => { 
+              localStorage.removeItem('bytequest_teacher_info'); 
+              localStorage.removeItem('bytequest_role'); 
+              setIsAuthenticated(false); 
+              onBack(); 
+            }}
+            className="w-full flex items-center justify-between text-left px-4 py-2.5 rounded-xl text-xs font-bold text-red-650 hover:bg-red-50 transition-colors"
           >
             <span>Sign Out</span>
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 text-red-500" />
           </button>
         </div>
       </aside>
@@ -1042,61 +1058,108 @@ export default function TeacherDashboard({
         {/* TAB 1: TEACHER DASHBOARD CENTRAL SCREEN */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-              <h2 className="font-adventure text-3xl font-bold text-gold mb-2">Welcome Back, {teacherInfo.name}!</h2>
-              <p className="text-gold-light text-xs">ByteQuest school classroom controller console. Setup and check study progress here.</p>
+            {/* Quick Actions Header Banner */}
+            <div className="bg-gradient-to-r from-[#991B1B] via-[#D32F2F] to-[#7F1D1D] text-white border-4 border-[#991B1B] rounded-2xl p-8 shadow-[6px_6px_0px_rgba(153,27,27,0.3)] relative overflow-hidden animate-scale-in">
+              <div className="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4 scale-150">
+                <Compass className="w-80 h-80 animate-spin-slow" />
+              </div>
+              <div className="relative z-10 space-y-4">
+                <div>
+                  <h2 className="font-adventure text-3xl md:text-4xl font-extrabold tracking-wide mb-1 leading-tight">Welcome back, {teacherInfo?.name}!</h2>
+                  <p className="text-red-100 text-xs md:text-sm font-semibold">Your ByteQuest classroom workspace portal. Access curriculum logs, configure teams, or host live play rooms.</p>
+                </div>
+                <div className="flex flex-wrap gap-2.5 pt-2">
+                  <button 
+                    onClick={() => setActiveTab('classes')}
+                    className="px-4 py-2 bg-white text-[#D32F2F] hover:bg-red-50 font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+                  >
+                    🏫 Create Classroom
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('classes')}
+                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-red-400/30"
+                  >
+                    🎲 Launch Live Match
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('classes')}
+                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-red-400/30"
+                  >
+                    🔗 Invite Students
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('teachers')}
+                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-red-400/30"
+                  >
+                    ➕ Create Teacher
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Quick Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-jungle-deep border border-jungle-light/35 p-5 rounded-2xl text-center">
-                <span className="text-2xl block mb-1">🏫</span>
-                <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Total Classes</span>
-                <span className="font-adventure text-xl font-bold text-gold">{classes.length}</span>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-sm flex flex-col justify-between min-h-[110px]">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-slate-550 uppercase tracking-wider">Active Classes</span>
+                  <span className="text-xl">🏫</span>
+                </div>
+                <span className="font-adventure text-3xl font-extrabold text-slate-900 leading-none">{classes.length}</span>
               </div>
-              <div className="bg-jungle-deep border border-jungle-light/35 p-5 rounded-2xl text-center">
-                <span className="text-2xl block mb-1">👥</span>
-                <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Total Students</span>
-                <span className="font-adventure text-xl font-bold text-gold">
+              <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-sm flex flex-col justify-between min-h-[110px]">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-slate-550 uppercase tracking-wider">Total Enrolled</span>
+                  <span className="text-xl">👥</span>
+                </div>
+                <span className="font-adventure text-3xl font-extrabold text-slate-900 leading-none">
                   {classes.reduce((acc, c) => acc + (c.students?.length || 0), 0)}
                 </span>
               </div>
-              <div className="bg-jungle-deep border border-jungle-light/35 p-5 rounded-2xl text-center">
-                <span className="text-2xl block mb-1">📜</span>
-                <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Question Bank</span>
-                <span className="font-adventure text-xl font-bold text-gold">{questions.length}</span>
+              <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-sm flex flex-col justify-between min-h-[110px]">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-slate-550 uppercase tracking-wider">Question Bank</span>
+                  <span className="text-xl">📁</span>
+                </div>
+                <span className="font-adventure text-3xl font-extrabold text-slate-900 leading-none">{questions.length}</span>
               </div>
-              <div className="bg-jungle-deep border border-jungle-light/35 p-5 rounded-2xl text-center">
-                <span className="text-2xl block mb-1">⚡</span>
-                <span className="text-[10px] block text-offwhite/50 font-bold uppercase">Pending Requests</span>
-                <span className="font-adventure text-xl font-bold text-gold">{joinRequests.length}</span>
+              <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-sm flex flex-col justify-between min-h-[110px]">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-slate-550 uppercase tracking-wider">Pending Invites</span>
+                  <span className="text-xl">⚡</span>
+                </div>
+                <span className="font-adventure text-3xl font-extrabold text-slate-900 leading-none">{joinRequests.length}</span>
               </div>
             </div>
 
             {/* Pending Requests List Panel */}
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-4">
-              <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2">Pending Student Approvals</h3>
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 className="font-adventure text-lg font-bold text-slate-900">Student Access Requests</h3>
+                <span className="bg-red-50 text-[#D32F2F] border border-cyan-95 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  {joinRequests.length} Action Needed
+                </span>
+              </div>
               {joinRequests.length === 0 ? (
-                <p className="text-offwhite/40 italic py-6 text-center text-xs">No pending student join requests.</p>
+                <p className="text-slate-550 italic py-8 text-center text-xs font-semibold">No pending student join requests. Share your classroom codes to invite students!</p>
               ) : (
                 <div className="space-y-3">
                   {joinRequests.map(req => (
-                    <div key={req.id} className="p-4 bg-jungle-deep/40 border border-jungle-light/20 rounded-xl flex justify-between items-center text-xs">
+                    <div key={req.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex justify-between items-center text-xs">
                       <div>
-                        <h4 className="font-bold text-white mb-0.5">{req.studentName}</h4>
-                        <p className="text-gold-light text-[10px]">Requests to join: {req.className}</p>
+                        <h4 className="font-bold text-slate-900 text-sm mb-0.5">{req.studentName}</h4>
+                        <p className="text-slate-450 font-semibold">Wants to join: <span className="text-[#D32F2F]">{req.className}</span></p>
                       </div>
                       <div className="flex gap-2">
                         <button 
                           onClick={() => handleResolveJoinRequest(req.id, 'ACCEPT')}
-                          className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded shadow"
+                          className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-sm transition-colors"
                           title="Approve student"
                         >
                           <Check className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleResolveJoinRequest(req.id, 'REJECT')}
-                          className="p-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded shadow"
+                          className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-sm transition-colors"
                           title="Reject student"
                         >
                           <X className="w-4 h-4" />
@@ -1366,50 +1429,48 @@ export default function TeacherDashboard({
             )}
           </div>
         )}
-
-        {/* TAB 2: CLASSES (FULL CRUD) */}
-        {activeTab === 'classes' && (
+                   {activeTab === 'classes' && (
           <div className="space-y-6">
             {/* Create Class Form */}
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-              <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-4">
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3 mb-4">
                 <button
                   onClick={handleGoBack}
-                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-full text-xs uppercase font-adventure transition-all"
                 >
                   ← Back
                 </button>
-                <h3 className="font-adventure text-lg font-bold text-gold">Register New Class</h3>
+                <h3 className="font-adventure text-lg font-bold text-slate-900 font-adventure">Register New Class</h3>
               </div>
-              <form onSubmit={handleCreateClass} className="grid grid-cols-1 md:grid-cols-5 gap-4 text-xs">
+              <form onSubmit={handleCreateClass} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs font-semibold">
                 <div>
-                  <label className="block font-bold text-gold-light mb-1">Classroom Name</label>
+                  <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Classroom Name</label>
                   <input
                     type="text"
                     value={newClassName}
                     onChange={(e) => setNewClassName(e.target.value)}
                     placeholder="e.g. Computer Science"
-                    className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-offwhite"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-gold-light mb-1">Section</label>
+                  <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Section</label>
                   <input
                     type="text"
                     value={newClassSection}
                     onChange={(e) => setNewClassSection(e.target.value)}
                     placeholder="e.g. A"
-                    className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-offwhite"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-gold-light mb-1">Target Syllabus Grade</label>
+                  <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Target Syllabus Grade</label>
                   <select
                     value={newClassGrade}
                     onChange={(e) => setNewClassGrade(Number(e.target.value))}
-                    className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-offwhite font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold font-sans"
                   >
                     <option value={10}>Class 10 (Basics)</option>
                     <option value={11}>Class 11 (Functions)</option>
@@ -1417,41 +1478,41 @@ export default function TeacherDashboard({
                   </select>
                 </div>
                 <div>
-                  <label className="block font-bold text-gold-light mb-1">Subject</label>
+                  <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Subject</label>
                   <input
                     type="text"
                     value={newClassSubject}
                     onChange={(e) => setNewClassSubject(e.target.value)}
                     placeholder="e.g. Computer Science"
-                    className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-offwhite"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                     required
                   />
                 </div>
                 <div className="flex items-end">
-                  <button type="submit" className="w-full py-2.5 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg uppercase">Create Class</button>
+                  <button type="submit" className="w-full py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl shadow-md uppercase transition-colors">Create Class</button>
                 </div>
               </form>
             </div>
 
             {/* Delete Confirmation Modal Overlay */}
             {showDeleteConfirm && (
-              <div className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                <div className="parchment-panel rounded-xl max-w-sm w-full p-6 text-center text-jungle-deep">
-                  <AlertCircle className="w-16 h-16 text-rose-600 mx-auto mb-3" />
-                  <h3 className="font-adventure text-2xl font-bold mb-2">Delete Classroom?</h3>
-                  <p className="text-xs text-jungle-light mb-6">
+              <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 text-center text-slate-800 shadow-2xl">
+                  <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-3" />
+                  <h3 className="font-adventure text-2xl font-bold mb-2 text-slate-900">Delete Classroom?</h3>
+                  <p className="text-xs text-slate-450 mb-6 font-semibold">
                     Warning: Deleting this class will permanently remove all student rosters, student progress stats, team configurations, and assignment history.
                   </p>
                   <div className="flex gap-3">
                     <button 
                       onClick={() => handleDeleteClass(showDeleteConfirm)}
-                      className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg"
+                      className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors"
                     >
                       Delete
                     </button>
                     <button 
                       onClick={() => setShowDeleteConfirm(null)}
-                      className="flex-1 py-2.5 bg-parchment-dark text-jungle-deep font-bold border rounded-lg"
+                      className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold border border-slate-200 rounded-xl transition-colors"
                     >
                       Cancel
                     </button>
@@ -1461,12 +1522,12 @@ export default function TeacherDashboard({
             )}
 
             {/* List Classes */}
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-4">
-              <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2">Active & Archived Classes</h3>
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl space-y-4">
+              <h3 className="font-adventure text-lg font-bold text-slate-900 border-b border-slate-100 pb-2">Active & Archived Classes</h3>
               <div className="space-y-4">
                 {classes.map(cls => (
-                  <div key={cls.id} className="p-4 bg-jungle-deep/45 border border-jungle-light/20 rounded-xl space-y-3">
-                    <div className="flex justify-between items-center">
+                  <div key={cls.id} className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+                    <div className="flex justify-between items-start">
                       <div>
                         {editingClass?.id === cls.id ? (
                           <input 
@@ -1475,47 +1536,47 @@ export default function TeacherDashboard({
                             onChange={(e) => setEditingClass({ ...editingClass, name: e.target.value })}
                             onBlur={() => handleEditClassName(cls.id, editingClass.name)}
                             onKeyDown={(e) => e.key === 'Enter' && handleEditClassName(cls.id, editingClass.name)}
-                            className="bg-jungle-deep border border-gold text-offwhite p-1 rounded text-sm font-bold"
+                            className="bg-white border border-[#D32F2F] text-slate-800 p-2 rounded-xl text-sm font-bold focus:outline-none"
                             autoFocus
                           />
                         ) : (
                           <div className="flex items-center gap-2">
-                            <span className="font-adventure text-lg font-bold text-white">{cls.name} (Section {cls.section || 'A'})</span>
-                            {cls.isArchived && <span className="bg-amber-100 text-amber-800 text-[9px] px-2 py-0.5 rounded-full uppercase font-bold">Archived</span>}
+                            <span className="font-adventure text-lg font-bold text-slate-900">{cls.name} (Section {cls.section || 'A'})</span>
+                            {cls.isArchived && <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[9px] px-2.5 py-0.5 rounded-full uppercase font-bold">Archived</span>}
                           </div>
                         )}
-                        <span className="text-[10px] text-gold-light block">Syllabus Grade {cls.grade} | Subject: {cls.subject || 'Computer Science'} | {cls.students?.length || 0} Students | {cls.teams?.length || 0} Teams</span>
-                        <div className="flex gap-4 mt-1">
-                          <span className="text-xs font-bold text-gold">Join Code: <span className="font-mono bg-jungle-deep px-2 py-0.5 rounded border border-jungle-light text-white">{cls.joinCode || `BQ${cls.id.replace(/-/g, '').substring(0, 4).toUpperCase()}`}</span></span>
-                          <span className="text-[10px] text-offwhite/50">Class ID: <span className="font-mono select-all bg-jungle-deep/50 px-1.5 py-0.5 rounded">{cls.id}</span></span>
+                        <span className="text-[10px] text-slate-550 font-bold block mt-1 uppercase tracking-wider">Syllabus Grade {cls.grade} | Subject: {cls.subject || 'Computer Science'} | {cls.students?.length || 0} Students | {cls.teams?.length || 0} Teams</span>
+                        <div className="flex flex-wrap gap-4 mt-2 font-semibold">
+                          <span className="text-xs text-slate-700 font-bold">Join Code: <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-[#D32F2F] font-extrabold select-all">{cls.joinCode || `BQ${cls.id.replace(/-/g, '').substring(0, 4).toUpperCase()}`}</span></span>
+                          <span className="text-[10px] text-slate-550 font-bold">Class ID: <span className="font-mono select-all bg-white px-1.5 py-0.5 rounded border border-slate-200">{cls.id}</span></span>
                         </div>
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
                         <button 
                           onClick={() => handleDuplicateClass(cls.id)}
-                          className="p-1.5 bg-jungle-medium text-emerald-400 hover:bg-emerald-500/10 rounded"
+                          className="p-2 text-slate-450 hover:bg-slate-200 rounded-xl transition-colors"
                           title="Duplicate Class"
                         >
                           <Copy className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => setEditingClass({ id: cls.id, name: cls.name })}
-                          className="p-1.5 bg-jungle-medium text-gold hover:bg-gold/10 rounded"
+                          className="p-2 text-[#D32F2F] hover:bg-red-50 rounded-xl transition-colors"
                           title="Rename Class"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleArchiveClass(cls.id, !cls.isArchived)}
-                          className="p-1.5 bg-jungle-medium text-amber-400 hover:bg-amber-500/10 rounded"
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
                           title={cls.isArchived ? "Unarchive Class" : "Archive Class"}
                         >
                           <Lock className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => setShowDeleteConfirm(cls.id)}
-                          className="p-1.5 bg-rose-950/40 text-rose-400 hover:bg-rose-600 hover:text-white rounded"
+                          className="p-2 text-red-650 hover:bg-red-50 rounded-xl transition-colors"
                           title="Delete Class"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1524,10 +1585,10 @@ export default function TeacherDashboard({
                     </div>
 
                     {!cls.isArchived && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-jungle-light/20 text-xs">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-200/60 text-xs font-semibold">
                         {/* Roster students additions */}
-                        <div>
-                          <h4 className="font-bold text-gold-light mb-1 uppercase text-[9px]">Add Students (newline separated)</h4>
+                        <div className="space-y-2">
+                          <h4 className="font-bold text-slate-550 mb-1 uppercase text-[9px] tracking-wider">Add Students (newline separated)</h4>
                           <form onSubmit={(e) => {
                             setRosterClassId(cls.id);
                             handleAddStudentsToClass(e);
@@ -1535,30 +1596,30 @@ export default function TeacherDashboard({
                             <textarea
                               value={rosterClassId === cls.id ? rosterNamesText : ''}
                               onChange={(e) => {
-                                setRosterClassId(cls.id);
-                                setRosterNamesText(e.target.value);
+                                  setRosterClassId(cls.id);
+                                  setRosterNamesText(e.target.value);
                               }}
                               placeholder="Aarav Sharma&#10;Diya Verma&#10;Kabir Roy"
-                              className="w-full bg-jungle-deep border border-jungle-light/30 rounded p-1.5 text-offwhite text-[10px] h-16 resize-none"
+                              className="w-full bg-white border border-slate-200 rounded-xl p-3 text-slate-800 text-xs h-18 resize-none focus:outline-none focus:border-[#D32F2F] font-bold"
                               required
                             />
-                            <button type="submit" className="px-3 py-1 bg-gold text-jungle-deep font-bold rounded hover:bg-gold-light">Add to roster</button>
+                            <button type="submit" className="px-4 py-2 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl transition-colors shadow-sm">Add to roster</button>
                           </form>
                         </div>
 
                         {/* Team configure option links */}
-                        <div>
-                          <h4 className="font-bold text-gold-light mb-1 uppercase text-[9px]">Configure Classroom Teams</h4>
+                        <div className="space-y-2">
+                          <h4 className="font-bold text-slate-550 mb-1 uppercase text-[9px] tracking-wider">Configure Classroom Teams</h4>
                           <button 
                             onClick={() => {
                               const autoTeams = [
                                 { name: 'Team Crimson', color: 'bg-red-600 text-white border-red-300', studentIds: cls.students.slice(0, 3).map((s:any)=>s.id) },
-                                { name: 'Team Cobalt', color: 'bg-blue-600 text-white border-blue-300', studentIds: cls.students.slice(3, 6).map((s:any)=>s.id) },
-                                { name: 'Team Jade', color: 'bg-emerald-600 text-white border-emerald-300', studentIds: cls.students.slice(6, 9).map((s:any)=>s.id) }
+                                { name: 'Team Cobalt', color: 'bg-[#D32F2F] text-white border-blue-300', studentIds: cls.students.slice(3, 6).map((s:any)=>s.id) },
+                                { name: 'Team Jade', color: 'bg-[#D32F2F] text-white border-emerald-300', studentIds: cls.students.slice(6, 9).map((s:any)=>s.id) }
                               ];
                               handleConfigureTeams(cls.id, autoTeams);
                             }}
-                            className="w-full py-2 bg-jungle-medium border border-jungle-light text-offwhite hover:bg-jungle-deep/50 rounded font-bold"
+                            className="w-full py-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl font-bold transition-all shadow-sm"
                           >
                             Quick Auto-Allocate Teams (Crimson/Cobalt/Jade)
                           </button>
@@ -1566,7 +1627,7 @@ export default function TeacherDashboard({
                           <button 
                             onClick={() => handleStartLobby(cls.id)}
                             disabled={cls.students.length === 0}
-                            className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-bold mt-2 disabled:opacity-50"
+                            className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white rounded-xl font-bold mt-2 disabled:opacity-50 transition-colors shadow-md text-xs uppercase"
                           >
                             Launch Live Session Lobby 🚀
                           </button>
@@ -1580,30 +1641,30 @@ export default function TeacherDashboard({
 
             {/* Live game room console */}
             {activeSession && (
-              <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl mt-6 space-y-4">
-                <h3 className="font-adventure text-2xl font-bold text-gold border-b border-jungle-light pb-2">Active Classroom Room Lobby</h3>
-                <div className="flex justify-between items-center bg-jungle-deep/40 p-4 rounded-xl">
+              <div className="bg-white border border-slate-200 p-6 rounded-2xl mt-6 space-y-6 shadow-xl select-text">
+                <h3 className="font-adventure text-2xl font-bold text-slate-900 border-b border-slate-100 pb-3">Active Classroom Room Lobby</h3>
+                <div className="flex flex-col sm:flex-row justify-between items-center bg-slate-50 border border-slate-200 p-5 rounded-2xl gap-4">
                   <div>
-                    <span className="text-[10px] block text-gold-light uppercase font-bold">Session Code</span>
-                    <span className="font-adventure text-3xl font-bold text-white tracking-widest">{activeSession.roomCode}</span>
+                    <span className="text-[10px] block text-slate-550 font-bold uppercase tracking-wider mb-1">Session Code</span>
+                    <span className="font-adventure text-3xl font-extrabold text-blue-650 tracking-widest select-all">{activeSession.roomCode}</span>
                   </div>
                   <button 
                     onClick={handleTriggerStartMatch}
                     disabled={lobbyPlayers.length === 0}
-                    className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow disabled:opacity-50"
+                    className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-md disabled:opacity-50 transition-colors text-xs uppercase"
                   >
                     Start Classroom Match
                   </button>
                 </div>
                 <div className="text-xs">
-                  <h4 className="font-bold text-gold-light mb-2">CONNECTED STUDENTS ({lobbyPlayers.length})</h4>
+                  <h4 className="font-bold text-slate-550 mb-3 uppercase tracking-wider">CONNECTED STUDENTS ({lobbyPlayers.length})</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {lobbyPlayers.map((p: any) => (
-                      <div key={p.id} className="p-2 bg-jungle-deep/50 border border-jungle-light/25 rounded-lg text-center font-bold text-white">
+                      <div key={p.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-bold text-slate-800 shadow-sm">
                         {p.name}
                       </div>
                     ))}
-                    {lobbyPlayers.length === 0 && <p className="text-offwhite/40 italic py-2 col-span-4">Waiting for students to join with Room Code...</p>}
+                    {lobbyPlayers.length === 0 && <p className="text-slate-550 italic py-4 col-span-4 text-center font-semibold">Waiting for students to join with Room Code...</p>}
                   </div>
                 </div>
               </div>
@@ -1614,16 +1675,16 @@ export default function TeacherDashboard({
         {/* TAB 3: STUDENTS MANAGEMENT PANEL */}
         {activeTab === 'students' && (
           <div className="space-y-6">
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-jungle-light pb-2 mb-4">
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-3 mb-4">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleGoBack}
-                    className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-full text-xs uppercase font-adventure transition-all"
                   >
                     ← Back
                   </button>
-                  <h3 className="font-adventure text-lg font-bold text-gold">Student Profiles Controller</h3>
+                  <h3 className="font-adventure text-lg font-bold text-slate-900">Student Profiles Controller</h3>
                 </div>
                 {selectedStudentClassId && (
                   <button
@@ -1632,15 +1693,15 @@ export default function TeacherDashboard({
                       setAddStudentError('');
                       setAddStudentSuccess('');
                     }}
-                    className="px-3 py-1.5 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg text-[10px] uppercase flex items-center gap-1"
+                    className="px-4 py-2 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl text-xs uppercase flex items-center gap-1 shadow-md"
                   >
                     {showAddStudentForm ? '✕ Close Form' : '➕ Add Student'}
                   </button>
                 )}
               </div>
               
-              <div className="max-w-md text-xs">
-                <label className="block font-bold text-gold-light mb-1">Select Class roster</label>
+              <div className="max-w-md text-xs font-semibold">
+                <label className="block text-[10px] font-bold text-slate-550 mb-1.5 uppercase tracking-wider">Select Class roster</label>
                 <select
                   value={selectedStudentClassId}
                   onChange={(e) => {
@@ -1648,7 +1709,7 @@ export default function TeacherDashboard({
                     setShowAddStudentForm(false);
                     setEditingStudentId(null);
                   }}
-                  className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-offwhite font-bold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 font-bold font-sans"
                 >
                   <option value="">Choose Class...</option>
                   {classes.map(c => (
@@ -1659,66 +1720,66 @@ export default function TeacherDashboard({
 
               {/* Add student manually form */}
               {showAddStudentForm && selectedStudentClassId && (
-                <form onSubmit={handleAddStudentSubmit} className="mt-6 p-5 bg-jungle-deep/45 border border-jungle-light/25 rounded-xl space-y-4 text-xs">
-                  <h4 className="font-adventure text-sm font-bold text-gold">Register Student Manually</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <form onSubmit={handleAddStudentSubmit} className="mt-6 p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 text-xs font-semibold select-text">
+                  <h4 className="font-adventure text-sm font-bold text-slate-900 border-b border-slate-200/55 pb-2">Register Student Manually</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Full Name</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Full Name</label>
                       <input
                         type="text"
                         value={newStudentName}
                         onChange={(e) => setNewStudentName(e.target.value)}
                         placeholder="e.g. Aarav Sharma"
-                        className="w-full bg-jungle-deep border border-jungle-light/35 rounded px-2.5 py-1.5 text-white"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Email Address</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Email Address</label>
                       <input
                         type="email"
                         value={newStudentEmail}
                         onChange={(e) => setNewStudentEmail(e.target.value)}
                         placeholder="e.g. aarav@student.com"
-                        className="w-full bg-jungle-deep border border-jungle-light/35 rounded px-2.5 py-1.5 text-white"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Temporary Password</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Temporary Password</label>
                       <input
                         type="text"
                         value={newStudentPassword}
                         onChange={(e) => setNewStudentPassword(e.target.value)}
                         placeholder="Min 6 characters"
-                        className="w-full bg-jungle-deep border border-jungle-light/35 rounded px-2.5 py-1.5 text-white"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Roll Number (Optional)</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Roll Number (Optional)</label>
                       <input
                         type="text"
                         value={newStudentRoll}
                         onChange={(e) => setNewStudentRoll(e.target.value)}
                         placeholder="e.g. 15"
-                        className="w-full bg-jungle-deep border border-jungle-light/35 rounded px-2.5 py-1.5 text-white"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold"
                       />
                     </div>
                   </div>
-                  {addStudentError && <p className="text-rose-400 font-bold text-[10px]">{addStudentError}</p>}
-                  {addStudentSuccess && <p className="text-emerald-400 font-bold text-[10px]">{addStudentSuccess}</p>}
-                  <button type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded uppercase text-[10px]">Add Explorer</button>
+                  {addStudentError && <p className="text-red-650 font-bold text-center text-[10px]">{addStudentError}</p>}
+                  {addStudentSuccess && <p className="text-green-650 font-bold text-center text-[10px]">{addStudentSuccess}</p>}
+                  <button type="submit" className="px-5 py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl uppercase text-[10px] tracking-wide transition-colors">Add Explorer</button>
                 </form>
               )}
             </div>
 
             {selectedStudentClassId && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Students list */}
-                <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-                  <h4 className="font-adventure text-sm font-bold text-gold border-b border-jungle-light pb-2 mb-3">Roster list</h4>
-                  <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2 text-xs">
+                <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl">
+                  <h4 className="font-adventure text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 mb-3">Roster list</h4>
+                  <div className="space-y-1.5 max-h-[50vh] overflow-y-auto pr-2 text-xs">
                     {rosterStudents.map(student => (
                       <button
                         key={student.id}
@@ -1726,70 +1787,70 @@ export default function TeacherDashboard({
                           handleLoadStudentStats(student.id);
                           setEditingStudentId(null);
                         }}
-                        className={`w-full text-left p-3 rounded-lg border font-bold transition-all ${
+                        className={`w-full text-left p-3 rounded-xl border font-bold transition-all ${
                           selectedStudentProfile?.id === student.id 
-                            ? 'bg-gold border-gold text-jungle-deep' 
-                            : 'bg-jungle-deep/50 border-jungle-light/20 text-offwhite'
+                            ? 'bg-red-50 border-cyan-95 text-[#B91C1C] shadow-sm' 
+                            : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
                         <div className="flex justify-between items-center">
                           <span>{student.name}</span>
                           {localStorage.getItem(`bytequest_student_roll_${student.id}`) && (
-                            <span className="text-[9px] bg-jungle-deep/45 text-gold px-1.5 py-0.5 rounded font-mono">
+                            <span className="text-[9px] bg-white text-slate-550 border border-slate-200 px-1.5 py-0.5 rounded font-mono">
                               #{localStorage.getItem(`bytequest_student_roll_${student.id}`)}
                             </span>
                           )}
                         </div>
-                        {student.isSuspended && <span className="block text-[8px] text-rose-500 font-semibold">(Suspended)</span>}
+                        {student.isSuspended && <span className="block text-[8px] text-red-500 font-bold uppercase tracking-wider mt-0.5">(Suspended)</span>}
                       </button>
                     ))}
-                    {rosterStudents.length === 0 && <p className="text-offwhite/40 italic py-4 text-center">No students registered.</p>}
+                    {rosterStudents.length === 0 && <p className="text-slate-550 italic py-6 text-center font-semibold">No students registered.</p>}
                   </div>
                 </div>
 
                 {/* Profile detail / edit card actions */}
-                <div className="md:col-span-2 bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
+                <div className="lg:col-span-2 bg-white border border-slate-200 p-6 rounded-2xl shadow-xl">
                   {selectedStudentProfile ? (
                     editingStudentId === selectedStudentProfile.id ? (
                       /* EDITING STUDENT MODE FORM */
-                      <form onSubmit={handleEditStudentSubmit} className="space-y-4 text-xs">
-                        <div className="flex justify-between items-center border-b border-jungle-light pb-2">
-                          <h4 className="font-adventure text-sm font-bold text-gold">Edit Student Profile</h4>
+                      <form onSubmit={handleEditStudentSubmit} className="space-y-4 text-xs font-semibold select-text">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                          <h4 className="font-adventure text-sm font-bold text-slate-900">Edit Student Profile</h4>
                           <button
                             type="button"
                             onClick={() => setEditingStudentId(null)}
-                            className="text-[10px] text-offwhite/50 font-bold hover:text-white"
+                            className="text-[10px] text-slate-550 font-bold hover:text-slate-700 uppercase tracking-wider"
                           >
                             Cancel
                           </button>
                         </div>
                         <div className="space-y-3">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Full Name</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Full Name</label>
                             <input
                               type="text"
                               value={editStudentName}
                               onChange={(e) => setEditStudentName(e.target.value)}
-                              className="w-full bg-jungle-deep border border-jungle-light rounded px-2.5 py-1.5 text-white"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold"
                               required
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Email Address</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Email Address</label>
                             <input
                               type="email"
                               value={editStudentEmail}
                               onChange={(e) => setEditStudentEmail(e.target.value)}
-                              className="w-full bg-jungle-deep border border-jungle-light rounded px-2.5 py-1.5 text-white"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold"
                               required
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Move to Class / Section</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Move to Class / Section</label>
                             <select
                               value={editStudentClassId}
                               onChange={(e) => setEditStudentClassId(e.target.value)}
-                              className="w-full bg-jungle-deep border border-jungle-light rounded px-2.5 py-1.5 text-white font-bold"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold font-sans"
                             >
                               {classes.map(c => (
                                 <option key={c.id} value={c.id}>{c.name} {c.section ? `(Sec ${c.section})` : ''}</option>
@@ -1797,48 +1858,48 @@ export default function TeacherDashboard({
                             </select>
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Reset Password (Optional)</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Reset Password (Optional)</label>
                             <input
                               type="password"
                               value={editStudentPassword}
                               onChange={(e) => setEditStudentPassword(e.target.value)}
                               placeholder="Leave blank to keep current password"
-                              className="w-full bg-jungle-deep border border-jungle-light rounded px-2.5 py-1.5 text-white"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold font-sans"
                             />
                           </div>
                         </div>
-                        <button type="submit" className="w-full py-2 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded uppercase">Save Explorer Changes</button>
+                        <button type="submit" className="w-full py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl uppercase transition-colors shadow-md">Save Explorer Changes</button>
                       </form>
                     ) : (
                       /* STATISTICS VIEW MODE */
                       <div className="space-y-6 text-xs select-text">
-                        <div className="flex justify-between items-center border-b border-jungle-light pb-2 mb-3">
-                          <h4 className="font-adventure text-sm font-bold text-gold">Explorer Statistics</h4>
-                          <span className="text-[10px] text-offwhite/50 font-semibold">Registered Email: {selectedStudentProfile.email}</span>
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                          <h4 className="font-adventure text-sm font-bold text-slate-900">Explorer Statistics</h4>
+                          <span className="text-[10px] text-slate-550 font-bold uppercase tracking-wider">Email: {selectedStudentProfile.email}</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 font-semibold">
-                          <div className="bg-jungle-deep/30 p-3 rounded-xl">
-                            <span className="text-[9px] block text-gold-light uppercase">XP Score</span>
-                            <span className="text-lg font-bold text-white">{selectedStudentProfile.xp} XP</span>
+                        <div className="grid grid-cols-2 gap-4 font-bold">
+                          <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-sm">
+                            <span className="text-[9px] block text-slate-550 uppercase tracking-wider mb-0.5">XP Score</span>
+                            <span className="text-lg font-extrabold text-purple-600">{selectedStudentProfile.xp} XP</span>
                           </div>
-                          <div className="bg-jungle-deep/30 p-3 rounded-xl">
-                            <span className="text-[9px] block text-gold-light uppercase">Level</span>
-                            <span className="text-lg font-bold text-white">Level {selectedStudentProfile.level}</span>
+                          <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-sm">
+                            <span className="text-[9px] block text-slate-550 uppercase tracking-wider mb-0.5">Level</span>
+                            <span className="text-lg font-extrabold text-blue-650">Level {selectedStudentProfile.level}</span>
                           </div>
-                          <div className="bg-jungle-deep/30 p-3 rounded-xl">
-                            <span className="text-[9px] block text-gold-light uppercase">Coins Gained</span>
-                            <span className="text-lg font-bold text-white">{selectedStudentProfile.coins} Coins</span>
+                          <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-sm">
+                            <span className="text-[9px] block text-slate-550 uppercase tracking-wider mb-0.5">Coins Gained</span>
+                            <span className="text-lg font-extrabold text-amber-600">{selectedStudentProfile.coins} Coins</span>
                           </div>
-                          <div className="bg-jungle-deep/30 p-3 rounded-xl">
-                            <span className="text-[9px] block text-gold-light uppercase">Accuracy Rate</span>
-                            <span className="text-lg font-bold text-emerald-400">{(selectedStudentProfile.accuracy * 100).toFixed(0)}%</span>
+                          <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-sm">
+                            <span className="text-[9px] block text-slate-550 uppercase tracking-wider mb-0.5">Accuracy Rate</span>
+                            <span className="text-lg font-extrabold text-green-600">{(selectedStudentProfile.accuracy * 100).toFixed(0)}%</span>
                           </div>
                         </div>
 
                         {/* Admin action buttons */}
-                        <div className="border-t border-jungle-light/20 pt-4 space-y-3 font-sans">
-                          <h4 className="font-bold text-gold-light uppercase text-[9px] tracking-wider mb-2">Roster Controller Actions</h4>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 font-bold text-center">
+                        <div className="border-t border-slate-100 pt-4 space-y-3 font-semibold">
+                          <h4 className="font-bold text-slate-550 uppercase text-[9px] tracking-wider mb-1">Roster Controller Actions</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 font-bold text-center text-[10px]">
                             <button 
                               onClick={() => {
                                 setEditingStudentId(selectedStudentProfile.id);
@@ -1847,34 +1908,34 @@ export default function TeacherDashboard({
                                 setEditStudentClassId(selectedStudentProfile.classId || selectedStudentClassId);
                                 setEditStudentPassword('');
                               }}
-                              className="py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px]"
+                              className="py-2.5 bg-red-50 hover:bg-red-100 text-[#D32F2F] border border-cyan-95 rounded-xl transition-colors"
                             >
                               ✏️ Edit Info
                             </button>
                             {selectedStudentProfile.isSuspended ? (
                               <button 
                                 onClick={() => handleSuspendStudent(selectedStudentProfile.id, false)}
-                                className="py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px]"
+                                className="py-2.5 bg-green-50 hover:bg-green-100 text-green-600 border border-green-200 rounded-xl transition-colors"
                               >
                                 Unsuspend
                               </button>
                             ) : (
                               <button 
                                 onClick={() => handleSuspendStudent(selectedStudentProfile.id, true)}
-                                className="py-2 bg-amber-600 hover:bg-amber-500 text-white rounded text-[10px]"
+                                className="py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 rounded-xl transition-colors"
                               >
                                 Suspend Student
                               </button>
                             )}
                             <button 
                               onClick={() => handleResetStudentProgress(selectedStudentProfile.id)}
-                              className="py-2 bg-jungle-deep border border-gold text-gold rounded text-[10px]"
+                              className="py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-200 rounded-xl transition-colors"
                             >
                               Reset Progress
                             </button>
                             <button 
                               onClick={() => handleRemoveStudent(selectedStudentProfile.id)}
-                              className="py-2 bg-rose-600 hover:bg-rose-500 text-white rounded text-[10px]"
+                              className="py-2.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl transition-colors"
                             >
                               Remove Student
                             </button>
@@ -1883,7 +1944,7 @@ export default function TeacherDashboard({
                       </div>
                     )
                   ) : (
-                    <p className="text-offwhite/40 italic py-10 text-center text-xs">Choose a student profile from the roster list to check stats.</p>
+                    <p className="text-slate-550 italic py-12 text-center text-xs font-semibold">Choose a student profile from the roster list to check stats.</p>
                   )}
                 </div>
               </div>
@@ -1895,17 +1956,17 @@ export default function TeacherDashboard({
         {activeTab === 'questions' && (
           <div className="space-y-6">
             {/* Importer trigger */}
-            <div className="flex justify-between items-center bg-jungle-medium border border-jungle-light p-4 rounded-2xl">
+            <div className="flex justify-between items-center bg-white border border-slate-200 p-5 rounded-2xl shadow-xl">
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleGoBack}
-                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-full text-xs uppercase font-adventure transition-all"
                 >
                   ← Back
                 </button>
                 <div>
-                  <h3 className="font-adventure text-lg font-bold text-gold">Curriculum Syllabus Pool</h3>
-                  <span className="text-[10px] text-gold-light block">Create MCQ entries or upload CSV questions</span>
+                  <h3 className="font-adventure text-lg font-bold text-slate-900 font-adventure">Curriculum Syllabus Pool</h3>
+                  <span className="text-[10px] text-slate-550 font-bold block uppercase tracking-wider">Create MCQ entries or upload CSV questions</span>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -1919,13 +1980,13 @@ export default function TeacherDashboard({
                     correctIndex: 0,
                     explanation: ''
                   })}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs uppercase"
+                  className="px-4 py-2.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl text-xs uppercase tracking-wide transition-colors"
                 >
                   Create New Question
                 </button>
                 <button 
                   onClick={() => setShowCsvImport(!showCsvImport)}
-                  className="px-4 py-2 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg text-xs uppercase"
+                  className="px-4 py-2.5 bg-purple-50 border border-purple-200 hover:bg-purple-100 text-purple-600 font-bold rounded-xl text-xs uppercase tracking-wide transition-colors"
                 >
                   CSV Import
                 </button>
@@ -1934,18 +1995,18 @@ export default function TeacherDashboard({
 
             {/* Editing Form */}
             {isEditingQuestion && (
-              <div className="bg-jungle-medium border border-gold/40 p-6 rounded-2xl space-y-4 shadow-2xl">
-                <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2 mb-4">
+              <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-xl text-slate-800 font-semibold select-text">
+                <h3 className="font-adventure text-lg font-bold text-slate-900 border-b border-slate-150 pb-2 mb-4">
                   {isEditingQuestion.id ? '✏️ Edit Question' : '✨ Create New Question'}
                 </h3>
-                <form onSubmit={handleSaveQuestion} className="space-y-4 text-xs">
+                <form onSubmit={handleSaveQuestion} className="space-y-4 text-xs select-text">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block font-bold text-gold-light mb-1">Grade</label>
+                      <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Grade</label>
                       <select
                         value={isEditingQuestion.grade || 11}
                         onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, grade: Number(e.target.value) })}
-                        className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-white font-bold"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 font-bold font-sans"
                       >
                         <option value={10}>Class 10</option>
                         <option value={11}>Class 11</option>
@@ -1953,22 +2014,22 @@ export default function TeacherDashboard({
                       </select>
                     </div>
                     <div>
-                      <label className="block font-bold text-gold-light mb-1">Topic</label>
+                      <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Topic</label>
                       <input
                         type="text"
                         value={isEditingQuestion.topic || ''}
                         onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, topic: e.target.value })}
                         placeholder="e.g. Loops"
-                        className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 font-bold"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block font-bold text-gold-light mb-1">Difficulty</label>
+                      <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Difficulty</label>
                       <select
                         value={isEditingQuestion.difficulty || 'medium'}
                         onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, difficulty: e.target.value })}
-                        className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-white font-bold"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 font-bold font-sans"
                       >
                         <option value="easy">Easy</option>
                         <option value="medium">Medium</option>
@@ -1978,12 +2039,12 @@ export default function TeacherDashboard({
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gold-light mb-1">Question Text</label>
+                    <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Question Text</label>
                     <textarea
                       value={isEditingQuestion.question || ''}
                       onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, question: e.target.value })}
                       placeholder="Enter the question text here..."
-                      className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-white h-20 resize-none"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 h-20 resize-none font-bold"
                       required
                     />
                   </div>
@@ -1991,7 +2052,7 @@ export default function TeacherDashboard({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {(isEditingQuestion.options || ['', '', '', '']).map((opt: string, idx: number) => (
                       <div key={idx}>
-                        <label className="block font-bold text-gold-light mb-1">Option {idx + 1}</label>
+                        <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Option {idx + 1}</label>
                         <input
                           type="text"
                           value={opt}
@@ -2001,7 +2062,7 @@ export default function TeacherDashboard({
                             setIsEditingQuestion({ ...isEditingQuestion, options: newOpts });
                           }}
                           placeholder={`Option ${idx + 1}`}
-                          className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-white"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 font-bold"
                           required
                         />
                       </div>
@@ -2010,11 +2071,11 @@ export default function TeacherDashboard({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block font-bold text-gold-light mb-1">Correct Answer Index (1-4)</label>
+                      <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Correct Answer Index (1-4)</label>
                       <select
                         value={isEditingQuestion.correctIndex || 0}
                         onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, correctIndex: Number(e.target.value) })}
-                        className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-white font-bold"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 font-bold font-sans"
                       >
                         <option value={0}>Option 1</option>
                         <option value={1}>Option 2</option>
@@ -2023,25 +2084,25 @@ export default function TeacherDashboard({
                       </select>
                     </div>
                     <div>
-                      <label className="block font-bold text-gold-light mb-1">Explanation</label>
+                      <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Explanation</label>
                       <input
                         type="text"
                         value={isEditingQuestion.explanation || ''}
                         onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, explanation: e.target.value })}
                         placeholder="Explain the correct answer..."
-                        className="w-full bg-jungle-deep border border-jungle-light/40 rounded-lg p-2.5 text-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 font-bold"
                       />
                     </div>
                   </div>
 
                   <div className="flex gap-2 pt-2">
-                    <button type="submit" className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg uppercase">
+                    <button type="submit" className="px-5 py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl uppercase transition-colors shadow-md text-xs">
                       Save Question
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsEditingQuestion(null)}
-                      className="px-5 py-2.5 bg-jungle-deep border border-jungle-light text-offwhite font-bold rounded-lg uppercase"
+                      className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl uppercase transition-colors text-xs"
                     >
                       Cancel
                     </button>
@@ -2052,44 +2113,44 @@ export default function TeacherDashboard({
 
             {/* CSV Import card */}
             {showCsvImport && (
-              <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-                <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2 mb-4">Bulk Import MCQ (Semicolon separated)</h3>
-                <p className="text-[10px] text-gold-light mb-3">Format: Grade;Topic;Difficulty;Question;Opt1;Opt2;Opt3;Opt4;CorrectIndex(0-3);Explanation</p>
+              <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl text-slate-800 font-semibold select-text">
+                <h3 className="font-adventure text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">Bulk Import MCQ (Semicolon separated)</h3>
+                <p className="text-[10px] text-slate-550 font-bold mb-3 uppercase tracking-wider">Format: Grade;Topic;Difficulty;Question;Opt1;Opt2;Opt3;Opt4;CorrectIndex(0-3);Explanation</p>
                 <form onSubmit={handleCsvImport} className="space-y-3">
                   <textarea
                     value={csvText}
                     onChange={(e) => setCsvText(e.target.value)}
                     placeholder="11;Functions;medium;Define Python module;Script;Package;Library;Core;0;Modules are script files."
-                    className="w-full bg-jungle-deep border border-jungle-light/35 rounded-xl p-3 text-xs text-offwhite h-32 resize-y font-mono"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-800 h-32 resize-y font-mono focus:outline-none focus:border-[#D32F2F] font-bold"
                     required
                   />
-                  {csvStatus && <p className="text-xs font-bold text-gold">{csvStatus}</p>}
-                  <button type="submit" className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs uppercase">Upload CSV</button>
+                  {csvStatus && <p className="text-xs font-bold text-[#D32F2F]">{csvStatus}</p>}
+                  <button type="submit" className="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs uppercase shadow-md transition-colors">Upload CSV</button>
                 </form>
               </div>
             )}
 
             {/* Questions list filter */}
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-4">
-              <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-jungle-light pb-4">
-                <div className="flex items-center bg-jungle-deep border border-jungle-light/30 rounded-xl px-3 py-1.5 w-full md:w-80">
-                  <Search className="w-4 h-4 text-gold-light mr-2" />
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-xl text-slate-800">
+              <div className="flex flex-col lg:flex-row justify-between items-center gap-4 border-b border-slate-100 pb-4 select-text">
+                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 w-full lg:w-80 shadow-sm">
+                  <Search className="w-4 h-4 text-slate-550 mr-2" />
                   <input
                     type="text"
                     value={questionSearch}
                     onChange={(e) => setQuestionSearch(e.target.value)}
                     placeholder="Search topic or question..."
-                    className="bg-transparent text-xs text-white focus:outline-none w-full"
+                    className="bg-transparent text-xs text-slate-800 focus:outline-none w-full font-bold"
                   />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <div className="flex gap-1.5 border-r border-jungle-light pr-3">
+                <div className="flex flex-wrap gap-3 font-semibold text-[10px]">
+                  <div className="flex gap-1.5 border-r border-slate-100 pr-3">
                     {['all', '10', '11', '12'].map(g => (
                       <button
                         key={g}
                         onClick={() => setGradeFilter(g)}
-                        className={`px-3 py-1 border rounded text-[10px] font-bold uppercase ${
-                          gradeFilter === g ? 'bg-gold border-gold text-jungle-deep' : 'bg-jungle-deep border-jungle-light text-offwhite'
+                        className={`px-3 py-1.5 border rounded-lg font-bold uppercase transition-all ${
+                          gradeFilter === g ? 'bg-[#D32F2F] border-[#D32F2F] text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-650'
                         }`}
                       >
                         {g === 'all' ? 'All Grades' : `Class ${g}`}
@@ -2101,8 +2162,8 @@ export default function TeacherDashboard({
                       <button
                         key={d}
                         onClick={() => setDifficultyFilter(d)}
-                        className={`px-3 py-1 border rounded text-[10px] font-bold uppercase ${
-                          difficultyFilter === d ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-jungle-deep border-jungle-light text-offwhite'
+                        className={`px-3 py-1.5 border rounded-lg font-bold uppercase transition-all ${
+                          difficultyFilter === d ? 'bg-purple-650 border-purple-650 text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-650'
                         }`}
                       >
                         {d === 'all' ? 'All Diff' : d}
@@ -2113,40 +2174,40 @@ export default function TeacherDashboard({
               </div>
 
               {/* Display Question List */}
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 text-xs">
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 text-xs font-semibold select-text">
                 {filteredQuestions.map(q => (
-                  <div key={q.id} className="p-4 bg-jungle-deep/45 border border-jungle-light/25 rounded-xl space-y-2 relative select-text">
+                  <div key={q.id} className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 relative shadow-sm">
                     <div className="flex justify-between items-start gap-4">
                       <div>
-                        <span className="text-[9px] bg-gold/15 text-gold px-2 py-0.5 rounded-full font-bold uppercase mr-1.5">{q.difficulty}</span>
-                        <span className="text-gold-light font-bold">Class {q.grade} | Topic: {q.topic}</span>
-                        <p className="font-bold text-white text-sm mt-1 leading-relaxed">{q.question}</p>
+                        <span className="text-[9px] bg-purple-50 text-purple-600 border border-purple-200 px-2 py-0.5 rounded-full font-bold uppercase mr-1.5 tracking-wide">{q.difficulty}</span>
+                        <span className="text-slate-550 font-bold uppercase tracking-wider text-[9px]">Class {q.grade} | Topic: {q.topic}</span>
+                        <p className="font-extrabold text-slate-900 text-sm mt-1 leading-relaxed">{q.question}</p>
                       </div>
                       <div className="flex gap-1">
                         <button
                           onClick={() => setPreviewQuestion(q)}
-                          className="p-1.5 bg-jungle-medium text-emerald-400 hover:bg-emerald-500/10 rounded"
+                          className="p-1.5 text-slate-450 hover:bg-slate-200 rounded-lg transition-colors"
                           title="Student Preview"
                         >
                           👁️
                         </button>
                         <button
                           onClick={() => setIsEditingQuestion(q)}
-                          className="p-1.5 bg-jungle-medium text-gold hover:bg-gold/10 rounded"
+                          className="p-1.5 text-[#D32F2F] hover:bg-red-50 rounded-lg transition-colors"
                           title="Edit"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => duplicateQuestion(q)}
-                          className="p-1.5 bg-jungle-medium text-indigo-400 hover:bg-indigo-500/10 rounded"
+                          className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                           title="Duplicate"
                         >
                           📋
                         </button>
                         <button 
                           onClick={() => handleDeleteQuestion(q.id)}
-                          className="p-1.5 bg-rose-950/45 text-rose-400 hover:bg-rose-600 hover:text-white rounded"
+                          className="p-1.5 text-red-650 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -2154,12 +2215,14 @@ export default function TeacherDashboard({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-2 text-[11px] font-semibold text-offwhite/85">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-[11px] font-semibold text-slate-700">
                       {q.options.map((opt: string, idx: number) => (
                         <div 
                           key={idx} 
-                          className={`p-2 rounded border ${
-                            idx === q.correctIndex ? 'bg-emerald-950/40 border-emerald-500 text-emerald-300' : 'bg-jungle-deep/20 border-jungle-light/10'
+                          className={`p-2.5 rounded-xl border font-bold ${
+                            idx === q.correctIndex 
+                              ? 'bg-green-50 border-green-200 text-green-700 shadow-sm' 
+                              : 'bg-white border-slate-200'
                           }`}
                         >
                           {idx + 1}. {opt}
@@ -2168,33 +2231,33 @@ export default function TeacherDashboard({
                     </div>
                   </div>
                 ))}
-                {filteredQuestions.length === 0 && <p className="text-offwhite/40 italic py-10 text-center">No questions found matching your search parameters.</p>}
+                {filteredQuestions.length === 0 && <p className="text-slate-550 italic py-10 text-center font-bold">No questions found matching your search parameters.</p>}
               </div>
             </div>
 
             {/* Preview Question Modal Overlay */}
             {previewQuestion && (
-              <div className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                <div className="parchment-panel rounded-xl max-w-lg w-full p-6 text-jungle-deep shadow-2xl relative">
+              <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 text-slate-800 shadow-2xl relative">
                   <button
                     onClick={() => setPreviewQuestion(null)}
-                    className="absolute top-4 right-4 text-jungle-light font-bold text-xs"
+                    className="absolute top-4 right-4 text-slate-550 hover:text-slate-700 font-bold text-xs"
                   >
                     Close [X]
                   </button>
-                  <h3 className="font-adventure text-2xl font-bold text-gold-dark border-b border-gold-dark/25 pb-2 mb-4">
+                  <h3 className="font-adventure text-2xl font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4 font-adventure">
                     Student MCQ Preview
                   </h3>
                   <div className="space-y-4 text-xs font-bold font-sans">
                     <div className="flex gap-2">
-                      <span className="bg-gold/20 text-gold-dark px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-gold-dark/30">
+                      <span className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded border border-purple-200 text-[10px] uppercase font-bold">
                         {previewQuestion.difficulty}
                       </span>
-                      <span className="text-jungle-light text-[10px]">
+                      <span className="text-slate-550 text-[10px] font-bold uppercase tracking-wider">
                         Class {previewQuestion.grade}
                       </span>
                     </div>
-                    <p className="text-base font-semibold leading-relaxed text-jungle-deep font-adventure">
+                    <p className="text-base font-semibold leading-relaxed text-slate-900 font-sans">
                       {previewQuestion.question}
                     </p>
                     <div className="space-y-2">
@@ -2203,18 +2266,18 @@ export default function TeacherDashboard({
                         return (
                           <div
                             key={idx}
-                            className={`p-3 rounded-lg border text-xs font-semibold flex items-center justify-between ${
+                            className={`p-3.5 rounded-xl border text-xs font-bold flex items-center justify-between ${
                               isCorrect
-                                ? 'bg-emerald-50 border-emerald-400 text-emerald-900'
-                                : 'bg-parchment-light border-gold-dark/30 text-jungle-deep'
+                                ? 'bg-green-50 border-green-200 text-green-700'
+                                : 'bg-slate-50 border-slate-200 text-slate-700'
                             }`}
                           >
                             <span>
                               {String.fromCharCode(65 + idx)}. {opt}
                             </span>
                             {isCorrect && (
-                              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-extrabold">
-                                CORRECT CHOICE
+                              <span className="text-[9px] bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-extrabold uppercase">
+                                Correct Choice
                               </span>
                             )}
                           </div>
@@ -2222,10 +2285,10 @@ export default function TeacherDashboard({
                       })}
                     </div>
                     {previewQuestion.explanation && (
-                      <div className="bg-amber-50 border border-amber-300/60 p-3 rounded-lg text-amber-900 text-xs">
-                        <span className="block text-[10px] uppercase text-amber-800 font-extrabold mb-1">
+                      <div className="bg-amber-50 border border-amber-250 p-4 rounded-xl text-amber-900 text-xs font-semibold">
+                        <strong className="block text-[10px] uppercase text-amber-800 font-bold tracking-wider mb-1">
                           Explanation:
-                        </span>
+                        </strong>
                         {previewQuestion.explanation}
                       </div>
                     )}
@@ -2239,41 +2302,41 @@ export default function TeacherDashboard({
         {/* TAB 5: JOIN REQUESTS APPROVALS */}
         {activeTab === 'requests' && (
           <div className="space-y-6">
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-              <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-4">
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3 mb-4">
                 <button
                   onClick={handleGoBack}
-                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-full text-xs uppercase font-adventure transition-all"
                 >
                   ← Back
                 </button>
-                <h3 className="font-adventure text-lg font-bold text-gold">Join Requests</h3>
+                <h3 className="font-adventure text-lg font-bold text-slate-900">Join Requests</h3>
               </div>
-              <p className="text-xs text-gold-light mb-6">Review pending requests from students seeking to join your classrooms.</p>
+              <p className="text-xs text-slate-450 font-semibold mb-6">Review pending requests from students seeking to join your classrooms.</p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 select-text">
                 {joinRequests.map((req: any) => (
-                  <div key={req.id} className="p-5 bg-jungle-deep/55 border border-jungle-light/30 rounded-xl space-y-4 relative flex flex-col justify-between text-xs">
-                    <div className="space-y-2 text-white">
+                  <div key={req.id} className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 relative flex flex-col justify-between text-xs font-semibold">
+                    <div className="space-y-2 text-slate-700">
                       <div className="flex justify-between items-start">
                         <div>
-                          <span className="font-bold text-sm block">{req.studentName}</span>
-                          <span className="text-[10px] text-offwhite/50 block">Wants to join: {req.className}</span>
-                          <span className="text-[10px] text-gold block">Grade Level: {req.studentGrade || 11}</span>
+                          <span className="font-extrabold text-slate-900 text-sm block">{req.studentName}</span>
+                          <span className="text-[10px] text-slate-550 font-bold block uppercase tracking-wider">Wants to join: {req.className}</span>
+                          <span className="text-[10px] text-[#D32F2F] font-bold block">Grade Level: Class {req.studentGrade || 11}</span>
                         </div>
-                        <span className="text-[9px] text-offwhite/50">{new Date(req.createdAt).toLocaleDateString()}</span>
+                        <span className="text-[9px] text-slate-450 font-bold">{new Date(req.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
-                    <div className="flex gap-2 pt-3 border-t border-jungle-light/20">
+                    <div className="flex gap-2 pt-3 border-t border-slate-200/60">
                       <button
                         onClick={() => handleResolveJoinRequest(req.id, 'ACCEPT')}
-                        className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg uppercase"
+                        className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl uppercase transition-colors"
                       >
                         Accept
                       </button>
                       <button
                         onClick={() => handleResolveJoinRequest(req.id, 'REJECT')}
-                        className="flex-1 py-1.5 bg-rose-700 hover:bg-rose-600 text-white font-bold rounded-lg uppercase"
+                        className="flex-1 py-2 bg-red-650 hover:bg-red-700 text-white font-bold rounded-xl uppercase transition-colors"
                       >
                         Reject
                       </button>
@@ -2281,7 +2344,7 @@ export default function TeacherDashboard({
                   </div>
                 ))}
                 {joinRequests.length === 0 && (
-                  <div className="col-span-full py-16 text-center text-offwhite/40 italic text-sm">
+                  <div className="col-span-full py-16 text-center text-slate-550 font-bold text-sm italic">
                     🎉 No pending join requests. Everything is up to date!
                   </div>
                 )}
@@ -2292,35 +2355,35 @@ export default function TeacherDashboard({
 
         {/* TAB 6: CLASS LEADERBOARD STANDINGS */}
         {activeTab === 'leaderboard' && (
-          <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-4">
-            <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-2">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-xl select-text">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-3 mb-2">
               <button
                 onClick={handleGoBack}
-                className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-full text-xs uppercase font-adventure transition-all"
               >
                 ← Back
               </button>
-              <h3 className="font-adventure text-xl font-bold text-gold">Student Standings Leaderboard</h3>
+              <h3 className="font-adventure text-xl font-bold text-slate-900">Student Standings Leaderboard</h3>
             </div>
-            <p className="text-gold-light text-xs">Overview rank standings compiled across classes</p>
+            <p className="text-slate-550 text-xs font-semibold">Overview rank standings compiled across classes</p>
 
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 text-xs">
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 text-xs font-semibold">
               {[
                 { name: 'Aarav Gupta', xp: 480, coins: 45, className: 'Grade 11 - Section B' },
                 { name: 'Kabir Patel', xp: 320, coins: 30, className: 'Grade 11 - Section B' },
                 { name: 'Diya Sharma', xp: 250, coins: 15, className: 'Grade 11 - Section B' }
               ].sort((a,b)=>b.xp - a.xp).map((student, idx) => (
-                <div key={idx} className="p-4 bg-jungle-deep/50 border border-jungle-light/20 rounded-xl flex justify-between items-center text-white font-semibold">
+                <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-center text-slate-800 font-semibold shadow-sm">
                   <div className="flex items-center gap-3">
-                    <span className="font-bold font-mono">#{idx+1}</span>
+                    <span className="font-bold font-mono text-sm">#{idx+1}</span>
                     <div>
-                      <span className="font-bold text-sm block">{student.name}</span>
-                      <span className="text-[10px] text-offwhite/50 block">Class: {student.className}</span>
+                      <span className="font-extrabold text-slate-900 text-sm block">{student.name}</span>
+                      <span className="text-[10px] text-slate-550 font-bold block uppercase tracking-wider">Class: {student.className}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-xs font-semibold text-gold">
-                    <span>⭐ {student.xp} XP</span>
-                    <span>🪙 {student.coins} Coins</span>
+                  <div className="flex items-center gap-4 text-xs font-bold text-slate-700">
+                    <span className="text-purple-600">⭐ {student.xp} XP</span>
+                    <span className="text-amber-600">🪙 {student.coins} Coins</span>
                   </div>
                 </div>
               ))}
@@ -2332,42 +2395,42 @@ export default function TeacherDashboard({
         {activeTab === 'reports' && (
           <div className="space-y-6">
             {/* List past games */}
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-              <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-4">
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3 mb-4">
                 <button
                   onClick={handleGoBack}
-                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-full text-xs uppercase font-adventure transition-all"
                 >
                   ← Back
                 </button>
-                <h3 className="font-adventure text-lg font-bold text-gold">Completed Game Session Reports</h3>
+                <h3 className="font-adventure text-lg font-bold text-slate-900">Completed Game Session Reports</h3>
               </div>
-              <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2 text-xs">
+              <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2 text-xs font-semibold">
                 {pastReports.map(report => (
                   <button 
                     key={report.id}
                     onClick={() => fetchSessionReport(report.id)}
-                    className="w-full text-left p-4 bg-jungle-deep/55 border border-jungle-light/20 rounded-xl hover:bg-jungle-deep hover:border-gold/30 transition-all flex justify-between items-center"
+                    className="w-full text-left p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-slate-100 hover:border-slate-700 transition-all flex justify-between items-center shadow-sm"
                   >
                     <div>
-                      <span className="text-[9px] uppercase font-bold text-gold bg-gold/10 px-2 py-0.5 rounded-full mr-2">Finished</span>
-                      <span className="font-bold text-white">Roster Code: {report.roomCode}</span>
-                      <p className="text-[10px] text-gold-light mt-1">Classroom Grade: {report.className} | Date: {new Date(report.endedAt).toLocaleDateString()}</p>
+                      <span className="text-[9px] uppercase font-bold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full mr-2">Finished</span>
+                      <span className="font-extrabold text-slate-900">Roster Code: {report.roomCode}</span>
+                      <p className="text-[10px] text-slate-550 font-bold uppercase tracking-wider mt-1.5">Classroom Grade: {report.className} | Date: {new Date(report.endedAt).toLocaleDateString()}</p>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gold-light" />
+                    <ChevronRight className="w-5 h-5 text-slate-550" />
                   </button>
                 ))}
-                {pastReports.length === 0 && <p className="text-offwhite/40 italic py-10 text-center">No completed match sessions saved in database.</p>}
+                {pastReports.length === 0 && <p className="text-slate-550 italic py-10 text-center font-bold">No completed match sessions saved in database.</p>}
               </div>
             </div>
 
             {/* Student Progress & Activity Report */}
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-4">
-              <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2 mb-4">Student Activity & Progress</h3>
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-xl select-text">
+              <h3 className="font-adventure text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">Student Activity & Progress</h3>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
+                <table className="w-full text-left border-collapse text-xs select-text">
                   <thead>
-                    <tr className="border-b border-jungle-light/25 text-gold font-bold">
+                    <tr className="border-b border-slate-200 text-slate-550 font-bold uppercase tracking-wider text-[10px]">
                       <th className="py-2.5">Student Name</th>
                       <th className="py-2.5">Email</th>
                       <th className="py-2.5 text-center">Grade</th>
@@ -2379,22 +2442,22 @@ export default function TeacherDashboard({
                   </thead>
                   <tbody>
                     {classes.flatMap(cls => cls.students || []).map((student: any) => (
-                      <tr key={student.id} className="border-b border-jungle-light/10 text-white font-semibold">
-                        <td className="py-3 font-bold flex items-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full ${student.isSuspended ? 'bg-rose-500' : 'bg-emerald-500'}`} title={student.isSuspended ? 'Suspended' : 'Active'}></span>
+                      <tr key={student.id} className="border-b border-slate-100 text-slate-700 font-bold hover:bg-slate-50 transition-colors">
+                        <td className="py-3 font-bold flex items-center gap-1.5 text-slate-900">
+                          <span className={`w-2 h-2 rounded-full ${student.isSuspended ? 'bg-red-500' : 'bg-green-500'}`} title={student.isSuspended ? 'Suspended' : 'Active'}></span>
                           <span>{student.name}</span>
                         </td>
-                        <td className="py-3 text-offwhite/70">{student.email || 'N/A'}</td>
-                        <td className="py-3 text-center">{student.grade || 11}</td>
-                        <td className="py-3 text-center text-gold">{student.xp}</td>
-                        <td className="py-3 text-center">{student.coins}</td>
-                        <td className="py-3 text-center">Level {student.level}</td>
-                        <td className="py-3 text-center font-mono font-bold text-emerald-400">{student.minutesPlayed || 0} min</td>
+                        <td className="py-3 text-slate-550 font-mono text-[11px]">{student.email || 'N/A'}</td>
+                        <td className="py-3 text-center text-slate-800">{student.grade || 11}</td>
+                        <td className="py-3 text-center text-purple-600">{student.xp}</td>
+                        <td className="py-3 text-center text-amber-600">{student.coins}</td>
+                        <td className="py-3 text-center text-blue-650">Level {student.level}</td>
+                        <td className="py-3 text-center font-mono font-bold text-green-700">{student.minutesPlayed || 0} min</td>
                       </tr>
                     ))}
                     {classes.flatMap(cls => cls.students || []).length === 0 && (
                       <tr>
-                        <td colSpan={7} className="text-offwhite/40 italic py-6 text-center">No students registered.</td>
+                        <td colSpan={7} className="text-slate-550 italic py-6 text-center font-bold">No students registered.</td>
                       </tr>
                     )}
                   </tbody>
@@ -2404,25 +2467,25 @@ export default function TeacherDashboard({
 
             {/* Session details modal report */}
             {sessionReport && (
-              <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-4 relative">
+              <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 relative shadow-xl select-text">
                 <button 
                   onClick={() => setSessionReport(null)}
-                  className="absolute top-4 right-4 text-offwhite/60 hover:text-white text-xs font-bold font-sans"
+                  className="absolute top-4 right-4 text-slate-550 hover:text-slate-700 text-xs font-bold font-sans"
                 >
                   Close Report [X]
                 </button>
-                <h3 className="font-adventure text-2xl font-bold text-gold border-b border-jungle-light pb-2">Session Summary Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-gold-light">
-                  <div>Session ID: <span className="text-white font-bold">{sessionReport.session.id}</span></div>
-                  <div>Classroom: <span className="text-white font-bold">{sessionReport.className}</span></div>
-                  <div>Room Code: <span className="text-white font-bold">{sessionReport.session.roomCode}</span></div>
-                  <div>Ended At: <span className="text-white font-bold">{new Date(sessionReport.session.endedAt).toLocaleString()}</span></div>
+                <h3 className="font-adventure text-2xl font-bold text-slate-900 border-b border-slate-100 pb-2">Session Summary Details</h3>
+                <div className="grid grid-cols-2 gap-4 text-xs font-bold text-slate-550 pt-2">
+                  <div>Session ID: <span className="text-slate-900 font-extrabold">{sessionReport.session.id}</span></div>
+                  <div>Classroom: <span className="text-slate-900 font-extrabold">{sessionReport.className}</span></div>
+                  <div>Room Code: <span className="text-slate-900 font-extrabold">{sessionReport.session.roomCode}</span></div>
+                  <div>Ended At: <span className="text-slate-900 font-extrabold">{new Date(sessionReport.session.endedAt).toLocaleString()}</span></div>
                 </div>
 
                 <div className="overflow-x-auto pr-2 text-xs pt-4 select-text">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-jungle-light/25 text-gold font-bold">
+                      <tr className="border-b border-slate-200 text-slate-550 font-bold uppercase tracking-wider text-[10px]">
                         <th className="py-2.5">Team Explorer</th>
                         <th className="py-2.5 text-center">Final Tile Position</th>
                         <th className="py-2.5 text-center font-bold">Answer Accuracy</th>
@@ -2432,12 +2495,12 @@ export default function TeacherDashboard({
                     </thead>
                     <tbody>
                       {sessionReport.results.map((r: any) => (
-                        <tr key={r.id} className="border-b border-jungle-light/10 text-white font-semibold">
-                          <td className="py-3 font-bold">{r.teamName || r.studentName}</td>
+                        <tr key={r.id} className="border-b border-slate-100 text-slate-700 font-bold">
+                          <td className="py-3 font-bold text-slate-900">{r.teamName || r.studentName}</td>
                           <td className="py-3 text-center">{r.position}</td>
-                          <td className="py-3 text-center text-emerald-400 font-bold">{r.accuracy.toFixed(0)}%</td>
-                          <td className="py-3 text-center text-gold">{r.xp}</td>
-                          <td className="py-3 text-center font-adventure font-extrabold text-gold-dark text-sm">#{r.rank}</td>
+                          <td className="py-3 text-center text-green-700 font-bold">{r.accuracy.toFixed(0)}%</td>
+                          <td className="py-3 text-center text-purple-600">{r.xp}</td>
+                          <td className="py-3 text-center font-adventure font-extrabold text-blue-650 text-sm">#{r.rank}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -2450,35 +2513,35 @@ export default function TeacherDashboard({
 
         {/* TAB 8: SETTINGS PANEL */}
         {activeTab === 'settings' && (
-          <div className="parchment-panel rounded-2xl p-8 text-jungle-deep max-w-md mx-auto space-y-4">
-            <div className="flex items-center gap-3 border-b border-gold-dark/25 pb-2 mb-2">
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 text-slate-800 max-w-md mx-auto space-y-6 shadow-xl select-text">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-3 mb-2">
               <button
                 onClick={handleGoBack}
-                className="px-3 py-1.5 rounded-lg bg-gold/25 border border-gold-dark/30 hover:bg-gold/45 text-jungle-deep font-bold text-xs uppercase font-adventure transition-all"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-full text-xs uppercase font-adventure transition-all"
               >
                 ← Back
               </button>
-              <h3 className="font-adventure text-2xl font-bold text-gold-dark">Console Settings</h3>
+              <h3 className="font-adventure text-2xl font-bold text-slate-900 font-adventure">Console Settings</h3>
             </div>
             
-            <div className="flex justify-between items-center py-2 border-b border-gold-dark/10">
-              <span className="text-xs font-bold text-jungle-light">Sidebar Theme Layout</span>
+            <div className="flex justify-between items-center py-3 border-b border-slate-100">
+              <span className="text-xs font-bold text-slate-450">Sidebar Theme Layout</span>
               <select
                 value={themeMode}
                 onChange={(e) => setThemeMode(e.target.value)}
-                className="bg-parchment-light border border-gold-dark/30 rounded p-1 text-xs font-bold"
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-650 font-sans"
               >
                 <option value="Dark Forest">Dark Forest (Jungle)</option>
                 <option value="Parchment Light">Parchment Light</option>
               </select>
             </div>
 
-            <div className="flex justify-between items-center py-2 border-b border-gold-dark/10">
-              <span className="text-xs font-bold text-jungle-light">Authentication Logs</span>
-              <span className="bg-emerald-100 text-emerald-800 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase">SSL Secured</span>
+            <div className="flex justify-between items-center py-3 border-b border-slate-100">
+              <span className="text-xs font-bold text-slate-450">Authentication Logs</span>
+              <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide">SSL Secured</span>
             </div>
             
-            <div className="pt-2 text-center text-[10px] text-offwhite/40 italic">
+            <div className="pt-2 text-center text-[10px] text-slate-550 font-bold uppercase tracking-wider">
               ByteQuest Teacher Dashboard controller console build version 1.0.0
             </div>
           </div>
@@ -2486,16 +2549,16 @@ export default function TeacherDashboard({
 
         {/* TAB 9: PROFILE SUMMARY */}
         {activeTab === 'profile' && (
-          <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl text-xs space-y-4">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl text-xs space-y-6 select-text">
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleGoBack}
-                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-full text-xs uppercase font-adventure transition-all"
                 >
                   ← Back
                 </button>
-                <h3 className="font-adventure text-xl font-bold text-gold">Teacher Profile Details</h3>
+                <h3 className="font-adventure text-xl font-bold text-slate-900 font-adventure">Teacher Profile Details</h3>
               </div>
               <button
                 onClick={() => {
@@ -2517,16 +2580,16 @@ export default function TeacherDashboard({
                     setProfileSaveError('');
                   }
                 }}
-                className="px-3 py-1.5 bg-gold/20 border border-gold/50 text-gold text-[10px] font-bold rounded-lg hover:bg-gold/30 transition-colors font-sans"
+                className="px-4 py-2 bg-red-50 border border-cyan-95 text-[#D32F2F] text-xs font-bold rounded-full hover:bg-red-100 transition-colors font-sans"
               >
                 {editingProfile ? 'Cancel' : '✏️ Edit Profile'}
               </button>
             </div>
 
             {!editingProfile ? (
-              <div className="space-y-4 text-gold-light pt-2 font-semibold select-text">
-                <div className="flex items-center gap-4 border-b border-jungle-light pb-4 mb-2">
-                  <div className="w-16 h-16 rounded-full bg-jungle-deep border border-gold/45 flex items-center justify-center text-3xl overflow-hidden text-offwhite/50">
+              <div className="space-y-6 text-slate-550 pt-2 font-semibold select-text">
+                <div className="flex items-center gap-4 border-b border-slate-100 pb-4 mb-2">
+                  <div className="w-20 h-20 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-4xl overflow-hidden shadow-sm shrink-0">
                     {localStorage.getItem(`bytequest_teacher_pic_${teacherInfo.id}`) ? (
                       <img src={localStorage.getItem(`bytequest_teacher_pic_${teacherInfo.id}`)!} alt="profile" className="w-full h-full object-cover" />
                     ) : (
@@ -2534,43 +2597,64 @@ export default function TeacherDashboard({
                     )}
                   </div>
                   <div>
-                    <span className="text-xl font-adventure text-gold block">{teacherInfo.name}</span>
-                    <span className="text-[10px] text-offwhite/50">Certified Instructor</span>
+                    <span className="text-2xl font-adventure font-extrabold text-slate-900 block leading-tight">{teacherInfo.name}</span>
+                    <span className="bg-red-50 text-[#D32F2F] border border-cyan-95 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider inline-block mt-1">Certified Instructor</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>Name: <span className="text-white font-bold">{teacherInfo.name}</span></div>
-                  <div>Registered Email: <span className="text-white font-bold">{teacherInfo.email}</span></div>
-                  <div>School: <span className="text-white font-bold">{teacherInfo.schoolName || 'Delhi Public School'}</span></div>
-                  <div>Subject: <span className="text-white font-bold">{localStorage.getItem(`bytequest_teacher_subject_${teacherInfo.id}`) || 'Computer Science'}</span></div>
-                  <div>Phone: <span className="text-white font-bold">{localStorage.getItem(`bytequest_teacher_phone_${teacherInfo.id}`) || '—'}</span></div>
-                  <div>Experience: <span className="text-white font-bold">{localStorage.getItem(`bytequest_teacher_exp_${teacherInfo.id}`) ? `${localStorage.getItem(`bytequest_teacher_exp_${teacherInfo.id}`)} Years` : '—'}</span></div>
-                  <div className="col-span-2">Biography: <p className="text-white font-bold mt-1 bg-jungle-deep/30 p-2.5 rounded-lg border border-jungle-light/20 font-sans font-normal">{localStorage.getItem(`bytequest_teacher_bio_${teacherInfo.id}`) || 'No biography entered yet.'}</p></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs text-slate-550">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Full Name</span>
+                    <span className="text-slate-955 font-extrabold text-sm">{teacherInfo.name}</span>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Registered Email</span>
+                    <span className="text-slate-955 font-extrabold text-sm">{teacherInfo.email}</span>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">School</span>
+                    <span className="text-slate-955 font-extrabold text-sm">{teacherInfo.schoolName || 'Delhi Public School'}</span>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Subject</span>
+                    <span className="text-slate-955 font-extrabold text-sm">{localStorage.getItem(`bytequest_teacher_subject_${teacherInfo.id}`) || 'Computer Science'}</span>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Phone</span>
+                    <span className="text-slate-955 font-extrabold text-sm">{localStorage.getItem(`bytequest_teacher_phone_${teacherInfo.id}`) || '—'}</span>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Experience</span>
+                    <span className="text-slate-955 font-extrabold text-sm">{localStorage.getItem(`bytequest_teacher_exp_${teacherInfo.id}`) ? `${localStorage.getItem(`bytequest_teacher_exp_${teacherInfo.id}`)} Years` : '—'}</span>
+                  </div>
+                  <div className="col-span-1 sm:col-span-2 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Biography</span>
+                    <p className="text-slate-700 font-medium mt-1 font-sans leading-relaxed">{localStorage.getItem(`bytequest_teacher_bio_${teacherInfo.id}`) || 'No biography entered yet.'}</p>
+                  </div>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSaveTeacherProfile} className="space-y-4">
+              <form onSubmit={handleSaveTeacherProfile} className="space-y-4 text-xs font-semibold select-text">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">First Name</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">First Name</label>
                     <input
                       type="text"
                       value={profileFirstName}
                       onChange={(e) => setProfileFirstName(e.target.value)}
                       placeholder="First name"
-                      className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-gold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Last Name</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Last Name</label>
                     <input
                       type="text"
                       value={profileLastName}
                       onChange={(e) => setProfileLastName(e.target.value)}
                       placeholder="Last name"
-                      className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-gold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                       required
                     />
                   </div>
@@ -2578,24 +2662,24 @@ export default function TeacherDashboard({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Email</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Email</label>
                     <input
                       type="email"
                       value={profileEmail}
                       onChange={(e) => setProfileEmail(e.target.value)}
                       placeholder="Email address"
-                      className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-gold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">School</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">School</label>
                     <input
                       type="text"
                       value={profileSchool}
                       onChange={(e) => setProfileSchool(e.target.value)}
                       placeholder="School name"
-                      className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-gold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                       required
                     />
                   </div>
@@ -2603,45 +2687,45 @@ export default function TeacherDashboard({
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Subject</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Subject</label>
                     <input
                       type="text"
                       value={profileSubject}
                       onChange={(e) => setProfileSubject(e.target.value)}
                       placeholder="Subject taught"
-                      className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-gold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Phone</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Phone</label>
                     <input
                       type="text"
                       value={profilePhone}
                       onChange={(e) => setProfilePhone(e.target.value)}
                       placeholder="Phone number"
-                      className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-gold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Experience (Yrs)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Experience (Yrs)</label>
                     <input
                       type="number"
                       value={profileExperience}
                       onChange={(e) => setProfileExperience(e.target.value)}
                       placeholder="Years"
-                      className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-gold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Profile Photo (Upload from device)</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1.5">Profile Photo</label>
                   <div className="flex items-center gap-3">
                     {profilePhoto && (
                       <img 
                         src={profilePhoto} 
                         alt="Profile Preview" 
-                        className="w-12 h-12 rounded-full object-cover border border-gold/40"
+                        className="w-12 h-12 rounded-full object-cover border border-slate-200"
                       />
                     )}
                     <input
@@ -2657,62 +2741,62 @@ export default function TeacherDashboard({
                           reader.readAsDataURL(file);
                         }
                       }}
-                      className="text-xs text-offwhite bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 cursor-pointer w-full"
+                      className="text-xs text-slate-550 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer w-full"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-gold-light mb-1">Biography / Bio</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Biography / Bio</label>
                   <textarea
                     value={profileBio}
                     onChange={(e) => setProfileBio(e.target.value)}
                     placeholder="Tell your students about yourself..."
                     rows={3}
-                    className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-gold font-sans"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-sans font-bold"
                   />
                 </div>
 
-                <div className="border-t border-jungle-light pt-3">
-                  <p className="text-[10px] font-bold text-gold-light uppercase mb-2 font-sans font-extrabold">Change Password (optional)</p>
+                <div className="border-t border-slate-100 pt-4">
+                  <p className="text-[10px] font-bold text-slate-450 uppercase mb-2">Change Password (optional)</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] text-jungle-light mb-1 font-sans font-bold">Current Password</label>
+                      <label className="block text-[10px] text-slate-450 mb-1">Current Password</label>
                       <input
                         type="password"
                         value={profileCurrentPw}
                         onChange={(e) => setProfileCurrentPw(e.target.value)}
                         placeholder="Current password"
-                        className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-gold"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-jungle-light mb-1 font-sans font-bold">New Password</label>
+                      <label className="block text-[10px] text-slate-450 mb-1">New Password</label>
                       <input
                         type="password"
                         value={profileNewPw}
                         onChange={(e) => setProfileNewPw(e.target.value)}
                         placeholder="Min 6 characters"
-                        className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-gold"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
                       />
                     </div>
                   </div>
                 </div>
 
                 {profileSaveError && (
-                  <div className="bg-rose-950/50 text-rose-300 text-xs p-2.5 rounded-lg border border-rose-500/40 font-semibold font-sans">
+                  <div className="bg-red-50 text-red-650 text-xs p-2.5 rounded-xl border border-red-200 font-bold text-center">
                     {profileSaveError}
                   </div>
                 )}
                 {profileSaveStatus && (
-                  <div className="bg-emerald-950/50 text-emerald-300 text-xs p-2.5 rounded-lg border border-emerald-500/40 font-semibold font-sans">
+                  <div className="bg-green-50 text-green-600 text-xs p-2.5 rounded-xl border border-green-200 font-bold text-center">
                     {profileSaveStatus}
                   </div>
                 )}
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg text-xs uppercase"
+                  className="w-full py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl shadow-md uppercase transition-colors"
                 >
                   Save Changes
                 </button>

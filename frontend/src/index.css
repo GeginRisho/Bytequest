@@ -1,83 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;750&family=Space+Grotesk:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@500;700;900&family=IM+Fell+DW+Pica&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    background-color: #16352A;
-    color: #F6F1E3;
-    font-family: 'Outfit', 'Inter', sans-serif;
+    background-color: #FDFBF7;
+    background-image: radial-gradient(circle at 15% 20%, rgba(211, 47, 47, 0.04) 0%, transparent 40%),
+                      radial-gradient(circle at 85% 80%, rgba(211, 47, 47, 0.04) 0%, transparent 40%);
+    background-attachment: fixed;
+    color: #1E293B;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
+}
+
+/* Root light background utility */
+.bg-jungle-deep {
+  background-color: #FDFBF7;
 }
 
 @layer utilities {
   .parchment-glow {
-    box-shadow: 0 0 15px rgba(212, 169, 58, 0.15), inset 0 0 40px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 25px -10px rgba(211, 47, 47, 0.15), inset 0 0 20px rgba(255, 255, 255, 0.6);
   }
   .gold-border {
-    border-color: #D4A93A;
+    border-color: #D32F2F;
+  }
+  .terminal-border-cyan {
+    border-color: #D32F2F;
+    box-shadow: 0 4px 0px #991B1B;
+  }
+  .terminal-border-green {
+    border-color: #10B981;
+    box-shadow: 0 4px 0px #065F46;
   }
 }
 
-/* Custom scrollbar for game container */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #16352A;
+  background: #FDFBF7;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D4A93A;
-  border-radius: 4px;
+  background: #E2E8F0;
+  border-radius: 9999px;
+  border: 2px solid #FDFBF7;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #E8CD82;
+  background: #CBD5E1;
 }
 
-/* Background wood/jungle texture or parchment style pattern */
+/* Wood/jungle background replacement */
 .jungle-bg {
-  background-color: #16352A;
-  background-image: radial-gradient(circle at 20% 30%, #1f4a38 0%, transparent 40%),
-                    radial-gradient(circle at 80% 70%, #173f2f 0%, transparent 40%);
+  background-color: #FDFBF7;
+  background-image: radial-gradient(circle at 10% 20%, rgba(211, 47, 47, 0.03) 0%, transparent 45%),
+                    radial-gradient(circle at 90% 80%, rgba(211, 47, 47, 0.03) 0%, transparent 45%);
 }
 
+/* Glassmorphism/Terminal card panel - Juicy Game Style Card */
 .parchment-panel {
-  background-color: #F3EAD3;
-  color: #1A3026;
-  border: 4px solid #D4A93A;
-  border-image: linear-gradient(to bottom right, #D4A93A, #B88E2F, #E8CD82) 1;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), inset 0 0 60px rgba(184, 142, 47, 0.15);
+  background-color: #FFFFFF;
+  color: #1E293B;
+  border: 3px solid #D32F2F;
+  box-shadow: 6px 6px 0px #991B1B;
+  border-radius: 1.25rem;
 }
 
 /* Dice roll animation */
 @keyframes roll {
   0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.3); }
+  50% { transform: rotate(180deg) scale(1.25); }
   100% { transform: rotate(360deg) scale(1); }
 }
 
 .animate-dice-roll {
-  animation: roll 0.6s ease-out;
+  animation: roll 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Token hop animation */
 @keyframes hop {
   0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-20px) scale(1.15); }
+  50% { transform: translateY(-18px) scale(1.1); }
 }
 
 .animate-hop {
-  animation: hop 0.3s ease-out;
+  animation: hop 0.35s ease-out;
 }
 
-/* Dotted map path line */
+/* Map path line - brand red dashed line */
 .map-connector {
-  stroke: #D4A93A;
+  stroke: #D32F2F;
   stroke-dasharray: 6, 6;
-  stroke-width: 3;
+  stroke-width: 4;
   opacity: 0.65;
-  animation: dash 30s linear infinite;
+  animation: dash 35s linear infinite;
 }
 
 @keyframes dash {
@@ -85,3 +105,667 @@
     stroke-dashoffset: -1000;
   }
 }
+
+@keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  0% { opacity: 0; transform: scale(0.96); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Juicy Game Style Card quick action buttons */
+.juicy-action-card {
+  border: 3px solid #D32F2F;
+  box-shadow: 4px 4px 0px #991B1B;
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background-color: #FFFFFF;
+}
+.juicy-action-card:hover {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px #991B1B;
+}
+.juicy-action-card:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0px 0px 0px #991B1B;
+}
+
+
+/* Animated Game Launcher Background */
+.launcher-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.launcher-particle {
+  position: absolute;
+  background: rgba(220, 38, 38, 0.25);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: floatUp 12s infinite linear;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(100vh) translateX(0) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.6;
+  }
+  85% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(60px) scale(1.3);
+    opacity: 0;
+  }
+}
+
+.launcher-glass {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 3px solid #D32F2F;
+  box-shadow: 0 0 25px rgba(211, 47, 47, 0.25), 0 10px 40px rgba(0, 0, 0, 0.5);
+  border-radius: 2rem;
+}
+
+.game-btn-primary {
+  background: linear-gradient(135deg, #D32F2F 0%, #B91C1C 100%);
+  border-bottom: 4px solid #991B1B;
+  box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.game-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(211, 47, 47, 0.55);
+}
+
+.game-btn-primary:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+}
+
+/* Active Tile Glow */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(212, 175, 55, 0.4), inset 0 0 8px rgba(212, 175, 55, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.8), inset 0 0 12px rgba(212, 175, 55, 0.4); }
+}
+.active-tile-glow {
+  animation: glowPulse 2s infinite ease-in-out;
+}
+
+/* Pulsing Chest / Treasure Tiles */
+@keyframes treasurePulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.3)); }
+  50% { transform: scale(1.1); filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.7)); }
+}
+.pulsing-chest {
+  animation: treasurePulse 2s infinite ease-in-out;
+}
+
+/* Animating Boss Markers */
+@keyframes bossRotate {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.08) rotate(-5deg); }
+  75% { transform: scale(1.08) rotate(5deg); }
+}
+.boss-tile-anim {
+  animation: bossRotate 3s infinite ease-in-out;
+}
+
+/* Smooth Token Slide Transition */
+.token-glide {
+  transition: left 0.5s cubic-bezier(0.25, 1, 0.5, 1), top 0.5s cubic-bezier(0.25, 1, 0.5, 1), transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Floating rewards overlay text */
+@keyframes floatReward {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  20% { transform: translateY(-10px) scale(1.1); opacity: 1; }
+  80% { transform: translateY(-30px) scale(1); opacity: 1; }
+  100% { transform: translateY(-40px) scale(0.9); opacity: 0; }
+}
+.animate-float-reward {
+  animation: floatReward 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scan {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(96px); }
+  100% { transform: translateY(0); }
+}
+
+/* --- Light Game Board Theme --- */
+
+/* Light board background — cream with subtle red radial accents */
+.light-board-bg {
+  background-color: #FDFBF7;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(211, 47, 47, 0.04) 0%, transparent 65%),
+    radial-gradient(circle at 15% 20%, rgba(211, 47, 47, 0.03) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(211, 47, 47, 0.03) 0%, transparent 45%);
+}
+
+/* Keep fantasy-board-bg as alias for backward compat in StudentGame */
+.fantasy-board-bg {
+  background-color: #FDFBF7;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(211, 47, 47, 0.04) 0%, transparent 65%),
+    radial-gradient(circle at 15% 20%, rgba(211, 47, 47, 0.03) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(211, 47, 47, 0.03) 0%, transparent 45%);
+}
+
+.fantasy-serif {
+  font-family: 'Cinzel', 'IM Fell DW Pica', 'Georgia', serif;
+  font-variant: small-caps;
+}
+
+/* Portal Transition Effects */
+@keyframes portalSwirl {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.6) rotate(270deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3.5) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+.portal-active-effect {
+  animation: portalSwirl 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* Light Board Border Card */
+.ornate-border-box {
+  border: 3px solid #D32F2F;
+  box-shadow: 
+    6px 6px 0px #991B1B,
+    0px 8px 20px rgba(0,0,0,0.08);
+  border-radius: 2rem;
+  background: #FFFFFF;
+}
+
+.stone-plinth {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #FFFFFF 0%, #FEF2F2 100%);
+  border: 3px solid #D32F2F;
+  box-shadow: 
+    0 4px 8px rgba(0,0,0,0.12),
+    0 2px 0px #991B1B;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .stone-plinth {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+.stone-plinth:hover {
+  transform: scale(1.08);
+  box-shadow: 
+    0 8px 16px rgba(0,0,0,0.12),
+    0 2px 0px #991B1B,
+    0 0 12px rgba(211, 47, 47, 0.2);
+}
+
+@keyframes activeTilePulse {
+  0%, 100% {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12), 0 0 14px rgba(211, 47, 47, 0.55);
+    border-color: #DC2626;
+    transform: scale(1.1);
+  }
+  50% {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12), 0 0 26px rgba(220, 38, 38, 0.85);
+    border-color: #B91C1C;
+    transform: scale(1.13);
+  }
+}
+.stone-plinth-destination {
+  animation: activeTilePulse 1.8s infinite ease-in-out;
+  border-color: #DC2626;
+}
+
+.stone-plinth-completed {
+  opacity: 0.55;
+  filter: brightness(0.9) grayscale(0.2);
+}
+
+/* Pulsing Connector Path — Red on Light Board */
+@keyframes pathDashPulse {
+  0%, 100% {
+    stroke-dashoffset: 0;
+    opacity: 0.6;
+  }
+  50% {
+    stroke-dashoffset: -8;
+    opacity: 0.9;
+  }
+}
+
+.gold-energy-connector {
+  stroke: #D32F2F;
+  stroke-width: 2px;
+  fill: none !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px rgba(211, 47, 47, 0.35));
+  stroke-dasharray: 4 4;
+  animation: pathDashPulse 2s infinite linear;
+}
+
+/* Standings Parchment Scroll UI */
+.parchment-scroll {
+  background-color: #F5EFEB;
+  background-image: 
+    radial-gradient(rgba(139, 92, 26, 0.05) 1px, transparent 0),
+    linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px);
+  background-size: 16px 16px;
+  border: 4px solid #C49A45;
+  box-shadow: 
+    inset 0 0 20px rgba(139, 92, 26, 0.15),
+    4px 4px 20px rgba(0,0,0,0.35);
+  border-radius: 1.5rem;
+}
+
+/* Stat Box Gold Outline */
+.gold-stat-border {
+  border: 1.5px solid #C49A45;
+  background: #FFFDF9;
+}
+
+/* Explorer Deck Stack */
+.fanned-card-back {
+  background: linear-gradient(135deg, #FFFFFF 0%, #FEF2F2 100%);
+  border: 2px solid #D32F2F;
+  box-shadow: 
+    0px 4px 6px rgba(0,0,0,0.1),
+    0px 0px 5px rgba(211,47,47,0.15);
+}
+.fanned-card-back:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 
+    0px 8px 16px rgba(0,0,0,0.12),
+    0px 0px 15px rgba(211, 47, 47, 0.25);
+}
+
+/* Figurine standee base */
+.avatar-standee {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.97);
+  border: 2px solid #D32F2F;
+  border-bottom: 4px solid #991B1B;
+  box-shadow: 
+    0px 4px 10px rgba(0,0,0,0.18),
+    inset 0 0 4px rgba(211,47,47,0.1);
+  border-radius: 0.75rem;
+  padding: 2px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  z-index: 30;
+}
+
+/* Glow Ring under active player */
+@keyframes activeGlowRingPulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 0.95;
+  }
+}
+
+.board-bg {
+  background: linear-gradient(135deg, #2A0F0F 0%, #3B0F0F 40%, #5A1A1A 100%) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.board-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.7));
+  pointer-events: none;
+  z-index: 1;
+}
+
+.stone-plinth {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #5A1A1A, #2A0F0F);
+  border: 3px solid #D4AF37;
+  box-shadow:
+    0 6px 15px rgba(0,0,0,0.7),
+    inset 0 0 10px rgba(255,215,0,0.3);
+  position: absolute;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+@media (min-width: 640px) {
+  .stone-plinth {
+    width: 68px;
+    height: 68px;
+    border-width: 4px;
+  }
+}
+
+.stone-plinth-destination {
+  border-color: #FFD700 !important;
+  box-shadow: 0 0 20px #FFD700, 0 6px 15px rgba(0,0,0,0.7), inset 0 0 10px rgba(255,215,0,0.5) !important;
+}
+
+.stone-plinth-completed {
+  filter: brightness(0.65) saturate(0.5);
+  opacity: 0.8;
+}
+
+/* Special tile designs */
+.treasure-tile {
+  background: radial-gradient(circle, #B45309, #451A03) !important;
+  border-color: #F59E0B !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.6), 0 6px 15px rgba(0,0,0,0.7), inset 0 0 8px rgba(255,215,0,0.4) !important;
+}
+.trap-tile {
+  background: radial-gradient(circle, #991B1B, #450A0A) !important;
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.6), 0 6px 15px rgba(0,0,0,0.7), inset 0 0 8px rgba(255,0,0,0.3) !important;
+}
+.boss-tile-aura {
+  background: radial-gradient(circle, #DC2626, #4A0404) !important;
+  border-color: #DC2626 !important;
+  animation: bossAuraPulse 1.5s infinite ease-in-out !important;
+}
+@keyframes bossAuraPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 12px rgba(220, 38, 38, 0.75), 0 6px 15px rgba(0,0,0,0.7); }
+  50% { transform: translate(-50%, -50%) scale(1.06); box-shadow: 0 0 24px rgba(239, 68, 68, 0.95), 0 6px 15px rgba(0,0,0,0.7); }
+}
+
+.final-gold-glow {
+  background: radial-gradient(circle, #EAB308, #713F12) !important;
+  border-color: #FFD700 !important;
+  animation: finalGlowPulse 1.8s infinite ease-in-out !important;
+}
+@keyframes finalGlowPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 18px #FFD700, 0 6px 15px rgba(0,0,0,0.7); }
+  50% { transform: translate(-50%, -50%) scale(1.08); box-shadow: 0 0 35px #FFD700, 0 6px 15px rgba(0,0,0,0.7); }
+}
+
+/* Active Player Glow and Token Transitions */
+.active-glow-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 140%;
+  height: 140%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.25) 0%, transparent 70%);
+  animation: activeGlowRingPulse 1.5s infinite ease-in-out;
+  pointer-events: none;
+  z-index: 4;
+}
+
+@keyframes activeGlowRingPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.5; }
+  50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.95; }
+}
+
+.avatar-standee {
+  position: absolute;
+  z-index: 10;
+  transition: left 0.4s ease-in-out, top 0.4s ease-in-out, transform 0.4s ease-in-out;
+  pointer-events: auto;
+}
+
+/* Token Bounce animation */
+@keyframes tokenBounce {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50% { transform: translate(-50%, -50%) translateY(-10px); }
+}
+.active-token-bounce {
+  animation: tokenBounce 1.5s infinite ease-in-out;
+}
+
+/* SVG curved flow path */
+@keyframes flow {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+.gold-energy-connector {
+  stroke-dasharray: 18, 12;
+  animation: flow 25s linear infinite;
+  filter: drop-shadow(0 0 6px #FFD700);
+}
+
+/* Dice roll physics roll */
+@keyframes dice3DSpinShake {
+  0% { transform: scale(1) rotate(0deg); }
+  30% { transform: scale(1.3) rotate(180deg); }
+  60% { transform: scale(0.9) rotate(360deg); }
+  85% { transform: scale(1.15) rotate(540deg); }
+  100% { transform: scale(1) rotate(720deg); }
+}
+.dice-spin-shake {
+  animation: dice3DSpinShake 0.6s ease-in-out forwards;
+}
+
+/* GAME LAUNCHPAD STYLES */
+.game-launchpad-bg {
+  background: radial-gradient(circle at center, #5A1A1A 0%, #2A0F0F 60%, #000000 100%) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.game-launchpad-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.85));
+  pointer-events: none;
+  z-index: 1;
+}
+
+.game-menu-title {
+  font-family: 'Cinzel', 'Playfair Display', 'Space Grotesk', serif;
+  color: #FFFFFF;
+  font-size: 3.25rem;
+  font-weight: 900;
+  letter-spacing: 0.25em;
+  text-shadow: 
+    0 0 10px rgba(255, 255, 255, 0.8),
+    0 0 20px #7A0C0C,
+    0 0 35px #7A0C0C,
+    0 4px 8px rgba(0, 0, 0, 0.9);
+  text-transform: uppercase;
+}
+
+@media (min-width: 640px) {
+  .game-menu-title {
+    font-size: 4.75rem;
+  }
+}
+
+.game-menu-btn {
+  width: 320px;
+  height: 70px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #8B0000, #5A0F0F);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 10px 25px rgba(0, 0, 0, 0.8),
+    inset 0 0 15px rgba(255, 255, 255, 0.1),
+    0 0 15px rgba(122, 12, 12, 0.45);
+  color: #FFFFFF;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-family: 'Space Grotesk', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-menu-btn:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 
+    0 15px 30px rgba(0, 0, 0, 0.9),
+    inset 0 0 20px rgba(255, 255, 255, 0.25),
+    0 0 25px rgba(122, 12, 12, 0.85);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+@keyframes btn-flash {
+  0% {
+    filter: brightness(1);
+    box-shadow: 0 0 0px rgba(255, 255, 255, 0);
+  }
+  50% {
+    filter: brightness(1.75);
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.7);
+  }
+  100% {
+    filter: brightness(1);
+    box-shadow: 0 0 0px rgba(255, 255, 255, 0);
+  }
+}
+
+.game-menu-btn:active {
+  animation: btn-flash 0.15s ease-out;
+  transform: scale(0.95);
+}
+
+/* Sub-inputs */
+.game-menu-input {
+  width: 320px;
+  height: 44px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: bold;
+  font-family: 'Space Grotesk', monospace;
+  letter-spacing: 0.15em;
+  text-align: center;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.game-menu-input:focus {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.game-menu-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+/* Ambient VFX Layers */
+.game-light-beam {
+  position: absolute;
+  top: 0;
+  left: 25%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.03), transparent);
+  clip-path: polygon(45% 0, 55% 0, 100% 100%, 0% 100%);
+  pointer-events: none;
+  z-index: 0;
+  animation: ambientBeamWave 16s ease-in-out infinite alternate;
+}
+
+@keyframes ambientBeamWave {
+  0% {
+    transform: skewX(-3deg) scaleX(0.9);
+    opacity: 0.35;
+  }
+  100% {
+    transform: skewX(3deg) scaleX(1.1);
+    opacity: 0.75;
+  }
+}
+
+.game-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  z-index: 0;
+  animation: gameFloat 18s linear infinite;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes gameFloat {
+  0% {
+    transform: translateY(110vh) translateX(0) scale(0.8);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.65;
+  }
+  90% {
+    opacity: 0.65;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(45px) scale(1.25);
+    opacity: 0;
+  }
+}
+
+
+
+

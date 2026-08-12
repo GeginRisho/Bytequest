@@ -26,6 +26,7 @@ import { questionBank, Question } from './questions';
 import { Tile, BOARD_TILES, TILE_COORDS_DESKTOP, TILE_COORDS_MOBILE, PRESET_COLORS, PRESET_AVATARS } from './config';
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentGame from './components/StudentGame';
+import Launchpad from './components/Launchpad';
 
 const getTokenOffset = (indexOnTile: number, totalOnTile: number) => {
   if (totalOnTile <= 1) return { x: 0, y: 0 };
@@ -38,14 +39,28 @@ const getTokenOffset = (indexOnTile: number, totalOnTile: number) => {
   };
 };
 
+const getCurvedPath = (coords: { x: number; y: number }[]) => {
+  if (coords.length === 0) return '';
+  let d = `M ${coords[0].x} ${coords[0].y}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i];
+    const p1 = coords[i + 1];
+    if (p0.y !== p1.y) {
+      const cpX = p0.x + (p0.x > 50 ? 7 : -7);
+      d += ` C ${cpX} ${p0.y}, ${cpX} ${p1.y}, ${p1.x} ${p1.y}`;
+    } else {
+      d += ` L ${p1.x} ${p1.y}`;
+    }
+  }
+  return d;
+};
+
 // Connect Socket.io client to backend server
 const socket = io(import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`, {
   transports: ['websocket'],
   autoConnect: true
 });
 
-// ==========================================
-// SOUND EFFECT PLAYERS
 // ==========================================
 class SoundEffects {
   private ctx: AudioContext | null = null;
@@ -141,6 +156,7 @@ export default function App() {
 
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
   const [pendingExitCallback, setPendingExitCallback] = useState<(() => void) | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
 
   interface ByteQuestState {
     viewMode: 'selection' | 'local' | 'student' | 'teacher';
@@ -152,7 +168,7 @@ export default function App() {
     teacherShowModal: 'create' | 'edit' | 'reset-password' | null;
   }
 
-  const navigateTo = (updates: Partial<ByteQuestState>) => {
+  const applyNavigation = (updates: Partial<ByteQuestState>) => {
     const nextState: ByteQuestState = {
       viewMode: updates.viewMode ?? viewMode,
       localScreen: updates.localScreen ?? localScreen,
@@ -172,6 +188,31 @@ export default function App() {
     if (updates.teacherShowModal !== undefined) setTeacherShowModal(updates.teacherShowModal);
 
     window.history.pushState(nextState, '');
+  };
+
+  const navigateTo = (updates: Partial<ByteQuestState>) => {
+    const isEnteringBoard = 
+      (updates.localScreen === 'board' && localScreen !== 'board') || 
+      (updates.studentGameState === 'playing' && studentGameState !== 'playing');
+      
+    const isLeavingBoard = 
+      (localScreen === 'board' && updates.localScreen !== undefined && updates.localScreen !== 'board') ||
+      (studentGameState === 'playing' && updates.studentGameState !== undefined && updates.studentGameState !== 'playing') ||
+      (localScreen === 'board' && updates.viewMode === 'selection') ||
+      (studentGameState === 'playing' && updates.viewMode === 'selection');
+
+    if (isEnteringBoard || isLeavingBoard) {
+      setIsTransitioning(true);
+      sounds.playChest();
+      setTimeout(() => {
+        applyNavigation(updates);
+      }, 400);
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 850);
+    } else {
+      applyNavigation(updates);
+    }
   };
 
   const handleStudentActiveTab = (tab: any) => navigateTo({ studentActiveTab: tab });
@@ -261,7 +302,7 @@ export default function App() {
         if ((window as any).ByteQuestLeaveRoom) {
           (window as any).ByteQuestLeaveRoom();
         }
-        navigateTo({ viewMode: 'student', studentGameState: 'dashboard', studentActiveTab: 'new_adventure' });
+        navigateTo({ viewMode: 'selection' });
       });
       setShowExitConfirm(true);
       return;
@@ -281,21 +322,12 @@ export default function App() {
         if ((window as any).ByteQuestLeaveRoom) {
           (window as any).ByteQuestLeaveRoom();
         }
-        navigateTo({ studentGameState: 'dashboard', studentActiveTab: 'new_adventure' });
+        navigateTo({ viewMode: 'selection' });
         return;
       }
-      if (studentGameState === 'dashboard') {
-        if (studentActiveTab === 'dashboard') {
-          navigateTo({ viewMode: 'selection' });
-        } else if (studentActiveTab === 'daily_challenge' || studentActiveTab === 'practice_quiz') {
-          navigateTo({ studentActiveTab: 'new_adventure' });
-        } else if (studentActiveTab === 'profile' || studentActiveTab === 'settings' || studentActiveTab === 'leaderboard') {
-          navigateTo({ studentActiveTab: 'dashboard' });
-        } else {
-          navigateTo({ studentActiveTab: 'dashboard' });
-        }
-        return;
-      }
+      // All other student states — return to main selection menu
+      navigateTo({ viewMode: 'selection' });
+      return;
     }
 
     if (viewMode === 'teacher') {
@@ -322,6 +354,61 @@ export default function App() {
     sounds.enabled = audioOn;
   }, [audioOn]);
 
+  // Unified Auth States
+  const [showAuthModal, setShowAuthModal] = useState<'login' | 'signup' | null>(null);
+  const [authRoleSelection, setAuthRoleSelection] = useState<'student' | 'teacher' | null>(null);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authFirstName, setAuthFirstName] = useState('');
+  const [authLastName, setAuthLastName] = useState('');
+  const [authGrade, setAuthGrade] = useState('11');
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [showMainMenuSettings, setShowMainMenuSettings] = useState(false);
+  const [activeStudent, setActiveStudent] = useState<any>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [launchpadError, setLaunchpadError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  };
+
+  const loadStudentProfile = async (studentId: string) => {
+    const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
+    try {
+      const res = await fetch(`${baseApi}/api/v1/student/profile/${studentId}`);
+      const data = await res.json();
+      if (res.ok) {
+        setActiveStudent(data.student);
+        return data.student;
+      } else {
+        localStorage.removeItem('bytequest_student_id');
+        setActiveStudent(null);
+        return null;
+      }
+    } catch (e) {
+      console.error('Failed to load profile', e);
+      localStorage.removeItem('bytequest_student_id');
+      setActiveStudent(null);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const role = localStorage.getItem('bytequest_role');
+    const studentId = localStorage.getItem('bytequest_student_id');
+    if (role === 'student' && studentId) {
+      loadStudentProfile(studentId);
+      setViewMode('selection');
+    } else if (role === 'teacher' && localStorage.getItem('bytequest_teacher_info')) {
+      setViewMode('teacher');
+    }
+  }, []);
+
   // ==========================================
   // LOCAL GAME MODE STATE MACHINE (PHASE 1)
   // ==========================================
@@ -336,7 +423,6 @@ export default function App() {
     { name: 'Player 4', grade: 11, color: 3, avatar: 3 }
   ]);
   
-  // Active Local Players
   interface LocalPlayer {
     id: string;
     name: string;
@@ -355,6 +441,8 @@ export default function App() {
     totalTimeSpent: number;
     skipNextTurn: boolean;
     wasInLastPlace: boolean;
+    finished?: boolean;
+    finishedRank?: number;
   }
   
   const [localPlayers, setLocalPlayers] = useState<LocalPlayer[]>([]);
@@ -611,7 +699,7 @@ export default function App() {
     setLocalMapName(mapName);
     setLocalTurnIdx(0);
     setLocalAskedQs({});
-    setLocalScreen('board');
+    navigateTo({ localScreen: 'board' });
   };
 
   const localTriggerDiceRoll = () => {
@@ -662,7 +750,7 @@ export default function App() {
           localResolveLandedTile();
         }, 300);
       }
-    }, 350);
+    }, 550);
   };
 
   const localResolveLandedTile = () => {
@@ -745,6 +833,7 @@ export default function App() {
       if (q.difficulty !== targetDifficulty) return false;
       if (grade !== 'mixed' && q.grade !== grade) return false;
       // Do not repeat questions
+      if (askedList.includes(q.id)) return false;
       if (localPlayerSolvedQuestionIds.includes(q.id)) return false;
       if (localBotSolvedQuestionIds.includes(q.id)) return false;
       if (localPendingBotQuestions.some(pq => pq.id === q.id)) return false;
@@ -754,15 +843,14 @@ export default function App() {
     if (pool.length === 0) {
       pool = questionBank.filter(q => {
         if (q.difficulty !== targetDifficulty) return false;
-        if (localPlayerSolvedQuestionIds.includes(q.id)) return false;
-        if (localBotSolvedQuestionIds.includes(q.id)) return false;
+        if (askedList.includes(q.id)) return false;
         return true;
       });
     }
 
     if (pool.length === 0) {
       pool = questionBank.filter(q => {
-        if (localPlayerSolvedQuestionIds.includes(q.id)) return false;
+        if (askedList.includes(q.id)) return false;
         return true;
       });
     }
@@ -957,7 +1045,27 @@ export default function App() {
       }
 
       if (tile.type === 'finish') {
-        setTimeout(() => localTriggerVictory(), 600);
+        const finishedCount = currentPlayers.filter(p => p.finished).length;
+        const newFinishedRank = finishedCount + 1;
+        
+        updatedPlayers = currentPlayers.map((p, idx) => 
+          idx === localTurnIdx ? { ...p, finished: true, finishedRank: newFinishedRank } : p
+        );
+
+        setLocalScorePopup({ text: `🏁 ${activeP.name} finished in Rank ${newFinishedRank}!`, success: true });
+
+        const allFinished = updatedPlayers.every(p => p.finished);
+        setTimeout(() => {
+          setLocalScorePopup(null);
+          setLocalActiveQuestion(null);
+          setLocalLandingTile(null);
+          if (allFinished) {
+            localTriggerVictory();
+          } else {
+            localPassTurn();
+          }
+        }, 2200);
+
         return updatedPlayers;
       }
 
@@ -1047,7 +1155,23 @@ export default function App() {
   };
 
   const localPassTurn = () => {
-    const nextIdx = (localTurnIdx + 1) % localPlayers.length;
+    // Find next unfinished player index
+    let nextIdx = localTurnIdx;
+    let found = false;
+    for (let i = 1; i <= localPlayers.length; i++) {
+      const idx = (localTurnIdx + i) % localPlayers.length;
+      if (!localPlayers[idx].finished) {
+        nextIdx = idx;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      console.log(`[LOCAL GAME] All players finished turn rotation skipped.`);
+      return;
+    }
+
     const nextP = localPlayers[nextIdx];
 
     console.log(`[BOT DEBUG] TURN COMPLETE. Passing turn from index ${localTurnIdx} to index ${nextIdx} (${nextP.name})`);
@@ -1070,8 +1194,10 @@ export default function App() {
       setLocalScreen('board');
     } else {
       // Switch to pass device screen if human
-      if (localPlayers.filter(p => !p.isBot).length > 1) {
+      if (localPlayers.filter(p => !p.isBot && !p.finished).length > 1) {
         setLocalScreen('handoff');
+      } else {
+        setLocalScreen('board');
       }
     }
   };
@@ -1137,120 +1263,636 @@ export default function App() {
 
     return earned;
   };
+  const handleUnifiedLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
 
+    const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
 
+    // 1. Try Student login first
+    try {
+      const studentRes = await fetch(`${baseApi}/api/v1/student/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail, password: authPassword })
+      });
+      
+      if (studentRes.ok) {
+        const studentData = await studentRes.json();
+        localStorage.setItem('bytequest_student_id', studentData.student.id);
+        localStorage.setItem('bytequest_role', 'student');
+        
+        // Fetch and await student profile sync before proceeding
+        const profile = await loadStudentProfile(studentData.student.id);
+        setAuthLoading(false);
+        if (!profile) {
+          setAuthError('Unable to sync explorer profile. Please try again.');
+          return;
+        }
+
+        setShowAuthModal(null);
+        
+        // Execute pending action or return to Launchpad selection screen
+        if (pendingAction === 'play_online' || pendingAction === 'online_adventure' || pendingAction === 'student_new_adventure') {
+          setViewMode('student');
+          setStudentGameState('lobby');
+          setStudentActiveTab('dashboard');
+          setTimeout(() => {
+            if ((window as any).ByteQuestAutoCreatePractice) {
+              (window as any).ByteQuestAutoCreatePractice();
+            }
+          }, 300);
+        } else if (pendingAction === 'join_lobby') {
+          const lobbyCode = localStorage.getItem('bytequest_pending_lobby_code') || '';
+          setViewMode('student');
+          setStudentGameState('lobby');
+          setStudentActiveTab('dashboard');
+          setTimeout(() => {
+            if ((window as any).ByteQuestAutoJoinLobby && lobbyCode) {
+              (window as any).ByteQuestAutoJoinLobby(lobbyCode);
+            }
+          }, 300);
+        } else if (pendingAction === 'daily_challenge') {
+          setViewMode('student');
+          setStudentGameState('dashboard');
+          setStudentActiveTab('daily_challenge');
+        } else if (pendingAction === 'join_classroom') {
+          const classCode = localStorage.getItem('bytequest_pending_classroom_code') || '';
+          setViewMode('student');
+          setStudentGameState('dashboard');
+          setStudentActiveTab('join_classroom');
+          setTimeout(() => {
+            if ((window as any).ByteQuestAutoJoinClassroom) {
+              (window as any).ByteQuestAutoJoinClassroom(classCode);
+            }
+          }, 300);
+        } else {
+          setViewMode('selection');
+        }
+        setPendingAction(null);
+        return;
+      }
+    } catch (err) {
+      console.warn("Student authentication check failed, trying teacher...");
+    }
+
+    // 2. Try Teacher login next
+    try {
+      const teacherRes = await fetch(`${baseApi}/api/v1/teacher/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail, password: authPassword })
+      });
+      
+      if (teacherRes.ok) {
+        const teacherData = await teacherRes.json();
+        localStorage.setItem('bytequest_teacher_info', JSON.stringify(teacherData.teacher));
+        localStorage.setItem('bytequest_role', 'teacher');
+        setAuthLoading(false);
+        setShowAuthModal(null);
+        setViewMode('teacher');
+        setTeacherActiveTab('dashboard');
+        return;
+      } else {
+        const teacherData = await teacherRes.json();
+        setAuthError(teacherData.error || 'Invalid clearance email or password.');
+      }
+    } catch (err) {
+      setAuthError('Connection failed. Server is currently offline.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleUnifiedSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+
+    const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
+
+    try {
+      const res = await fetch(`${baseApi}/api/v1/student/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: authEmail,
+          password: authPassword,
+          grade: Number(authGrade),
+          firstName: authFirstName,
+          lastName: authLastName
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('bytequest_student_id', data.student.id);
+        localStorage.setItem('bytequest_role', 'student');
+        
+        // Fetch and await student profile sync before proceeding
+        const profile = await loadStudentProfile(data.student.id);
+        setAuthLoading(false);
+        if (!profile) {
+          setAuthError('Unable to sync explorer profile. Please try again.');
+          return;
+        }
+
+        setShowAuthModal(null);
+        
+        // Execute pending action or return to Launchpad selection screen
+        if (pendingAction === 'play_online' || pendingAction === 'online_adventure' || pendingAction === 'student_new_adventure') {
+          setViewMode('student');
+          setStudentGameState('lobby');
+          setStudentActiveTab('dashboard');
+          setTimeout(() => {
+            if ((window as any).ByteQuestAutoCreatePractice) {
+              (window as any).ByteQuestAutoCreatePractice();
+            }
+          }, 300);
+        } else if (pendingAction === 'join_lobby') {
+          const lobbyCode = localStorage.getItem('bytequest_pending_lobby_code') || '';
+          setViewMode('student');
+          setStudentGameState('lobby');
+          setStudentActiveTab('dashboard');
+          setTimeout(() => {
+            if ((window as any).ByteQuestAutoJoinLobby && lobbyCode) {
+              (window as any).ByteQuestAutoJoinLobby(lobbyCode);
+            }
+          }, 300);
+        } else if (pendingAction === 'daily_challenge') {
+          setViewMode('student');
+          setStudentGameState('dashboard');
+          setStudentActiveTab('daily_challenge');
+        } else if (pendingAction === 'join_classroom') {
+          const classCode = localStorage.getItem('bytequest_pending_classroom_code') || '';
+          setViewMode('student');
+          setStudentGameState('dashboard');
+          setStudentActiveTab('join_classroom');
+          setTimeout(() => {
+            if ((window as any).ByteQuestAutoJoinClassroom) {
+              (window as any).ByteQuestAutoJoinClassroom(classCode);
+            }
+          }, 300);
+        } else {
+          setViewMode('selection');
+        }
+        setPendingAction(null);
+      } else {
+        setAuthError(data.error || 'Signup failed.');
+      }
+    } catch (err) {
+      setAuthError('Connection failed.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   // ==========================================
   // PRIMARY SELECTION & LAYOUT
   // ==========================================
 
   return (
-    <div className="min-h-screen bg-jungle-deep text-offwhite flex flex-col font-sans relative select-none">
+    <div className="min-h-screen bg-jungle-deep text-[#0F172A] flex flex-col font-sans relative select-none">
+      {toastMessage && (
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-bounce pointer-events-none">
+          <div className="bg-[#7A0C0C] border-2 border-[#D32F2F] text-white px-6 py-3 rounded-2xl font-adventure font-extrabold text-sm uppercase tracking-widest shadow-[0_5px_20px_rgba(0,0,0,0.8)] flex items-center gap-2">
+            <span>⚠️</span> {toastMessage}
+          </div>
+        </div>
+      )}
       
-      {/* Dynamic Hub Navbar */}
-      <header className="border-b border-jungle-light bg-jungle-deep/85 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          {viewMode !== 'selection' && (
-            <button
-              onClick={handleGlobalBack}
-              className="mr-2 px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 text-gold hover:bg-gold/25 active:scale-95 transition-all text-xs font-bold font-adventure flex items-center gap-1.5 shadow-md"
-            >
-              ← Back
-            </button>
-          )}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => {
-            if (viewMode !== 'selection') {
-              if ((viewMode === 'local' && localScreen === 'board') || (viewMode === 'student' && studentGameState === 'playing')) {
-                setPendingExitCallback(() => () => navigateTo({ viewMode: 'selection' }));
-                setShowExitConfirm(true);
-              } else {
-                navigateTo({ viewMode: 'selection' });
-              }
-            }
-          }}>
-            <Compass className="text-gold w-8 h-8 animate-pulse-slow shrink-0" />
-            <h1 className="font-adventure text-xl sm:text-2xl font-bold text-gold tracking-wide truncate max-w-[180px] sm:max-w-none">ByteQuest</h1>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setAudioOn(!audioOn)}
-            className="p-2 rounded-lg border border-jungle-light text-offwhite hover:bg-jungle-medium transition-colors"
-          >
-            {audioOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-          </button>
-        </div>
-      </header>
-
-      {/* R1: SELECTION MENU */}
-      {viewMode === 'selection' && (
-        <main className="max-w-4xl mx-auto px-6 py-16 flex-1 flex flex-col justify-center w-full">
-          <div className="text-center mb-12 relative">
-            <h2 className="font-adventure text-5xl sm:text-6xl font-extrabold text-gold mb-2 tracking-wider">ByteQuest</h2>
-            <div className="w-32 h-1 bg-gold mx-auto mb-4 rounded-full"></div>
-            <p className="text-lg text-gold-light italic">A Dice-Driven Computer Science Revision Adventure</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto w-full">
+      {/* Header displayed ONLY when not on selection page */}
+      {viewMode !== 'selection' && (() => {
+        const isGameBoardActive = (viewMode === 'local' && localScreen === 'board') || (viewMode === 'student' && studentGameState === 'playing');
+        return (
+          <header className={`border-b-3 ${isGameBoardActive ? 'border-[#D4AF37] bg-[#2A0F0F] text-white' : 'border-[#D32F2F] bg-white/98 text-stone-900'} backdrop-blur px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-md`}>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleGlobalBack}
+                className={`mr-2 px-4 py-2 rounded-xl border-2 active:scale-95 transition-all text-xs font-bold font-adventure flex items-center gap-1.5 shadow-sm uppercase tracking-wider ${isGameBoardActive ? 'bg-[#3B0F0F] border-[#D4AF37] text-[#FFD700] hover:bg-[#5A1A1A]/50' : 'bg-red-50 border-[#D32F2F] text-[#D32F2F] hover:bg-red-100/50'}`}
+              >
+                ← Back
+              </button>
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => {
+                if (isGameBoardActive) {
+                  setPendingExitCallback(() => () => navigateTo({ viewMode: 'selection' }));
+                  setShowExitConfirm(true);
+                } else {
+                  navigateTo({ viewMode: 'selection' });
+                }
+              }}>
+                <Compass className={`w-8 h-8 animate-pulse-slow shrink-0 ${isGameBoardActive ? 'text-[#FFD700]' : 'text-[#D32F2F]'}`} />
+                <h1 className={`font-adventure text-xl sm:text-2xl font-extrabold tracking-wider truncate uppercase ${isGameBoardActive ? 'text-[#FFD700]' : 'text-[#D32F2F]'}`}>ByteQuest</h1>
+              </div>
+            </div>
             
-            {/* Mode 1: Local */}
-            <button
-              onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'local', localScreen: 'setup' }); }}
-              className="parchment-panel rounded-2xl p-6 text-center hover:scale-105 active:scale-95 transition-all text-jungle-deep flex flex-col items-center justify-between h-72 shadow-lg"
-            >
-              <div className="my-auto space-y-3">
-                <span className="text-5xl block">🎲</span>
-                <h3 className="font-adventure text-2xl font-bold text-gold-dark">Local Play</h3>
-                <p className="text-xs font-semibold text-jungle-light leading-relaxed">
-                  1-4 players or bots on **one device**. Pass-and-play local adventure map.
-                </p>
-              </div>
-              <div className="w-full py-2 bg-jungle-medium text-offwhite rounded-lg text-xs font-bold font-sans uppercase mt-auto">
-                Start Offline
-              </div>
-            </button>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setAudioOn(!audioOn)}
+                className={`p-2.5 rounded-xl border transition-colors shadow-sm ${isGameBoardActive ? 'border-[#D4AF37]/45 text-[#FFD700] hover:bg-[#3B0F0F]' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+              >
+                {audioOn 
+                  ? <Volume2 className="w-4 h-4" /> 
+                  : <VolumeX className={`w-4 h-4 ${isGameBoardActive ? 'text-rose-500' : 'text-red-500'}`} />
+                }
+              </button>
+            </div>
+          </header>
+        );
+      })()}
 
-            {/* Mode 2: Student Sync */}
-            <button
-              onClick={() => { sounds.playBeep(480, 'sine', 0.1); navigateTo({ viewMode: 'student' }); }}
-              className="parchment-panel rounded-2xl p-6 text-center hover:scale-105 active:scale-95 transition-all text-jungle-deep flex flex-col items-center justify-between h-72 shadow-lg"
-            >
-              <div className="my-auto space-y-3">
-                <span className="text-5xl block">👥</span>
-                <h3 className="font-adventure text-2xl font-bold text-gold-dark">Student Lobby</h3>
-                <p className="text-xs font-semibold text-jungle-light leading-relaxed">
-                  Join a live classroom **Ludo-style** team match using a Room Code shared by your teacher.
-                </p>
-              </div>
-              <div className="w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold font-sans uppercase mt-auto">
-                Connect Online
-              </div>
-            </button>
-
-            {/* Mode 3: Teacher Portal */}
-            <button
-              onClick={() => { sounds.playBeep(520, 'sine', 0.1); navigateTo({ viewMode: 'teacher' }); }}
-              className="parchment-panel rounded-2xl p-6 text-center hover:scale-105 active:scale-95 transition-all text-jungle-deep flex flex-col items-center justify-between h-72 shadow-lg"
-            >
-              <div className="my-auto space-y-3">
-                <span className="text-5xl block">🏫</span>
-                <h3 className="font-adventure text-2xl font-bold text-gold-dark">Teacher Portal</h3>
-                <h5 className="text-[10px] bg-gold/20 text-gold-dark px-2 rounded-full uppercase tracking-wider font-bold h-fit mx-auto mt-0">Instructor Console</h5>
-                <p className="text-xs font-semibold text-jungle-light leading-relaxed">
-                  Manage syllabus questions, register class rosters, allocate teams, and launch live matches.
-                </p>
-              </div>
-              <div className="w-full py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold font-sans uppercase mt-auto">
-                Teacher Access
-              </div>
-            </button>
-
-          </div>
-        </main>
+      {viewMode === 'selection' && (
+        <Launchpad
+          activeStudent={activeStudent}
+          launchpadError={launchpadError}
+          onClearError={() => setLaunchpadError(null)}
+          onPlayOffline={() => {
+            sounds.playBeep(440, 'sine', 0.1);
+            setPendingAction(null);
+            setAuthError('');
+            setShowAuthModal(null);
+            setLaunchpadError(null);
+            navigateTo({ viewMode: 'local', localScreen: 'setup' });
+          }}
+          onPlayOnline={() => {
+            sounds.playBeep(440, 'sine', 0.1);
+            setLaunchpadError(null);
+            if (activeStudent) {
+              navigateTo({ viewMode: 'student', studentGameState: 'lobby', studentActiveTab: 'dashboard' });
+              setTimeout(() => {
+                if ((window as any).ByteQuestAutoCreatePractice) {
+                  (window as any).ByteQuestAutoCreatePractice();
+                }
+              }, 200);
+            } else {
+              setPendingAction('play_online');
+              showToast('PLEASE SIGN IN FIRST');
+              setAuthError('PLEASE SIGN IN FIRST');
+              setShowAuthModal('login');
+            }
+          }}
+          onJoinLobby={(code) => {
+            sounds.playBeep(440, 'sine', 0.1);
+            setLaunchpadError(null);
+            if (!code.trim()) return;
+            localStorage.setItem('bytequest_pending_lobby_code', code.trim().toUpperCase());
+            if (activeStudent) {
+              navigateTo({ viewMode: 'student', studentGameState: 'lobby', studentActiveTab: 'dashboard' });
+              setTimeout(() => {
+                if ((window as any).ByteQuestAutoJoinLobby) {
+                  (window as any).ByteQuestAutoJoinLobby(code.trim().toUpperCase());
+                }
+              }, 200);
+            } else {
+              setPendingAction('join_lobby');
+              showToast('PLEASE SIGN IN FIRST');
+              setAuthError('PLEASE SIGN IN FIRST');
+              setShowAuthModal('login');
+            }
+          }}
+          onDailyChallenge={() => {
+            sounds.playBeep(440, 'sine', 0.1);
+            setLaunchpadError(null);
+            if (activeStudent) {
+              navigateTo({ viewMode: 'student', studentGameState: 'dashboard', studentActiveTab: 'daily_challenge' });
+            } else {
+              setPendingAction('daily_challenge');
+              showToast('PLEASE SIGN IN FIRST');
+              setAuthError('PLEASE SIGN IN FIRST');
+              setShowAuthModal('login');
+            }
+          }}
+          onJoinClassroom={(code) => {
+            sounds.playBeep(440, 'sine', 0.1);
+            setLaunchpadError(null);
+            if (!code.trim()) return;
+            localStorage.setItem('bytequest_pending_classroom_code', code.trim().toUpperCase());
+            if (activeStudent) {
+              navigateTo({ viewMode: 'student', studentGameState: 'dashboard', studentActiveTab: 'join_classroom' });
+              setTimeout(() => {
+                if ((window as any).ByteQuestAutoJoinClassroom) {
+                  (window as any).ByteQuestAutoJoinClassroom(code.trim().toUpperCase());
+                }
+              }, 200);
+            } else {
+              setPendingAction('join_classroom');
+              showToast('PLEASE SIGN IN FIRST');
+              setAuthError('PLEASE SIGN IN FIRST');
+              setShowAuthModal('login');
+            }
+          }}
+          onOpenSettings={() => {
+            sounds.playBeep(390, 'sine', 0.05);
+            setShowMainMenuSettings(true);
+          }}
+          onSignIn={() => {
+            setAuthError('');
+            setLaunchpadError(null);
+            setAuthRoleSelection(null);
+            setPendingAction(null); // Explicit sign-in from top right resets pending action
+            setShowAuthModal('login');
+          }}
+          onSignUp={() => {
+            setAuthError('');
+            setLaunchpadError(null);
+            setAuthRoleSelection(null);
+            setPendingAction(null); // Explicit sign-up from top right resets pending action
+            setShowAuthModal('signup');
+          }}
+          onSignOut={() => {
+            sounds.playBeep(350, 'sine', 0.05);
+            localStorage.removeItem('bytequest_student_id');
+            localStorage.removeItem('bytequest_role');
+            localStorage.removeItem('bytequest_teacher_info');
+            setActiveStudent(null);
+            setPendingAction(null);
+            setLaunchpadError(null);
+            setShowAuthModal(null);
+            navigateTo({ viewMode: 'selection' });
+          }}
+          audioOn={audioOn}
+          setAudioOn={setAudioOn}
+        />
       )}
 
-      {/* R2: TEACHER DASHBOARD PORTAL */}
+          {/* MAIN MENU SETTINGS OVERLAY MODAL */}
+          {showMainMenuSettings && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white text-stone-900 border-3 border-[#D32F2F] p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-[6px_6px_0px_#991B1B] relative select-text">
+                <h3 className="font-adventure text-2xl font-extrabold text-[#D32F2F] border-b-2 border-red-100 pb-3 mb-6 uppercase tracking-wider text-center">
+                  System Settings
+                </h3>
+
+                <div className="space-y-6">
+                  {/* Audio Toggle */}
+                  <div className="flex items-center justify-between font-adventure">
+                    <span className="font-bold text-sm text-slate-700">Audio Synthesizer</span>
+                    <button
+                      onClick={() => setAudioOn(!audioOn)}
+                      className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border-2 ${
+                        audioOn 
+                          ? 'bg-emerald-50 border-emerald-400 text-emerald-700' 
+                          : 'bg-red-50 border-red-300 text-red-600'
+                      }`}
+                    >
+                      {audioOn ? "Enabled 🔊" : "Muted 🔇"}
+                    </button>
+                  </div>
+
+                  {/* Auth Status details */}
+                  <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3.5 space-y-1.5 text-xs">
+                    <span className="font-bold text-slate-500 uppercase tracking-widest text-[9px] block">Account Status</span>
+                    {localStorage.getItem('bytequest_role') ? (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-stone-800 capitalize">{localStorage.getItem('bytequest_role')} Account</p>
+                          <p className="text-[10px] text-slate-400">Auto-auth active</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            localStorage.removeItem('bytequest_student_id');
+                            localStorage.removeItem('bytequest_teacher_info');
+                            localStorage.removeItem('bytequest_role');
+                            sounds.playBeep(300, 'sine', 0.1);
+                            setShowMainMenuSettings(false);
+                            window.location.reload();
+                          }}
+                          className="px-2.5 py-1.5 bg-[#D32F2F] text-white font-bold rounded-lg uppercase tracking-wider text-[9px] hover:bg-[#B91C1C] active:scale-95 transition-all border-b-2 border-[#991B1B]"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="font-bold text-slate-400 italic">No authenticated profile loaded.</p>
+                    )}
+                  </div>
+
+                  {/* Gameplay details */}
+                  <div className="text-[10px] text-slate-500 font-semibold leading-relaxed border-t border-slate-100 pt-4">
+                    <p className="font-bold text-[#D32F2F] mb-1 font-adventure uppercase tracking-wider">Adventure Rules:</p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>Roll the dice to advance on the map track.</li>
+                      <li>Land on Trap or Treasure tiles to prompt CS questions.</li>
+                      <li>Answering correctly speeds progress; failing slows it.</li>
+                    </ul>
+                  </div>
+
+                  {/* Close button */}
+                  <button
+                    onClick={() => { sounds.playBeep(350, 'sine', 0.05); setShowMainMenuSettings(false); }}
+                    className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white border-b-4 border-[#991B1B] rounded-xl font-adventure font-extrabold text-sm uppercase tracking-wider transition-all shadow-md"
+                  >
+                    Return to Menu
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+
+
+      {/* UNIFIED AUTH MODAL OVERLAY */}
+      {showAuthModal && (
+            <div className="fixed inset-0 launcher-container z-50 flex items-center justify-center p-4">
+              {/* CSS Particle background simulation */}
+              {Array.from({ length: 25 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="launcher-particle"
+                  style={{
+                    left: `${(i * 7) % 100}%`,
+                    bottom: `-${Math.random() * 20}%`,
+                    animationDelay: `${(i * 0.4).toFixed(1)}s`,
+                    width: `${((i % 4) + 3)}px`,
+                    height: `${((i % 4) + 3)}px`,
+                  }}
+                />
+              ))}
+
+              <div className="launcher-glass text-white p-6 sm:p-8 w-full max-w-sm relative select-text animate-scale-in">
+                
+                {/* Close Button */}
+                <button
+                  onClick={() => {
+                    setShowAuthModal(null);
+                    setAuthRoleSelection(null);
+                    setPendingAction(null);
+                    setAuthError('');
+                  }}
+                  className="absolute top-5 right-5 text-slate-400 hover:text-white p-1.5 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div>
+                  {showAuthModal === 'login' ? (
+                    <>
+                      <h3 className="font-adventure text-3xl font-extrabold text-[#D32F2F] tracking-widest text-center uppercase mb-1">
+                        Welcome Back
+                      </h3>
+                      <p className="text-center text-[10px] text-slate-400 font-bold tracking-wide uppercase mb-6">
+                        Continue Your Journey
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="font-adventure text-2xl font-extrabold text-[#D32F2F] tracking-wider text-center uppercase mb-1">
+                        Create Account
+                      </h3>
+                      <p className="text-center text-[10px] text-slate-400 font-bold tracking-wide uppercase mb-6">
+                        Enter the Adventure Campaign
+                      </p>
+                    </>
+                  )}
+
+                  {/* Unified Login Form */}
+                  {showAuthModal === 'login' && (
+                    <form onSubmit={handleUnifiedLogin} className="space-y-5 text-xs font-semibold">
+                      <div>
+                        <label className="block text-[10px] font-extrabold uppercase text-slate-350 mb-1.5 tracking-wider font-adventure">Explorer Email</label>
+                        <input
+                          type="email"
+                          value={authEmail}
+                          onChange={(e) => setAuthEmail(e.target.value)}
+                          placeholder="e.g. explorer@bytequest.edu"
+                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3.5 py-3 text-white focus:outline-none focus:border-[#D32F2F] font-bold transition-all"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-extrabold uppercase text-slate-350 mb-1.5 tracking-wider font-adventure">Password</label>
+                        <input
+                          type="password"
+                          value={authPassword}
+                          onChange={(e) => setAuthPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3.5 py-3 text-white focus:outline-none focus:border-[#D32F2F] font-bold transition-all"
+                          required
+                        />
+                      </div>
+                      
+                      {authError && (
+                        <p className="text-red-400 text-[10px] font-bold bg-red-950/30 p-2.5 rounded-xl text-center border border-red-900/50 font-sans">
+                          {authError}
+                        </p>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={authLoading}
+                        className="w-full py-3.5 game-btn-primary text-white font-adventure font-extrabold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 uppercase text-xs tracking-wider"
+                      >
+                        {authLoading ? "Entering..." : "Enter Adventure"}
+                      </button>
+
+                      <div className="text-center pt-2">
+                        <span className="text-[10px] text-slate-400 font-bold block mb-1">New Explorer?</span>
+                        <button
+                          type="button"
+                          onClick={() => { setAuthError(''); setShowAuthModal('signup'); }}
+                          className="text-[#D32F2F] hover:text-[#EF4444] font-adventure font-extrabold tracking-widest text-xs transition-colors"
+                        >
+                          Create Account →
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Unified Student Signup Form */}
+                  {showAuthModal === 'signup' && (
+                    <form onSubmit={handleUnifiedSignup} className="space-y-4 text-xs font-semibold">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-extrabold uppercase text-slate-350 mb-1 tracking-wider font-adventure">First Name</label>
+                          <input
+                            type="text"
+                            value={authFirstName}
+                            onChange={(e) => setAuthFirstName(e.target.value)}
+                            placeholder="Aarav"
+                            className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-2.5 py-2.5 text-white focus:outline-none focus:border-[#D32F2F] font-bold"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-extrabold uppercase text-slate-350 mb-1 tracking-wider font-adventure">Last Name</label>
+                          <input
+                            type="text"
+                            value={authLastName}
+                            onChange={(e) => setAuthLastName(e.target.value)}
+                            placeholder="Sharma"
+                            className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-2.5 py-2.5 text-white focus:outline-none focus:border-[#D32F2F] font-bold"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-extrabold uppercase text-slate-350 mb-1 tracking-wider font-adventure">Syllabus Grade</label>
+                        <select
+                          value={authGrade}
+                          onChange={(e) => setAuthGrade(e.target.value)}
+                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[#D32F2F] font-bold font-adventure"
+                        >
+                          <option value="10">Class 10 (Basics)</option>
+                          <option value="11">Class 11 (Functions)</option>
+                          <option value="12">Class 12 (Advanced)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-extrabold uppercase text-slate-350 mb-1 tracking-wider font-adventure">Explorer Email</label>
+                        <input
+                          type="email"
+                          value={authEmail}
+                          onChange={(e) => setAuthEmail(e.target.value)}
+                          placeholder="aarav@student.com"
+                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[#D32F2F] font-bold"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-extrabold uppercase text-slate-350 mb-1 tracking-wider font-adventure">Create Password</label>
+                        <input
+                          type="password"
+                          value={authPassword}
+                          onChange={(e) => setAuthPassword(e.target.value)}
+                          placeholder="Min 6 characters"
+                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[#D32F2F] font-bold"
+                          required
+                        />
+                      </div>
+                      
+                      {authError && (
+                        <p className="text-red-400 text-[10px] font-bold bg-red-950/30 p-2 rounded-lg text-center border border-red-900/50 font-sans">
+                          {authError}
+                        </p>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={authLoading}
+                        className="w-full py-3.5 game-btn-primary text-white font-adventure font-extrabold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 uppercase text-xs tracking-wider"
+                      >
+                        {authLoading ? "Initializing..." : "Create Account"}
+                      </button>
+
+                      <p className="text-center text-[10px] text-slate-400 font-bold mt-3">
+                        Already have an account?{' '}
+                        <button
+                          type="button"
+                          onClick={() => { setAuthError(''); setShowAuthModal('login'); }}
+                          className="text-[#D32F2F] hover:text-[#EF4444] font-bold"
+                        >
+                          Sign In
+                        </button>
+                      </p>
+                    </form>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          )}
+
+      {/* R2: TEACHER WORKSPACE */}
       {viewMode === 'teacher' && (
         <TeacherDashboard 
           onBack={() => navigateTo({ viewMode: 'selection' })} 
@@ -1265,7 +1907,14 @@ export default function App() {
       {/* R3: STUDENT LOBBY / LIVE GAMEPLAY */}
       {viewMode === 'student' && (
         <StudentGame 
-          onBack={() => navigateTo({ viewMode: 'selection' })} 
+          onBack={(err?: string) => {
+            if (err) {
+              setLaunchpadError(err);
+            } else {
+              setLaunchpadError(null);
+            }
+            navigateTo({ viewMode: 'selection' });
+          }} 
           socket={socket} 
           onStartSoloPractice={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'local', localScreen: 'setup' }); }}
           onResumeLocalPractice={resumeLocalPracticeGame}
@@ -1275,12 +1924,14 @@ export default function App() {
           setActiveTab={handleStudentActiveTab}
           showLobbyConfigModal={studentShowLobbyConfigModal}
           setShowLobbyConfigModal={handleStudentShowLobbyConfigModal}
+          activeStudent={activeStudent}
+          onUpdateStudent={loadStudentProfile}
+          sounds={sounds}
         />
       )}
 
-      {/* R4: LOCAL PASS-AND-PLAY SYSTEM (PHASE 1 MODIFIED) */}
       {viewMode === 'local' && (
-        <div className="flex-1 flex flex-col">
+        <div className={`flex-1 flex flex-col min-h-screen relative pb-28 select-none ${localScreen === 'board' ? 'board-bg text-white' : 'bg-[#FDFBF7] text-stone-900'}`}>
           {localScorePopup && (
             <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-bounce">
               <div className={`px-6 py-3 rounded-full shadow-2xl font-bold border-2 text-sm ${
@@ -1293,21 +1944,23 @@ export default function App() {
 
           {/* S1: LOCAL SETUP */}
           {localScreen === 'setup' && (
-            <main className="max-w-4xl mx-auto px-6 py-10 w-full">
+            <main className="max-w-4xl mx-auto px-6 py-10 w-full flex-1">
               <div className="text-center mb-8">
-                <h2 className="font-adventure text-3xl font-bold text-gold">Configure Offline Game</h2>
-                <p className="text-gold-light text-sm">Pass the device among players to take turns</p>
+                <h2 className="font-adventure text-3xl font-extrabold text-[#D32F2F] uppercase tracking-wide">Configure Offline Game</h2>
+                <p className="text-slate-500 text-xs font-semibold">Pass the device among players to take turns</p>
               </div>
 
-              <div className="bg-jungle-medium border border-jungle-light p-6 rounded-xl mb-8 flex flex-col items-center gap-3">
-                <label className="text-gold-light font-bold">Select Player Count</label>
+              <div className="bg-white border-3 border-[#D32F2F] p-6 rounded-2xl mb-8 flex flex-col items-center gap-3 shadow-[4px_4px_0px_#991B1B] text-slate-800">
+                <label className="text-slate-700 font-adventure text-sm font-extrabold uppercase tracking-wider">Select Player Count</label>
                 <div className="flex gap-2.5">
                   {([1, 2, 3, 4] as const).map(num => (
                     <button
                       key={num}
                       onClick={() => { sounds.playBeep(300 + num*20, 'sine', 0.1); setLocalPlayerCount(num); }}
-                      className={`w-12 h-12 rounded-full font-bold text-lg border-2 transition-all flex items-center justify-center ${
-                        localPlayerCount === num ? 'bg-gold border-gold text-jungle-deep scale-110 shadow-lg' : 'bg-jungle-deep border-jungle-light text-offwhite'
+                      className={`w-12 h-12 rounded-xl font-adventure font-extrabold text-lg border-2 transition-all flex items-center justify-center ${
+                        localPlayerCount === num 
+                          ? 'bg-[#D32F2F] border-[#D32F2F] text-white scale-110 shadow-md' 
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                       }`}
                     >
                       {num}
@@ -1318,11 +1971,11 @@ export default function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 {Array.from({ length: localPlayerCount }).map((_, idx) => (
-                  <div key={idx} className="bg-jungle-medium border border-jungle-light p-5 rounded-xl relative text-xs">
-                    <h4 className="font-adventure text-base font-bold text-gold mb-3">Explorer {idx + 1}</h4>
+                  <div key={idx} className="bg-white border-3 border-[#D32F2F] p-5 rounded-2xl relative text-xs shadow-[4px_4px_0px_#991B1B] text-slate-850">
+                    <h4 className="font-adventure text-base font-extrabold text-[#D32F2F] mb-3 uppercase tracking-wide">Explorer {idx + 1}</h4>
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-[10px] font-bold text-gold-light mb-0.5">Explorer Name</label>
+                        <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1">Explorer Name</label>
                         <input 
                           type="text" 
                           value={localSetupPlayers[idx].name}
@@ -1332,12 +1985,12 @@ export default function App() {
                             setLocalSetupPlayers(list);
                           }}
                           placeholder={`Player ${idx + 1}`}
-                          className="w-full bg-jungle-deep border border-jungle-light rounded-lg px-2 py-1.5 focus:outline-none"
+                          className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold text-xs"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-[10px] font-bold text-gold-light mb-0.5">Grade Syllabus</label>
+                        <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1">Grade Syllabus</label>
                         <div className="flex gap-1.5">
                           {([10, 11, 12] as const).map(g => (
                             <button
@@ -1348,8 +2001,10 @@ export default function App() {
                                 list[idx].grade = g;
                                 setLocalSetupPlayers(list);
                               }}
-                              className={`flex-1 py-1 border rounded-lg font-bold ${
-                                localSetupPlayers[idx].grade === g ? 'bg-gold text-jungle-deep border-gold' : 'bg-jungle-deep border-jungle-light'
+                              className={`flex-1 py-2 border-2 rounded-xl font-bold uppercase text-[10px] transition-all ${
+                                localSetupPlayers[idx].grade === g 
+                                  ? 'bg-[#D32F2F] border-[#D32F2F] text-white shadow-sm' 
+                                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               G{g}
@@ -1358,9 +2013,9 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center gap-4 pt-1.5">
                         <div>
-                          <label className="block text-[10px] font-bold text-gold-light mb-1">Color</label>
+                          <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1">Token Color</label>
                           <div className="flex gap-1">
                             {PRESET_COLORS.map((col, cIdx) => (
                               <button
@@ -1371,7 +2026,7 @@ export default function App() {
                                   list[idx].color = cIdx;
                                   setLocalSetupPlayers(list);
                                 }}
-                                className={`w-5 h-5 rounded-full ${localSetupPlayers[idx].color === cIdx ? 'ring-2 ring-gold border-white' : ''}`}
+                                className={`w-5 h-5 rounded-full border border-slate-200 transition-all ${localSetupPlayers[idx].color === cIdx ? 'ring-2 ring-[#D32F2F] ring-offset-1 border-white scale-110' : 'hover:scale-105'}`}
                                 style={{ backgroundColor: col.hex }}
                               />
                             ))}
@@ -1379,8 +2034,8 @@ export default function App() {
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-bold text-gold-light mb-1">Avatar</label>
-                          <div className="flex gap-1 bg-jungle-deep p-1 rounded">
+                          <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1">Avatar</label>
+                          <div className="flex gap-1 bg-slate-50 border-2 border-slate-200 p-1 rounded-xl">
                             {PRESET_AVATARS.slice(0, 4).map((av, aIdx) => (
                               <button
                                 key={aIdx}
@@ -1390,7 +2045,7 @@ export default function App() {
                                   list[idx].avatar = aIdx;
                                   setLocalSetupPlayers(list);
                                 }}
-                                className={`text-base p-0.5 rounded ${localSetupPlayers[idx].avatar === aIdx ? 'bg-gold/20' : ''}`}
+                                className={`text-sm p-1 rounded-lg transition-all ${localSetupPlayers[idx].avatar === aIdx ? 'bg-[#D32F2F]/15 scale-110' : ''}`}
                               >
                                 {av.icon}
                               </button>
@@ -1403,23 +2058,23 @@ export default function App() {
                 ))}
 
                 {localPlayerCount === 1 && (
-                  <div className="bg-jungle-medium/40 border border-jungle-light/45 p-6 rounded-xl flex flex-col justify-center text-center text-xs">
-                    <h4 className="font-adventure text-gold font-bold mb-2">Auto Opponents Added</h4>
-                    <p className="text-[10px] text-offwhite/70 italic mb-4">Compiler-Bot (🤖) & Binary-Beast (👾) will race against you.</p>
+                  <div className="bg-white border-3 border-[#D32F2F] p-6 rounded-2xl flex flex-col justify-center text-center text-xs shadow-[4px_4px_0px_#991B1B] text-slate-800 md:col-span-2">
+                    <h4 className="font-adventure text-[#D32F2F] font-extrabold text-sm uppercase mb-1">Auto Opponents Added</h4>
+                    <p className="text-[10px] text-slate-550 font-semibold italic">Compiler-Bot (🤖) & Binary-Beast (👾) will race against you.</p>
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-center gap-3">
+              <div className="flex justify-center gap-4">
                 <button 
                   onClick={localInitializeGame}
-                  className="px-10 py-4 bg-gold hover:bg-gold-light text-jungle-deep rounded-full font-bold text-base shadow-xl"
+                  className="px-10 py-4 bg-[#D32F2F] hover:bg-[#B91C1C] text-white rounded-2xl font-adventure font-extrabold text-base uppercase tracking-wider border-b-4 border-[#991B1B] shadow-lg hover:scale-105 active:scale-95 transition-all"
                 >
                   Start Game Map
                 </button>
                 <button 
                   onClick={() => setViewMode('selection')}
-                  className="px-6 py-4 bg-jungle-medium border border-jungle-light rounded-full text-xs font-bold"
+                  className="px-6 py-4 bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 rounded-2xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
                 >
                   Back
                 </button>
@@ -1430,17 +2085,17 @@ export default function App() {
           {/* S2: LOCAL HANDOFF */}
           {localScreen === 'handoff' && (
             <main className="max-w-md mx-auto px-6 py-20 flex-1 flex flex-col justify-center w-full">
-              <div className="parchment-panel rounded-xl p-8 text-center text-jungle-deep shadow-2xl">
+              <div className="bg-white border-4 border-[#D32F2F] rounded-[2rem] p-8 text-center text-slate-800 shadow-[6px_6px_0px_#991B1B]">
                 <span className="text-3xl block mb-2">📱</span>
-                <h3 className="font-adventure text-2xl font-bold mb-2">Pass the Device</h3>
-                <p className="text-xs text-jungle-light mb-6">Pass the screen to the next explorer:</p>
-                <div className="bg-jungle-deep text-offwhite p-4 rounded-xl mb-8 flex items-center justify-center gap-3">
+                <h3 className="font-adventure text-2xl font-extrabold text-[#D32F2F] mb-2 uppercase tracking-wider">Pass the Device</h3>
+                <p className="text-xs text-slate-500 font-semibold mb-6">Pass the screen to the next explorer:</p>
+                <div className="bg-red-50 text-[#D32F2F] border-2 border-[#D32F2F] p-4 rounded-2xl mb-8 flex items-center justify-center gap-3">
                   <span className="text-3xl">{localPlayers[localTurnIdx]?.avatar}</span>
-                  <span className="font-adventure text-xl font-bold">{localPlayers[localTurnIdx]?.name}</span>
+                  <span className="font-adventure text-xl font-extrabold uppercase tracking-wide">{localPlayers[localTurnIdx]?.name}</span>
                 </div>
                 <button
-                  onClick={() => setLocalScreen('board')}
-                  className="w-full py-3.5 bg-gold text-jungle-deep rounded-xl font-bold hover:bg-gold-light border border-gold-dark"
+                  onClick={() => navigateTo({ localScreen: 'board' })}
+                  className="w-full py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white rounded-xl font-adventure font-extrabold border-b-4 border-[#991B1B] uppercase tracking-wider text-xs transition-colors"
                 >
                   Ready!
                 </button>
@@ -1450,264 +2105,379 @@ export default function App() {
 
           {/* S3: LOCAL BOARD PLAY */}
           {localScreen === 'board' && localPlayers.length > 0 && (
-            <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative pb-24">
+            <main className="max-w-7xl mx-auto px-4 py-4 w-full flex-1 flex flex-col justify-between relative pb-24">
               {/* STICKY LOCAL PLAY HUD */}
               {localPlayers[localTurnIdx] && (
-                <div className="sticky top-14 md:top-0 z-30 bg-jungle-medium/95 backdrop-blur border border-jungle-light px-2 py-1 md:px-4 md:py-2 rounded-xl flex items-center justify-between gap-1 md:gap-2 mb-4 shadow-lg text-[9px] md:text-xs font-bold font-adventure text-gold-light whitespace-nowrap overflow-x-auto scrollbar-none animate-fade-in">
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">{localPlayers[localTurnIdx].avatar}</span>
-                    <span className="text-white uppercase tracking-wide">{localPlayers[localTurnIdx].name}</span>
+                <div className="sticky top-14 md:top-[60px] z-30 bg-[#3B0F0F] border-3 border-[#D4AF37] px-4 py-3 rounded-2xl flex items-center justify-between gap-4 mb-4 shadow-[0_5px_15px_rgba(0,0,0,0.5)] text-white select-none animate-fade-in">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{localPlayers[localTurnIdx].avatar}</span>
+                    <div>
+                      <span className="text-[#FFD700] font-adventure text-sm font-extrabold block leading-none">{localPlayers[localTurnIdx].name}</span>
+                      <span className="text-[9px] text-amber-200/70 font-bold uppercase tracking-wider">Grade {localPlayers[localTurnIdx].grade}</span>
+                    </div>
                   </div>
-                  <div className="hidden sm:inline">|</div>
-                  <div>📚 GRADE <span className="text-white font-mono">{localPlayers[localTurnIdx].grade}</span></div>
-                  <div>|</div>
-                  <div>⭐ XP <span className="text-white font-mono">{localPlayers[localTurnIdx].xp}</span></div>
-                  <div>|</div>
-                  <div>🪙 COINS <span className="text-white font-mono">{localPlayers[localTurnIdx].coins}</span></div>
+                  
+                  {/* Progress XP Bar */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-amber-200 uppercase tracking-widest">XP</span>
+                    <div className="bg-stone-950 border border-[#D4AF37]/30 rounded-full h-3.5 w-24 md:w-40 p-0.5 overflow-hidden flex items-center relative shadow-inner">
+                      <div 
+                        className="bg-gradient-to-r from-[#D4AF37] to-[#FFD700] h-full rounded-full transition-all duration-1000 shadow-[0_0_8px_#FFD700]"
+                        style={{ width: `${Math.max(15, Math.min(100, (localPlayers[localTurnIdx].xp % 100)))}%` }}
+                      ></div>
+                      <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold font-mono text-white">
+                        {localPlayers[localTurnIdx].xp}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Coins Display */}
+                  <div className="flex items-center gap-1.5 bg-[#523B0B] border-2 border-[#D4AF37] px-3 py-1.5 rounded-full shadow-md">
+                    <span className="text-base">🪙</span>
+                    <span className="font-adventure text-sm font-extrabold text-[#FFD700] tracking-wider font-mono">
+                      {localPlayers[localTurnIdx].coins}
+                    </span>
+                  </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full items-start">
-                <div className="lg:col-span-3 bg-jungle-medium border border-jungle-light p-2 md:p-4 rounded-2xl md:rounded-3xl relative shadow-2xl w-full flex flex-col gap-3">
-                  <div className="relative aspect-[4/3] w-full bg-jungle-deep/45 border border-gold/15 rounded-xl md:rounded-2xl flex items-center justify-center overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#1a3d30,transparent_70%)]"></div>
-                    
-                    <div className="relative w-[82%] h-[82%] md:w-[90%] md:h-[90%]">
-                      
-                      <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                        <path d={`M ${TILE_COORDS.map(c => `${c.x}%, ${c.y}%`).join(' L ')}`} fill="none" className="map-connector" />
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 w-full items-start">
+                {/* GAME BOARD PANEL */}
+                <div className="lg:col-span-3 bg-[#3B0F0F] border-3 border-[#D4AF37] p-3 md:p-5 rounded-3xl relative w-full flex flex-col gap-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
+                  {/* Board viewport — full size, no clipping, tiles 0-17 always visible */}
+                  <div className="relative w-full board-bg border-2 border-[#D4AF37]/50 rounded-2xl overflow-visible shadow-inner" style={{ paddingBottom: '75%' }}>
+                    {/* Inner absolute container fills the padding-bottom area */}
+                    <div className="absolute inset-3">
+                      {/* Subtle center radial glow */}
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(211,47,47,0.04),transparent_70%)] pointer-events-none rounded-xl"></div>
+                      {/* Explorer Deck (Decorative card stack) */}
+                      <div className="absolute bottom-4 left-4 z-10 flex flex-col items-center select-none group pointer-events-auto">
+                        <div className="relative w-12 h-16 sm:w-16 sm:h-22">
+                          <div className="absolute inset-0 rounded-lg bg-slate-200 border-2 border-slate-300 translate-x-2 translate-y-2 opacity-40"></div>
+                          <div className="absolute inset-0 rounded-lg bg-slate-100 border-2 border-slate-200 translate-x-1 translate-y-1 opacity-70"></div>
+                          <div className="absolute inset-0 rounded-lg bg-white border-2 border-[#D32F2F] flex flex-col items-center justify-center p-1.5 transition-transform duration-300 group-hover:-translate-y-1">
+                            <div className="w-full h-full border border-[#D32F2F]/30 rounded-md flex items-center justify-center bg-slate-50">
+                              <div className="w-4 h-4 bg-[#D32F2F] rotate-45 flex items-center justify-center shadow-sm">
+                                <div className="w-1.5 h-1.5 bg-white"></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[8px] font-adventure text-slate-400 mt-1 opacity-75 tracking-wider uppercase">Explorer Deck</span>
+                      </div>
+
+                      {/* SVG path mapping */}
+                      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="goldPathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#D4AF37" />
+                            <stop offset="50%" stopColor="#F6E27A" />
+                            <stop offset="100%" stopColor="#D4AF37" />
+                          </linearGradient>
+                        </defs>
+                        <path d={getCurvedPath(TILE_COORDS)} fill="none" className="gold-energy-connector" stroke="url(#goldPathGrad)" strokeWidth="6" strokeLinecap="round" />
                       </svg>
 
+                      {/* Plinth Tiles rendering */}
                       {BOARD_TILES.map((tile, tIdx) => {
                         const coord = TILE_COORDS[tIdx];
-                        const isSafe = [0, 5, 10, 15, 20].includes(tIdx); // Offline SAFE_TILES matching config
+                        const isSafe = [0, 4, 10, 15].includes(tIdx); // Offline SAFE_TILES matching config
                         const activePlayer = localPlayers[localTurnIdx];
                         const isDestination = activePlayer && activePlayer.position === tIdx;
-                        const isOccupied = localPlayers.some((pl: any) => pl.position === tIdx);
+                        const isCompleted = localPlayers.some((pl: any) => pl.position > tIdx);
 
+                        // Icon symbols mapping matching visual description
                         let symbol = '📜';
-                        let color = 'bg-[#E5D6B3] border-gold-dark text-jungle-deep';
-                        if (tile.type === 'start') { symbol = '⛺'; color = 'bg-teal-700 border-teal-500 text-white'; }
-                        else if (tile.type === 'finish') { symbol = '👑'; color = 'bg-amber-600 border-amber-400 text-white animate-pulse'; }
-                        else if (tile.type === 'trap') { symbol = '🕸️'; color = 'bg-rose-900 border-rose-600 text-rose-100'; }
-                        else if (tile.type === 'treasure') { 
-                          symbol = '🎁'; 
-                          color = isOccupied 
-                            ? 'bg-amber-700 border-gold text-gold-glow shadow-[0_0_20px_#f59e0b] ring-2 ring-gold/60' 
-                            : 'bg-amber-700 border-gold text-gold-glow'; 
-                        }
-                        else if (tile.type === 'boss') { 
-                          symbol = '🐉'; 
-                          color = isOccupied 
-                            ? 'bg-indigo-950 border-indigo-400 text-indigo-200 shadow-[0_0_20px_#6366f1] ring-2 ring-indigo-500/60' 
-                            : 'bg-indigo-950 border-indigo-500 text-indigo-200'; 
-                        }
+                        if (tIdx === 0) symbol = '🧙‍♂️';
+                        else if (tIdx === 17) symbol = '👑';
+                        else if ([2, 8, 10, 12].includes(tIdx)) symbol = '🛡️';
+                        else if ([5, 13, 14].includes(tIdx)) symbol = '📦';
+                        else if (tIdx === 16) symbol = '🐉';
+                        else if (tile.type === 'trap') symbol = '🕸️';
+                        else if (tile.type === 'treasure') symbol = '🎁';
 
-                        const destinationClass = isDestination ? 'ring-4 ring-gold ring-offset-2 ring-offset-jungle-deep shadow-[0_0_25px_#f59e0b] border-gold' : '';
-                        const safeClass = isSafe ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#F3EAD3]' : '';
+                        const destinationClass = isDestination ? 'active-tile' : '';
+                        const safeClass = isSafe ? 'ring-2 ring-[#FFD700] ring-offset-2 ring-offset-[#2A0F0F]' : '';
+                        const completedClass = isCompleted ? 'stone-plinth-completed' : '';
+
+                        let specialAuraClass = '';
+                        if (tile.type === 'boss') specialAuraClass = 'boss-tile-aura';
+                        else if (tile.type === 'treasure') specialAuraClass = 'treasure-tile';
+                        else if (tile.type === 'trap') specialAuraClass = 'trap-tile';
+                        else if (tile.type === 'finish') specialAuraClass = 'final-gold-glow';
 
                         return (
                           <div 
                             key={tIdx} 
-                            className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 border-[1.5px] text-[10px] sm:w-14 sm:h-14 sm:border-2 sm:text-xl rounded-full flex items-center justify-center font-bold transition-all duration-300 shadow-md group ${color} ${destinationClass} ${safeClass}`} 
+                            className={`stone-plinth -translate-x-1/2 -translate-y-1/2 flex items-center justify-center font-bold group ${destinationClass} ${safeClass} ${completedClass} ${specialAuraClass}`} 
                             style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                           >
-                            <span>{symbol}</span>
+                            <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#7F1D1D] to-[#2A0F0F] border border-[#D4AF37]/50 flex items-center justify-center text-[10px] sm:text-lg text-white">
+                              <span>{symbol}</span>
+                            </div>
                             {isSafe && (
-                              <div className="absolute -top-1 -left-1 bg-emerald-600 text-white p-0.5 rounded-full border border-white">
-                                <Shield className="w-2 h-2" />
+                              <div className="absolute -top-1 -left-1 bg-[#D4AF37] text-stone-950 p-0.5 rounded-full border border-stone-955">
+                                <Shield className="w-2.5 h-2.5" />
                               </div>
                             )}
-                            <span className="absolute -bottom-1 -right-1 text-[6px] w-3 h-3 sm:text-[8px] sm:w-4 sm:h-4 bg-jungle-deep text-gold rounded-full flex items-center justify-center border border-gold/40">{tIdx}</span>
+                            <span className="absolute -bottom-1 -right-1 text-[6px] w-3.5 h-3.5 sm:text-[8px] sm:w-5 sm:h-5 bg-stone-900 border border-[#D4AF37]/50 text-[#FFD700] rounded-full flex items-center justify-center font-bold shadow-md">{tIdx}</span>
                           </div>
                         );
                       })}
 
+                      {/* Active Player Glow Ring */}
+                      {localPlayers[localTurnIdx] && (() => {
+                        const activeP = localPlayers[localTurnIdx];
+                        const activeCoord = TILE_COORDS[activeP.position];
+                        return (
+                          <div 
+                            className="active-glow-ring" 
+                            style={{ left: `${activeCoord.x}%`, top: `${activeCoord.y}%` }}
+                          />
+                        );
+                      })()}
+
+                      {/* Characters standing miniatures standees */}
                       {localPlayers.map((p, idx) => {
                         const coord = TILE_COORDS[p.position];
                         const onTile = localPlayers.filter(pl => pl.position === p.position);
                         const sameIdx = onTile.findIndex(pl => pl.id === p.id);
                         const offset = getTokenOffset(sameIdx, onTile.length);
+                        const isActive = localTurnIdx === idx;
                         
                         return (
                           <div 
                             key={p.id} 
-                            className={`absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 border-[1.5px] text-[9px] sm:w-10 sm:h-10 sm:border-2 sm:text-xs rounded-full flex items-center justify-center font-extrabold shadow-lg transition-all duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] z-20 ${p.color} ${localTurnIdx === idx ? 'ring-3 sm:ring-4 ring-gold animate-bounce-slow' : ''}`} 
+                            className={`avatar-standee ${isActive ? 'active-token-bounce ring-3 ring-[#D4AF37]' : ''}`} 
                             style={{ 
-                              left: `calc(${coord.x}% + ${offset.x}px)`, 
-                              top: `calc(${coord.y}% + ${offset.y}px)` 
+                              left: `${coord.x}%`, 
+                              top: `${coord.y}%`,
+                              transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px)`
                             }}
                           >
-                            <span>{p.avatar}</span>
+                            <span className="text-sm sm:text-xl">{p.avatar}</span>
+                            <span className="text-[6px] sm:text-[8px] font-sans font-bold text-stone-600 block truncate max-w-[36px] mt-0.5 leading-none">{p.name}</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* MOBILE DOCKED TURN PANEL - MERGED & DOCKED OUTSIDE PATH */}
-                  <div className="flex md:hidden bg-jungle-deep/40 border border-gold/20 p-2 rounded-xl flex-col items-center justify-center gap-1.5 shadow-md select-none text-center w-full max-w-[280px] mx-auto">
+                  {/* MOBILE DOCKED TURN PANEL */}
+                  <div className="flex md:hidden bg-[#3B0F0F] border-3 border-[#D4AF37] p-3 rounded-2xl flex-col items-center justify-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.5)] text-center w-full max-w-[280px] mx-auto text-white select-none">
                     <div>
-                      <h4 className="text-gold font-adventure text-sm font-bold block truncate max-w-[200px]" title={localPlayers[localTurnIdx]?.name}>
+                      <h4 className="text-[#FFD700] font-adventure text-sm font-bold block truncate max-w-[200px]" title={localPlayers[localTurnIdx]?.name}>
                         {localPlayers[localTurnIdx]?.name}
                       </h4>
-                      <span className="text-[9px] bg-gold/15 text-gold px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block font-sans">
+                      <span className="text-[9px] bg-[#5A1A1A] border border-[#D4AF37]/30 text-amber-200 px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block">
                         Active Explorer
                       </span>
-                      {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
-                        <p className="text-gold-glow font-bold font-mono text-[10px] mt-1.5">
-                          Rolled: {localCurrentRoll} 🎲
-                        </p>
-                      )}
                     </div>
 
-                    <div className="flex justify-center items-center py-1">
+                    {/* D6 Cube Die */}
+                    <div className="relative w-20 h-20 flex items-center justify-center">
                       <button
                         onClick={localTriggerDiceRoll}
                         disabled={localIsRolling || localIsMoving || localPlayers[localTurnIdx]?.isBot || localActiveQuestion !== null || localLandingTile !== null}
-                        className="w-12 h-12 bg-gold hover:bg-gold-light border border-gold-dark text-jungle-deep rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-90 disabled:opacity-40 disabled:pointer-events-none transition-all duration-150"
+                        className="relative w-16 h-16 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center"
+                        title="Roll Dice"
                       >
-                        <Dices className={`w-5 h-5 ${localIsRolling ? 'animate-bounce' : ''}`} />
+                        <svg viewBox="0 0 100 100" className={`w-14 h-14 ${localIsRolling ? 'dice-spin-shake' : ''}`} style={{ filter: 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
+                          {/* Top face */}
+                          <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2.5"/>
+                          {/* Left face */}
+                          <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
+                          {/* Right face */}
+                          <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
+                          {/* Top face pips (3 dots = shows "3") */}
+                          <circle cx="38" cy="26" r="3.5" fill="#FFD700"/>
+                          <circle cx="50" cy="34" r="3.5" fill="#FFD700"/>
+                          <circle cx="62" cy="26" r="3.5" fill="#FFD700"/>
+                        </svg>
                       </button>
+
+                      {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
+                        <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[#D4AF37] shadow-lg">
+                          <span className="font-adventure text-3xl font-extrabold text-[#FFD700]">
+                            {localCurrentRoll}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-5 lg:col-span-1">
                   {/* DESKTOP TURN PANEL - HIDDEN ON MOBILE */}
-                  <div className="hidden md:flex bg-jungle-medium border border-jungle-light p-6 rounded-2xl flex-col items-center justify-center text-center shadow-xl">
-                    <span className="text-[10px] block font-bold text-gold-light uppercase tracking-wider mb-2">Turn Information</span>
+                  <div className="hidden md:flex bg-[#3B0F0F] border-3 border-[#D4AF37] p-6 rounded-3xl flex-col items-center justify-center text-center shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white select-none">
+                    <span className="text-[10px] block font-bold text-amber-300 uppercase tracking-wider mb-2 font-adventure">Turn Information</span>
                     <div className="mb-4">
-                      <span className="font-adventure text-lg font-bold text-white block">
+                      <span className="font-adventure text-lg font-extrabold text-[#FFD700] block uppercase tracking-wide">
                         {localPlayers[localTurnIdx]?.name}
                       </span>
-                      <span className="text-[10px] bg-gold/15 text-gold px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block">
+                      <span className="text-[9px] bg-[#5A1A1A] border border-[#D4AF37]/30 text-amber-200 px-2.5 py-0.5 rounded-full font-bold uppercase mt-1 inline-block">
                         Active Explorer
                       </span>
                     </div>
 
-                    <button
-                      onClick={localTriggerDiceRoll}
-                      disabled={localIsRolling || localIsMoving || localPlayers[localTurnIdx]?.isBot || localActiveQuestion !== null || localLandingTile !== null}
-                      className="w-16 h-16 bg-gold border-2 border-gold-dark text-jungle-deep rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-90 disabled:opacity-40 disabled:pointer-events-none transition-all duration-150"
-                    >
-                      <Dices className={`w-8 h-8 ${localIsRolling ? 'animate-bounce' : ''}`} />
-                    </button>
+                    {/* D6 Cube Die — Desktop */}
+                    <div className="relative w-28 h-28 flex items-center justify-center mb-2">
+                      <button
+                        onClick={localTriggerDiceRoll}
+                        disabled={localIsRolling || localIsMoving || localPlayers[localTurnIdx]?.isBot || localActiveQuestion !== null || localLandingTile !== null}
+                        className="relative w-24 h-24 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center"
+                        title="Click to Roll"
+                      >
+                        <svg viewBox="0 0 100 100" className={`w-20 h-20 ${localIsRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: 'drop-shadow(0 3px 6px rgba(255,215,0,0.25))' }}>
+                          {/* Top face */}
+                          <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2"/>
+                          {/* Left face */}
+                          <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
+                          {/* Right face */}
+                          <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
+                          {/* Top face pips */}
+                          <circle cx="38" cy="25" r="4" fill="#FFD700"/>
+                          <circle cx="50" cy="33" r="4" fill="#FFD700"/>
+                          <circle cx="62" cy="25" r="4" fill="#FFD700"/>
+                          {/* Left face pip */}
+                          <circle cx="28" cy="60" r="3.5" fill="#FFD700"/>
+                          {/* Right face pips */}
+                          <circle cx="72" cy="58" r="3.5" fill="#FFD700"/>
+                          <circle cx="72" cy="72" r="3.5" fill="#FFD700"/>
+                        </svg>
+                      </button>
 
-                    {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
-                      <div className="mt-3 font-adventure text-gold text-lg font-bold">
-                        Rolled: {localCurrentRoll} 🎲
-                      </div>
-                    )}
-                  </div>
-
-                {localActiveQuestion && localPlayers[localTurnIdx]?.isBot ? (
-                  <div className="bg-jungle-medium border border-indigo-500/50 p-6 rounded-2xl shadow-2xl space-y-4 select-text">
-                    <div className="flex justify-between items-center border-b border-jungle-light pb-2">
-                      <div>
-                        <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest block font-sans">Bot Thinking...</span>
-                        <span className="font-adventure text-lg font-bold text-white">🤖 {localPlayers[localTurnIdx]?.name}</span>
-                      </div>
-                      {localQuizPhase === 'answering' && (
-                        <span className="text-xs font-bold px-2 py-1 rounded-full border bg-jungle-deep border-jungle-light text-gold animate-pulse">
-                          ⏰ {localTimerRemaining}s
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <span className="text-[9px] font-bold text-gold-light uppercase tracking-wider block mb-1">Question</span>
-                      <p className="text-white text-xs font-semibold leading-relaxed font-sans">{localActiveQuestion.question}</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {localActiveQuestion.options.map((opt: string, oi: number) => {
-                        let chipStyle = 'bg-jungle-deep/60 border-jungle-light/30 text-offwhite/70';
-                        if (localQuizPhase === 'result') {
-                          if (oi === localActiveQuestion.correctIndex) chipStyle = 'bg-emerald-950/80 border-emerald-500 text-emerald-200';
-                          else if (oi === localSelectedOptIdx) chipStyle = 'bg-rose-950/80 border-rose-500 text-rose-200';
-                        }
-                        return (
-                          <div key={oi} className={`w-full text-left px-3 py-2 rounded-lg border text-[10px] font-semibold ${chipStyle}`}>
-                            {String.fromCharCode(65 + oi)}. {opt}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {localQuizPhase === 'result' && (
-                      <div className={`p-2 rounded-lg text-[10px] font-bold text-center border ${
-                        localSelectedOptIdx === localActiveQuestion.correctIndex ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300' : 'bg-rose-950/80 border-rose-500 text-rose-300'
-                      }`}>
-                        {localSelectedOptIdx === localActiveQuestion.correctIndex ? `✓ Correct` : `✗ Wrong`}
-                      </div>
-                    )}
-
-                    {localQuizPhase === 'result' && localActiveQuestion.explanation && (
-                      <div className="bg-jungle-deep/80 text-offwhite p-3 rounded-lg text-[10px] border border-jungle-light/20">
-                        <p className="font-bold text-gold mb-1 font-sans">Explanation:</p>
-                        {localActiveQuestion.explanation}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl">
-                    <h3 className="font-adventure text-lg font-bold text-gold border-b border-jungle-light pb-2 mb-4">Leaderboard</h3>
-                    <div className="space-y-3 text-xs">
-                      {localPlayers.slice().sort((a,b)=>b.position - a.position || b.xp - a.xp).map((p, idx) => (
-                        <div key={p.id} className="p-3 bg-jungle-deep/50 border border-jungle-light/40 rounded-xl">
-                          <div className="flex justify-between font-bold mb-1.5">
-                            <span>#{idx+1} {p.avatar} {p.name}</span>
-                            {p.streak >= 3 && <span className="text-rose-500">🔥 {p.streak}</span>}
-                          </div>
-                          <div className="grid grid-cols-3 gap-1 bg-jungle-medium/30 p-1.5 rounded font-mono text-center">
-                            <div><span className="text-[9px] block text-offwhite/50">XP</span><span className="font-bold">{p.xp}</span></div>
-                            <div><span className="text-[9px] block text-offwhite/50">Gold</span><span className="font-bold">{p.coins}</span></div>
-                            <div><span className="text-[9px] block text-offwhite/50">Tile</span><span className="font-bold">{p.position}</span></div>
+                      {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
+                        <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[#D4AF37] shadow-lg">
+                          <div className="text-center">
+                            <span className="block text-[8px] text-[#FFD700] uppercase font-extrabold tracking-widest leading-none mb-0.5 font-adventure">ROLLED</span>
+                            <span className="font-adventure text-5xl font-extrabold text-[#FFD700]">
+                              {localCurrentRoll}
+                            </span>
                           </div>
                         </div>
-                      ))}
+                      )}
                     </div>
+                    <span className="text-[9px] text-amber-200/50 block font-adventure tracking-wider uppercase">Roll Dice (1–6)</span>
                   </div>
-                )}
+
+                  {localActiveQuestion && localPlayers[localTurnIdx]?.isBot ? (
+                    <div className="bg-white border-3 border-[#D32F2F] p-5 rounded-3xl shadow-[4px_4px_0px_#991B1B] space-y-4 select-text text-stone-900">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Bot Thinking...</span>
+                          <span className="font-adventure text-base font-extrabold text-[#D32F2F] block">🤖 {localPlayers[localTurnIdx]?.name}</span>
+                        </div>
+                        {localQuizPhase === 'answering' && (
+                          <span className="text-xs font-bold px-2 py-1 rounded-full border bg-red-50 border-[#D32F2F] text-[#D32F2F] animate-pulse">
+                            ⏰ {localTimerRemaining}s
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <span className="text-[9px] font-bold text-[#D32F2F] uppercase tracking-wider block mb-1">Question</span>
+                        <p className="text-stone-800 text-xs font-semibold leading-relaxed">{localActiveQuestion.question}</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        {localActiveQuestion.options.map((opt: string, oi: number) => {
+                          let chipStyle = 'bg-slate-50 border-slate-200 text-slate-700';
+                          if (localQuizPhase === 'result') {
+                            if (oi === localActiveQuestion.correctIndex) chipStyle = 'bg-emerald-50 border-emerald-400 text-emerald-800 font-bold';
+                            else if (oi === localSelectedOptIdx) chipStyle = 'bg-red-50 border-red-400 text-red-800 font-bold';
+                          }
+                          return (
+                            <div key={oi} className={`w-full text-left px-3 py-2 rounded-xl border text-[10px] font-semibold ${chipStyle}`}>
+                              {String.fromCharCode(65 + oi)}. {opt}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {localQuizPhase === 'result' && (
+                        <div className={`p-2 rounded-xl text-[10px] font-bold text-center border ${
+                          localSelectedOptIdx === localActiveQuestion.correctIndex ? 'bg-emerald-50 border-emerald-400 text-emerald-800' : 'bg-red-50 border-red-400 text-red-800'
+                        }`}>
+                          {localSelectedOptIdx === localActiveQuestion.correctIndex ? `✓ Correct` : `✗ Wrong`}
+                        </div>
+                      )}
+
+                      {localQuizPhase === 'result' && localActiveQuestion.explanation && (
+                        <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-[10px] text-slate-600">
+                          <p className="font-bold text-[#D32F2F] mb-1 font-adventure uppercase tracking-wider">Explanation:</p>
+                          {localActiveQuestion.explanation}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-[#3B0F0F] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white">
+                      <h3 className="font-adventure text-base font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 mb-4 uppercase tracking-wider">Standings</h3>
+                      <div className="space-y-3 text-xs">
+                        {localPlayers.slice().sort((a,b)=>b.position - a.position || b.xp - a.xp).map((p, idx) => (
+                          <div key={p.id} className="p-3 bg-[#2A0F0F] border-2 border-[#D4AF37]/30 rounded-2xl shadow-md text-white">
+                            <div className="flex justify-between items-center font-bold mb-2">
+                              <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
+                                <span className="font-adventure text-[#FFD700]">#{idx+1}</span>
+                                <span>{p.avatar}</span>
+                                <span className="truncate max-w-[90px] text-amber-100">{p.name}</span>
+                              </span>
+                              {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
+                            </div>
+                            <div className="grid grid-cols-3 gap-1 bg-[#3B0F0F] border border-[#D4AF37]/35 p-1 rounded-xl text-center">
+                              <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">XP</span><span className="font-bold text-xs text-white">{p.xp}</span></div>
+                              <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Gold</span><span className="font-bold text-xs text-white">{p.coins}</span></div>
+                              <div><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Tile</span><span className="font-bold text-xs text-[#FFD700]">{p.position}</span></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </main>
+            </main>
           )}
 
           {/* LOCAL ACTIVE QUIZ (Only for human turns) */}
           {localScreen === 'board' && localActiveQuestion && !localPlayers[localTurnIdx]?.isBot && (
-            <div className="fixed inset-0 bg-black/15 z-50 flex items-center justify-center p-4">
-              <div className="parchment-panel rounded-2xl max-w-xl w-full p-6 text-jungle-deep relative shadow-2xl">
-                <div className="flex justify-between items-center mb-4 pb-2 border-b border-gold-dark/20 text-xs">
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 select-text animate-fade-in">
+              <div className="parchment-scroll max-w-xl w-full p-6 text-[#2D0B0B] relative shadow-2xl">
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#C49A45]/30 text-xs text-stone-500 font-sans font-bold">
                   <span>Topic: {localActiveQuestion.topic}</span>
-                  {localQuizPhase === 'answering' && <span className="font-bold">⏰ {localTimerRemaining}s</span>}
+                  {localQuizPhase === 'answering' && <span className="font-bold text-amber-800">⏰ {localTimerRemaining}s</span>}
                 </div>
 
-                <p className="text-lg font-semibold mb-6 leading-relaxed">{localActiveQuestion.question}</p>
+                <p className="text-lg font-bold mb-6 leading-relaxed text-[#2D0B0B] font-sans">{localActiveQuestion.question}</p>
 
                 <div className="space-y-3 mb-6">
                   {localActiveQuestion.options.map((opt: string, oIdx: number) => {
-                    let style = 'bg-parchment-light border-gold-dark/45';
+                    const isSelected = localSelectedOptIdx === oIdx;
+                    let style = 'bg-[#FFFDF6] border-[#C49A45]/45 hover:bg-[#F2EBD9] hover:border-[#C49A45] text-[#2D0B0B]';
                     if (localQuizPhase === 'result') {
-                      if (oIdx === localActiveQuestion.correctIndex) style = 'bg-emerald-100 border-emerald-500 text-emerald-950';
-                      else if (localSelectedOptIdx === oIdx) style = 'bg-rose-100 border-rose-500 text-rose-950';
+                      if (oIdx === localActiveQuestion.correctIndex) style = 'bg-emerald-100 border-emerald-600 text-emerald-950 font-bold';
+                      else if (isSelected) style = 'bg-rose-100 border-rose-600 text-rose-950 font-bold';
+                    } else if (isSelected) {
+                      style = 'border-amber-700 bg-[#F2EBD9] text-[#2D0B0B] ring-2 ring-amber-700/35';
                     }
                     return (
                       <button
                         key={oIdx}
                         onClick={() => localSubmitAnswer(oIdx)}
                         disabled={localQuizPhase !== 'answering' || localPlayers[localTurnIdx]?.isBot}
-                        className={`w-full text-left p-3 rounded-lg border font-semibold ${style}`}
+                        className={`w-full text-left p-4 rounded-xl border-2 font-bold text-xs transition-all shadow-sm active:translate-y-0.5 ${style}`}
                       >
-                        {opt}
+                        {String.fromCharCode(65 + oIdx)}. {opt}
                       </button>
                     );
                   })}
                 </div>
 
-                {localQuizPhase === 'result' && (
-                  <div className="bg-jungle-deep text-offwhite p-3 rounded-lg text-xs">{localActiveQuestion.explanation}</div>
+                {localQuizPhase === 'result' && localActiveQuestion.explanation && (
+                  <div className="bg-[#FFFDF6] border border-[#C49A45]/40 p-4 rounded-xl text-xs text-stone-700">
+                    <p className="font-adventure text-amber-800 font-bold mb-1 uppercase tracking-wider">Explanation:</p>
+                    {localActiveQuestion.explanation}
+                  </div>
                 )}
               </div>
             </div>
@@ -1715,80 +2485,91 @@ export default function App() {
 
           {/* LOCAL VICTORY SUMMARY */}
           {localScreen === 'victory' && (
-            <main className="max-w-4xl mx-auto px-6 py-12 flex flex-col items-center">
-              <span className="text-7xl block mb-2">🏆</span>
-              <h2 className="font-adventure text-4xl font-extrabold text-gold mb-8">Victory Achieved!</h2>
-              
-              {localLevelUpTo !== null && (
-                <div className="bg-gradient-to-r from-amber-500 to-yellow-400 text-jungle-deep border border-yellow-300 px-6 py-3 rounded-2xl font-adventure text-lg font-bold mb-6 animate-bounce text-center shadow-lg">
-                  🎉 LEVEL UP! You are now Level {localLevelUpTo}! 🎉
+            <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 select-text animate-fade-in font-serif">
+              <div className="bg-[#3B0F0F] border-4 border-[#D4AF37] max-w-xl w-full p-8 text-center rounded-[2rem] relative shadow-[0_0_60px_rgba(255,215,0,0.4)] animate-scale-in flex flex-col items-center text-white">
+                {/* Shiny confetti glow overlay */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(255,215,0,0.15),transparent_70%)] pointer-events-none"></div>
+                
+                <span className="text-7xl block mb-4 animate-bounce">🏆</span>
+                <h2 className="font-adventure text-4xl font-extrabold text-[#FFD700] mb-2 drop-shadow-[0_2px_5px_rgba(0,0,0,0.6)] uppercase tracking-widest">Victory!</h2>
+                <p className="text-amber-200/70 font-sans text-xs uppercase tracking-widest font-bold mb-6">Adventure Completed</p>
+                
+                {localLevelUpTo !== null && (
+                  <div className="bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 border border-yellow-300 px-6 py-2 rounded-2xl font-adventure text-sm font-bold mb-6 animate-pulse shadow-md">
+                    🎉 LEVEL UP! You reached Level {localLevelUpTo}! 🎉
+                  </div>
+                )}
+
+                {/* Champion stats */}
+                {localPlayers.length > 0 && (() => {
+                  const sorted = localPlayers.slice().sort((a,b)=>b.position - a.position || b.xp - a.xp);
+                  const winner = sorted[0];
+                  return (
+                    <div className="bg-[#2A0F0F] border border-[#D4AF37]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
+                      <h4 className="text-xs font-extrabold text-[#FFD700] uppercase tracking-wider mb-3 text-center">Champion: {winner.avatar} {winner.name}</h4>
+                      <div className="grid grid-cols-2 gap-4 text-center">
+                        <div className="bg-[#3B0F0F] border border-[#D4AF37]/35 p-3 rounded-2xl">
+                          <span className="text-[10px] block text-amber-200/50 uppercase font-bold">XP Gained</span>
+                          <span className="text-lg font-bold text-white">+{winner.xp} XP</span>
+                        </div>
+                        <div className="bg-[#3B0F0F] border border-[#D4AF37]/35 p-3 rounded-2xl">
+                          <span className="text-[10px] block text-amber-200/50 uppercase font-bold">Coins Earned</span>
+                          <span className="text-lg font-bold text-white">+{winner.coins} Gold</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Ranked Standings list */}
+                <div className="w-full max-w-md max-h-48 overflow-y-auto scrollbar-none mb-8 space-y-2">
+                  {localPlayers.slice().sort((a, b) => {
+                    const rA = a.finishedRank || 999;
+                    const rB = b.finishedRank || 999;
+                    if (rA !== rB) return rA - rB;
+                    if (a.position !== b.position) return b.position - a.position;
+                    return b.xp - a.xp;
+                  }).map((p, idx) => (
+                    <div key={p.id} className="flex items-center justify-between p-3 bg-[#2A0F0F] border border-[#D4AF37]/30 rounded-xl text-xs text-white">
+                      <span className="font-bold">#{idx+1} {p.avatar} {p.name}</span>
+                      <div className="flex gap-2">
+                        {localCalculateBadges(p).map((b, bIdx) => (
+                          <span key={bIdx} className="bg-[#5A1A1A] border border-[#D4AF37]/45 text-[#FFD700] text-[7px] px-1.5 py-0.5 rounded font-bold">{b}</span>
+                        ))}
+                      </div>
+                      <span className="font-semibold text-amber-200/80">{p.xp} XP | {p.coins} Coins</span>
+                    </div>
+                  ))}
                 </div>
-              )}
 
-              <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl w-full mb-8">
-                <table className="w-full text-left text-xs border-collapse font-semibold">
-                  <thead>
-                    <tr className="border-b border-jungle-light text-gold-light uppercase">
-                      <th className="py-2.5 px-1">Explorer</th>
-                      <th className="py-2.5 px-1 text-center">XP</th>
-                      <th className="py-2.5 px-1 text-center">Gold</th>
-                      <th className="py-2.5 px-1 text-center">Accuracy</th>
-                      <th className="py-2.5 px-1 text-center">Badges</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {localPlayers.map(p => (
-                      <tr key={p.id} className="border-b border-jungle-light/20">
-                        <td className="py-3 px-1">{p.avatar} {p.name}</td>
-                        <td className="py-3 px-1 text-center text-gold">{p.xp}</td>
-                        <td className="py-3 px-1 text-center text-gold">{p.coins}</td>
-                        <td className="py-3 px-1 text-center text-emerald-400">
-                          {p.answersTotal > 0 ? ((p.answersCorrect / p.answersTotal) * 100).toFixed(0) : 0}%
-                        </td>
-                        <td className="py-3 px-1 text-center">
-                          {localCalculateBadges(p).map((b, bIdx) => (
-                            <span key={bIdx} className="bg-amber-950 border border-gold/45 text-gold-glow text-[9px] px-2 py-0.5 rounded-full inline-block mx-0.5">{b}</span>
-                          )) || '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="flex flex-wrap gap-4 w-full justify-center">
+                  <button
+                    onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ localScreen: 'setup' }); }}
+                    className="px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800 text-white font-bold text-xs shadow-md active:translate-y-0.5 transition-all font-adventure uppercase tracking-wider border-b-4 border-amber-900"
+                  >
+                    Play Again
+                  </button>
+                  <button
+                    onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'selection' }); }}
+                    className="px-6 py-3 rounded-full bg-[#5A1A1A] hover:bg-[#7F1D1D] text-[#FFD700] border-2 border-[#D4AF37]/80 font-bold text-xs shadow-md active:translate-y-0.5 transition-all font-adventure uppercase tracking-wider"
+                  >
+                    Exit Game
+                  </button>
+                </div>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                <button 
-                  onClick={() => { sounds.playBeep(440, 'sine', 0.1); setLocalScreen('setup'); }}
-                  className="px-6 py-3 bg-gold text-jungle-deep font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
-                >
-                  Play Again
-                </button>
-                <button 
-                  onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'student', studentGameState: 'dashboard', studentActiveTab: 'new_adventure' }); }}
-                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
-                >
-                  Back to Explorer Launchpad
-                </button>
-                <button 
-                  onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'student', studentGameState: 'dashboard', studentActiveTab: 'dashboard' }); }}
-                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
-                >
-                  Return to Dashboard
-                </button>
-              </div>
-            </main>
+            </div>
           )}
         </div>
       )}
 
       {/* Leave Game Confirmation Dialog */}
       {showExitConfirm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[999999] animate-fade-in select-text">
-          <div className="parchment-panel text-jungle-deep p-6 rounded-2xl w-full max-w-sm shadow-2xl relative border border-gold-dark/30">
-            <h3 className="font-adventure text-2xl font-bold text-red-700 mb-2 uppercase tracking-wide">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[999999] animate-fade-in select-text">
+          <div className="bg-white border-3 border-[#D32F2F] text-stone-900 p-6 rounded-[2rem] w-full max-w-sm shadow-[6px_6px_0px_#991B1B] relative">
+            <h3 className="font-adventure text-2xl font-extrabold text-[#D32F2F] mb-2 uppercase tracking-wide">
               Leave Game?
             </h3>
-            <p className="text-xs font-semibold text-jungle-light mb-6">
+            <p className="text-xs font-semibold text-slate-500 mb-6">
               Current match progress will be lost.
             </p>
             <div className="flex gap-3">
@@ -1797,7 +2578,7 @@ export default function App() {
                   setShowExitConfirm(false);
                   setPendingExitCallback(null);
                 }}
-                className="flex-1 py-2.5 bg-gray-200 hover:bg-gray-300 text-jungle-deep font-bold rounded-lg text-xs uppercase transition-colors"
+                className="flex-1 py-2.5 bg-slate-50 border-2 border-slate-200 hover:bg-slate-100 text-slate-700 font-adventure font-extrabold rounded-xl text-xs uppercase tracking-wide transition-colors"
               >
                 Cancel
               </button>
@@ -1807,11 +2588,20 @@ export default function App() {
                   if (pendingExitCallback) pendingExitCallback();
                   setPendingExitCallback(null);
                 }}
-                className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-xs uppercase shadow-md transition-colors"
+                className="flex-1 py-2.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white border-b-4 border-[#991B1B] font-adventure font-extrabold rounded-xl text-xs uppercase tracking-wide transition-all"
               >
-                Leave Game
+                Leave Match
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Screen Transition Overlay */}
+      {isTransitioning && (
+        <div className="fixed inset-0 z-[99999] bg-white/80 flex items-center justify-center pointer-events-auto backdrop-blur-md">
+          <div className="relative w-32 h-32 flex items-center justify-center">
+            <div className="w-28 h-28 rounded-full border-4 border-[#D32F2F]/20 animate-spin-slow border-dashed"></div>
+            <Compass className="absolute text-[#D32F2F] w-10 h-10 animate-pulse-slow" />
           </div>
         </div>
       )}
@@ -1819,3 +2609,4 @@ export default function App() {
     </div>
   );
 }
+

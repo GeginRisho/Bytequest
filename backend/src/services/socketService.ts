@@ -20,6 +20,9 @@ interface TeamState {
   members: StudentPlayer[];
   activeMemberIdx: number;
   skipNextTurn: boolean;
+  finished?: boolean;
+  finishedRank?: number;
+  askedQuestionIds?: string[];
 }
 
 interface LiveRoom {
@@ -68,16 +71,16 @@ export class SocketService {
       logger.info(`🔌 Connection established: ${socket.id}`);
 
       // Teacher room registration
-      socket.on('teacher:join', (payload: { roomCode: string }) => {
+      socket.on('teacher:join', async (payload: { roomCode: string }) => {
         const { roomCode } = payload;
-        socket.join(roomCode);
+        await socket.join(roomCode);
         logger.info(`🏫 Teacher joined room: ${roomCode}`);
         this.sendRoomUpdate(roomCode);
       });
 
       // Student join lobby
-      socket.on('student:join', (payload: { roomCode: string; studentId: string }) => {
-        this.handleStudentJoin(socket, payload);
+      socket.on('student:join', async (payload: { roomCode: string; studentId: string }) => {
+        await this.handleStudentJoin(socket, payload);
       });
 
       // Teacher triggers game start
@@ -96,18 +99,18 @@ export class SocketService {
       });
 
       // Student re-connection hook
-      socket.on('student:reconnect', (payload: { roomCode: string; studentId: string }) => {
-        this.handleStudentReconnect(socket, payload);
+      socket.on('student:reconnect', async (payload: { roomCode: string; studentId: string }) => {
+        await this.handleStudentReconnect(socket, payload);
       });
 
       // Student creates practice room
-      socket.on('student:create_practice', (payload: { studentId: string; studentName: string }) => {
-        this.handleCreatePracticeRoom(socket, payload);
+      socket.on('student:create_practice', async (payload: { studentId: string; studentName: string }) => {
+        await this.handleCreatePracticeRoom(socket, payload);
       });
 
       // Student joins practice room
-      socket.on('student:join_practice', (payload: { roomCode: string; studentId: string; studentName: string }) => {
-        this.handleJoinPracticeRoom(socket, payload);
+      socket.on('student:join_practice', async (payload: { roomCode: string; studentId: string; studentName: string }) => {
+        await this.handleJoinPracticeRoom(socket, payload);
       });
 
       // Student starts practice game
@@ -210,7 +213,7 @@ export class SocketService {
         return;
       }
 
-      socket.join(roomCode);
+      await socket.join(roomCode);
       (socket as any).roomCode = roomCode;
       (socket as any).studentId = studentId;
 
@@ -221,7 +224,7 @@ export class SocketService {
     }
   }
 
-  private handleStudentReconnect(socket: Socket, payload: { roomCode: string; studentId: string }) {
+  private async handleStudentReconnect(socket: Socket, payload: { roomCode: string; studentId: string }) {
     const { roomCode, studentId } = payload;
     const room = this.activeRooms.get(roomCode);
     if (!room) return;
@@ -234,7 +237,7 @@ export class SocketService {
       });
     });
 
-    socket.join(roomCode);
+    await socket.join(roomCode);
     (socket as any).roomCode = roomCode;
     (socket as any).studentId = studentId;
 
@@ -391,13 +394,19 @@ export class SocketService {
       if (pool.length === 0) pool = teacherQs;
 
       // Avoid repeats
-      let unasked = pool.filter(q => !room.askedQuestionIds.includes(q.id));
+      if (!activeTeam.askedQuestionIds) activeTeam.askedQuestionIds = [];
+      let unasked = pool.filter(q => !activeTeam.askedQuestionIds!.includes(q.id) && !room.askedQuestionIds.includes(q.id));
+      if (unasked.length === 0) {
+        unasked = pool.filter(q => !activeTeam.askedQuestionIds!.includes(q.id));
+      }
       if (unasked.length === 0) {
         unasked = pool;
+        activeTeam.askedQuestionIds = [];
         room.askedQuestionIds = [];
       }
 
       const q = unasked[Math.floor(Math.random() * unasked.length)] || pool[0];
+      activeTeam.askedQuestionIds.push(q.id);
       room.askedQuestionIds.push(q.id);
       room.activeQuestion = q;
       room.timerRemaining = 15;
@@ -506,7 +515,18 @@ export class SocketService {
     if (tileText) combinedLogs.push(tileText);
     const resultLog = combinedLogs.join(' | ');
 
-    if (activeTeam.position >= 17) {
+    if (activeTeam.position >= 17 && !activeTeam.finished) {
+      activeTeam.finished = true;
+      const finishedCount = room.teams.filter(t => t.finished).length;
+      activeTeam.finishedRank = finishedCount;
+      this.io.to(roomCode).emit('game:log', { 
+        message: `🏁 ${activeTeam.name} has reached the Final Treasure! Finished in Rank ${activeTeam.finishedRank}!` 
+      });
+    }
+
+    const allFinished = room.teams.every(t => t.finished);
+
+    if (allFinished) {
       room.status = 'FINISHED';
 
       // Increment matchesPlayed and update level for all players in room
@@ -518,7 +538,7 @@ export class SocketService {
             where: { id: member.id }
           });
           if (profile) {
-            const nextMatches = profile.matchesPlayed + 1;
+            const nextMatches = (profile.matchesPlayed || 0) + 1;
             let nextLevel = 1;
             if (nextMatches <= 5) nextLevel = 1;
             else if (nextMatches <= 12) nextLevel = 2;
@@ -538,12 +558,20 @@ export class SocketService {
                 level: nextLevel
               }
             });
-            logger.info(`[LEVELING] Updated Student ID: ${member.id} - matches: ${nextMatches}, level: ${nextLevel}`);
           }
         } catch (err: any) {
           logger.error(`[LEVELING ERROR] Failed to update stats for student ${member.id}: ${err.message}`);
         }
       }
+
+      // Sort teams by finish rank before saving/returning
+      room.teams.sort((a, b) => {
+        const rA = a.finishedRank || 999;
+        const rB = b.finishedRank || 999;
+        if (rA !== rB) return rA - rB;
+        if (a.position !== b.position) return b.position - a.position;
+        return b.xp - a.xp;
+      });
 
       if (room.classId) {
         await db.updateSessionStatus(room.sessionId, 'FINISHED');
@@ -564,16 +592,13 @@ export class SocketService {
             accuracy: teamAccuracy,
             xp: t.xp,
             coins: t.coins,
-            rank: idx + 1
+            rank: t.finishedRank || (idx + 1)
           };
         });
-        dbResults.sort((a, b) => b.position - a.position || b.xp - a.xp);
-        dbResults.forEach((res, rankIdx) => {
-          res.rank = rankIdx + 1;
-        });
+        dbResults.sort((a, b) => a.rank - b.rank);
         await db.saveSessionResults(room.sessionId, dbResults);
       }
-      this.io.to(roomCode).emit('game:victory', { winner: activeTeam, teams: room.teams, leveledUpMembers });
+      this.io.to(roomCode).emit('game:victory', { winner: room.teams[0], teams: room.teams, leveledUpMembers });
       this.sendRoomUpdate(roomCode);
       return;
     }
@@ -598,18 +623,41 @@ export class SocketService {
     const room = this.activeRooms.get(roomCode);
     if (!room || room.status !== 'PLAYING') return;
 
-    // Rotate within team members
+    // Rotate within active team members
     const activeTeam = room.teams[room.activeTeamIdx];
     activeTeam.activeMemberIdx = (activeTeam.activeMemberIdx + 1) % activeTeam.members.length;
 
-    // Pass turn to next team
-    let nextTeamIdx = (room.activeTeamIdx + 1) % room.teams.length;
-    let nextTeam = room.teams[nextTeamIdx];
+    // Pass turn to next unfinished team
+    let nextTeamIdx = room.activeTeamIdx;
+    let found = false;
+    for (let i = 1; i <= room.teams.length; i++) {
+      const idx = (room.activeTeamIdx + i) % room.teams.length;
+      if (!room.teams[idx].finished) {
+        nextTeamIdx = idx;
+        found = true;
+        break;
+      }
+    }
 
+    if (!found) {
+      logger.info(`All teams finished in room ${roomCode}. Turn rotation skipped.`);
+      return;
+    }
+
+    const nextTeam = room.teams[nextTeamIdx];
     if (nextTeam.skipNextTurn) {
       nextTeam.skipNextTurn = false;
       this.io.to(roomCode).emit('game:log', { message: `🚫 ${nextTeam.name}'s turn is skipped!` });
-      nextTeamIdx = (nextTeamIdx + 1) % room.teams.length;
+      
+      let doubleNextIdx = nextTeamIdx;
+      for (let i = 1; i <= room.teams.length; i++) {
+        const idx = (nextTeamIdx + i) % room.teams.length;
+        if (!room.teams[idx].finished) {
+          doubleNextIdx = idx;
+          break;
+        }
+      }
+      nextTeamIdx = doubleNextIdx;
     }
 
     room.activeTeamIdx = nextTeamIdx;
@@ -619,7 +667,7 @@ export class SocketService {
     this.sendRoomUpdate(roomCode);
   }
 
-  private handleCreatePracticeRoom(socket: Socket, payload: { studentId: string; studentName: string }) {
+  private async handleCreatePracticeRoom(socket: Socket, payload: { studentId: string; studentName: string }) {
     const { studentId, studentName } = payload;
     const roomCode = 'BQ' + Math.floor(1000 + Math.random() * 9000);
 
@@ -654,12 +702,12 @@ export class SocketService {
     };
 
     this.activeRooms.set(roomCode, room);
-    socket.join(roomCode);
+    await socket.join(roomCode);
     logger.info(`🎮 Student Practice Room created: ${roomCode}`);
     this.sendRoomUpdate(roomCode);
   }
 
-  private handleJoinPracticeRoom(socket: Socket, payload: { roomCode: string; studentId: string; studentName: string }) {
+  private async handleJoinPracticeRoom(socket: Socket, payload: { roomCode: string; studentId: string; studentName: string }) {
     const { roomCode, studentId, studentName } = payload;
     const room = this.activeRooms.get(roomCode);
     if (!room) {
@@ -701,7 +749,7 @@ export class SocketService {
       }
     }
 
-    socket.join(roomCode);
+    await socket.join(roomCode);
     logger.info(`🎮 Student ${studentName} joined Practice Room: ${roomCode}`);
     this.sendRoomUpdate(roomCode);
   }

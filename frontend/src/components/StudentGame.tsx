@@ -50,6 +50,10 @@ interface StudentGameProps {
   setActiveTab: (tab: 'dashboard' | 'continue' | 'new_adventure' | 'practice_quiz' | 'daily_challenge' | 'leaderboard' | 'profile' | 'settings' | 'join_classroom') => void;
   showLobbyConfigModal: boolean;
   setShowLobbyConfigModal: (show: boolean) => void;
+  // Passed from App.tsx to avoid re-authentication inside StudentGame
+  activeStudent?: any;
+  onUpdateStudent?: (studentId: string) => void;
+  sounds?: any;
 }
 
 export default function StudentGame({ 
@@ -62,7 +66,10 @@ export default function StudentGame({
   activeTab,
   setActiveTab,
   showLobbyConfigModal,
-  setShowLobbyConfigModal
+  setShowLobbyConfigModal,
+  activeStudent: propActiveStudent,
+  onUpdateStudent,
+  sounds: _sounds
 }: StudentGameProps) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -85,24 +92,8 @@ export default function StudentGame({
   const [loading, setLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>('');
   const [joinStatus, setJoinStatus] = useState<string>('');
+  const [syncFailed, setSyncFailed] = useState<boolean>(false);
 
-  // New Auth Overhaul State
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'wizard'>('login');
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupGrade, setSignupGrade] = useState('10');
-  const [signupFirstName, setSignupFirstName] = useState('');
-  const [signupLastName, setSignupLastName] = useState('');
-  
-  // Wizard variables
-  const [schools, setSchools] = useState<any[]>([]);
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
-  const [wSchoolId, setWSchoolId] = useState('');
-  const [wTeacherId, setWTeacherId] = useState('');
-  const [wClassId, setWClassId] = useState('');
 
   // Dashboard Nav States
   const [joinCodeInput, setJoinCodeInput] = useState<string>('');
@@ -163,6 +154,52 @@ export default function StudentGame({
     };
   }, [socket, syncState]);
 
+  // Expose auto-create practice room hook for App.tsx to call after auth
+  useEffect(() => {
+    (window as any).ByteQuestAutoCreatePractice = () => {
+      const studentId = localStorage.getItem('bytequest_student_id');
+      if (socket && studentId) {
+        const studentName = propActiveStudent?.name || activeStudent?.name || 'Player';
+        socket.emit('student:create_practice', { studentId, studentName });
+        setGameState('lobby');
+      }
+    };
+    return () => { delete (window as any).ByteQuestAutoCreatePractice; };
+  }, [socket, propActiveStudent, activeStudent]);
+
+  // Expose auto-join lobby hook for App.tsx to call after auth
+  useEffect(() => {
+    (window as any).ByteQuestAutoJoinLobby = (code: string) => {
+      const studentId = localStorage.getItem('bytequest_student_id');
+      const studentName = propActiveStudent?.name || activeStudent?.name || 'Player';
+      if (socket && studentId && code) {
+        if (code.startsWith('BQ')) {
+          socket.emit('student:join_practice', { roomCode: code, studentId, studentName });
+        } else {
+          socket.emit('student:join', { roomCode: code, studentId });
+        }
+        setRoomCode(code);
+        setGameState('lobby');
+      }
+    };
+    return () => { delete (window as any).ByteQuestAutoJoinLobby; };
+  }, [socket, propActiveStudent, activeStudent]);
+
+  // Expose auto-join classroom hook for App.tsx to call after auth
+  useEffect(() => {
+    (window as any).ByteQuestAutoJoinClassroom = (code: string) => {
+      setJoinCodeInput(code);
+      // Attempt to resolve and join the classroom
+      if (code) {
+        setTimeout(() => {
+          const btn = document.getElementById('classroom-join-submit-btn');
+          if (btn) btn.click();
+        }, 100);
+      }
+    };
+    return () => { delete (window as any).ByteQuestAutoJoinClassroom; };
+  }, []);
+
   // Audio Config
   const [audioOn, setAudioOn] = useState<boolean>(true);
   const [diceRolling, setDiceRolling] = useState<boolean>(false);
@@ -205,160 +242,68 @@ export default function StudentGame({
   const [dailySelectedOpt, setDailySelectedOpt] = useState<number | null>(null);
   const [dailyChecked, setDailyChecked] = useState<boolean>(false);
   const [dailyPlayedToday, setDailyPlayedToday] = useState<boolean>(false);
+  const [dailyLoading, setDailyLoading] = useState<boolean>(false);
+  const [showDailyResults, setShowDailyResults] = useState<boolean>(false);
 
   // API Config
   const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
   const STUDENT_API_BASE = `${baseApi}/api/v1/student`;
   const TEACHER_API_BASE = `${baseApi}/api/v1/teacher`;
 
-  // Restore Student Session on Mount
+  // Restore Student Session on Mount (only if not already provided via prop)
   useEffect(() => {
-    const cachedStudentId = localStorage.getItem('bytequest_student_id');
-    if (cachedStudentId) {
-      loadStudentProfile(cachedStudentId);
+    if (propActiveStudent) {
+      // Profile passed from App.tsx — use it directly, no need to reload
+      setActiveStudent(propActiveStudent);
+    } else {
+      const cachedStudentId = localStorage.getItem('bytequest_student_id');
+      if (cachedStudentId) {
+        loadStudentProfile(cachedStudentId);
+      }
     }
   }, []);
 
+  // Sync prop changes (e.g. profile refresh after rewards)
+  useEffect(() => {
+    if (propActiveStudent) {
+      setActiveStudent(propActiveStudent);
+    }
+  }, [propActiveStudent]);
+
+  // Auto-start Daily Challenge when tab is opened
+  useEffect(() => {
+    if (activeTab === 'daily_challenge') {
+      handleStartDailyChallenge();
+    }
+  }, [activeTab]);
+
   const loadStudentProfile = async (studentId: string) => {
     setLoading(true);
+    setSyncFailed(false);
     try {
       const res = await fetch(`${STUDENT_API_BASE}/profile/${studentId}`);
       const data = await res.json();
       if (res.ok) {
         setActiveStudent(data.student);
         localStorage.setItem('bytequest_student_id', studentId);
-        setGameState('dashboard');
+        // NOTE: Do NOT call setGameState here — game state is managed by App.tsx
+        // and setting it here would override the intended destination (lobby, daily_challenge, etc.)
       } else {
         localStorage.removeItem('bytequest_student_id');
         setActiveStudent(null);
+        setSyncFailed(true);
       }
     } catch (e) {
       console.error('Failed to load profile', e);
       localStorage.removeItem('bytequest_student_id');
       setActiveStudent(null);
+      setSyncFailed(true);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    setLoading(true);
-    try {
-      const res = await fetch(`${STUDENT_API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        loadStudentProfile(data.student.id);
-      } else {
-        setAuthError(data.error || 'Login failed.');
-      }
-    } catch (err) {
-      setAuthError('Connection failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleSignupSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    setLoading(true);
-    try {
-      const res = await fetch(`${STUDENT_API_BASE}/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: signupEmail,
-          password: signupPassword,
-          grade: Number(signupGrade),
-          firstName: signupFirstName,
-          lastName: signupLastName
-        })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        localStorage.setItem('bytequest_student_id', data.student.id);
-        setActiveStudent(data.student);
-        setAuthMode('wizard');
-        fetchSchools();
-      } else {
-        setAuthError(data.error || 'Signup failed.');
-      }
-    } catch (err) {
-      setAuthError('Connection failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSchools = async () => {
-    try {
-      const res = await fetch(`${STUDENT_API_BASE}/schools`);
-      const data = await res.json();
-      if (res.ok) setSchools(data.schools || []);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleSchoolSelect = async (schoolId: string) => {
-    setWSchoolId(schoolId);
-    setWTeacherId('');
-    setWClassId('');
-    setTeachers([]);
-    setClasses([]);
-    if (!schoolId) return;
-    try {
-      const res = await fetch(`${STUDENT_API_BASE}/teachers?schoolId=${schoolId}`);
-      const data = await res.json();
-      if (res.ok) setTeachers(data.teachers || []);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleTeacherSelect = async (teacherId: string) => {
-    setWTeacherId(teacherId);
-    setWClassId('');
-    setClasses([]);
-    if (!teacherId) return;
-    try {
-      const res = await fetch(`${STUDENT_API_BASE}/classes?teacherId=${teacherId}`);
-      const data = await res.json();
-      if (res.ok) setClasses(data.classes || []);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleEnrollSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!wClassId || !activeStudent) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${STUDENT_API_BASE}/join-request`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentId: activeStudent.id,
-          classId: wClassId,
-          studentName: activeStudent.name
-        })
-      });
-      if (res.ok) {
-        loadStudentProfile(activeStudent.id);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleJoinCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -380,7 +325,11 @@ export default function StudentGame({
         setJoinClassroomStatus(data.message || 'Request submitted successfully. Pending teacher approval.');
         loadStudentProfile(activeStudent.id);
       } else {
-        setJoinClassroomError(data.error || 'Failed to submit join request.');
+        let errStr = data.error || 'Failed to submit join request.';
+        if (errStr.toLowerCase().includes('not found') || errStr.toLowerCase().includes('invalid')) {
+          errStr = 'INVALID CLASS CODE';
+        }
+        setJoinClassroomError(errStr.toUpperCase());
       }
     } catch (err: any) {
       setJoinClassroomError(err.message || 'An error occurred.');
@@ -389,9 +338,10 @@ export default function StudentGame({
 
   const handleLogout = () => {
     localStorage.removeItem('bytequest_student_id');
+    localStorage.removeItem('bytequest_role');
     setActiveStudent(null);
     setAuthMode('login');
-    setGameState('dashboard');
+    onBack();
   };
 
 
@@ -502,13 +452,22 @@ export default function StudentGame({
       });
 
       socket.on('room:error', (data: any) => {
-        setJoinError(data.message);
-        setGameState('dashboard');
+        let msg = data.message || '';
+        if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('invalid')) {
+          msg = 'ROOM NOT FOUND';
+        } else if (msg.toLowerCase().includes('full')) {
+          msg = 'ROOM IS FULL';
+        } else {
+          msg = msg.toUpperCase();
+        }
+        setJoinError(msg);
+        onBack(msg);
       });
 
       socket.on('error', (data: any) => {
-        setJoinError(data.message || 'Connection error occurred');
-        setGameState('dashboard');
+        const msg = (data.message || 'CONNECTION ERROR').toUpperCase();
+        setJoinError(msg);
+        onBack(msg);
       });
     }
 
@@ -635,23 +594,14 @@ export default function StudentGame({
       setShowLobbyConfigModal(false);
       return;
     }
-    if (gameState === 'lobby') {
-      if (socket) socket.emit('room:leave', { roomCode: syncState?.roomCode });
-      setGameState('dashboard');
-      setActiveTab('new_adventure');
-      return;
-    }
-    if (gameState === 'playing') {
+    // From lobby or playing — always go back to the main game menu (Launchpad)
+    if (gameState === 'lobby' || gameState === 'playing') {
+      if (socket && syncState) socket.emit('room:leave', { roomCode: syncState?.roomCode });
       onBack();
       return;
     }
-    if (activeTab === 'profile' || activeTab === 'settings' || activeTab === 'leaderboard') {
-      setActiveTab('dashboard');
-    } else if (activeTab === 'daily_challenge' || activeTab === 'practice_quiz') {
-      setActiveTab('new_adventure');
-    } else {
-      setActiveTab('dashboard');
-    }
+    // From any dashboard sub-tab — go back to main menu (Launchpad)
+    onBack();
   };
 
   const getTimerColorClass = (seconds: number, hasQuestion: boolean) => {
@@ -763,15 +713,34 @@ export default function StudentGame({
   const handleStartDailyChallenge = () => {
     if (dailyPlayedToday) {
       alert("You have already completed today's challenge! Come back tomorrow.");
+      onBack();
       return;
     }
-    const shuffled = [...questionBank].sort(() => 0.5 - Math.random()).slice(0, 5);
-    setDailyQs(shuffled);
-    setDailyQIdx(0);
-    setDailyScore(0);
-    setDailySelectedOpt(null);
-    setDailyChecked(false);
-    setDailyActive(true);
+    setDailyLoading(true);
+    setDailyActive(false);
+    setShowDailyResults(false);
+    setTimeout(() => {
+      try {
+        if (!questionBank || questionBank.length === 0) {
+          setDailyQs([]);
+          setDailyActive(false);
+        } else {
+          const shuffled = [...questionBank].sort(() => 0.5 - Math.random()).slice(0, 5);
+          setDailyQs(shuffled);
+          setDailyQIdx(0);
+          setDailyScore(0);
+          setDailySelectedOpt(null);
+          setDailyChecked(false);
+          setDailyActive(true);
+        }
+      } catch (err) {
+        console.error("Daily challenge start error:", err);
+        setDailyQs([]);
+        setDailyActive(false);
+      } finally {
+        setDailyLoading(false);
+      }
+    }, 600);
   };
 
   const handleDailyAnswerSelect = (idx: number) => {
@@ -804,11 +773,14 @@ export default function StudentGame({
           body: JSON.stringify({ xpEarned: 20, coinsEarned: 10, minutesEarned: 5 })
         }).then(() => {
           loadStudentProfile(activeStudent.id);
+          if (onUpdateStudent) {
+            onUpdateStudent(activeStudent.id);
+          }
         });
       }
       setDailyPlayedToday(true);
-      alert(`Daily Challenge completed! Gained +20 XP and +10 Coins!`);
       setDailyActive(false);
+      setShowDailyResults(true);
     }
   };
 
@@ -855,229 +827,56 @@ export default function StudentGame({
   };
 
   if (!activeStudent) {
+    const cachedStudentId = localStorage.getItem('bytequest_student_id');
+
     return (
-      <main className="max-w-md mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full min-h-[85vh] select-text">
-        <div className="parchment-panel rounded-2xl p-8 text-jungle-deep shadow-2xl relative flex flex-col justify-between">
-          <div>
-            <div className="flex justify-center mb-6">
-              <span className="text-5xl animate-bounce-slow">👑</span>
-            </div>
-            
-            {authMode === 'login' && (
+      <main className="max-w-md mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full min-h-[85vh] select-none font-sans">
+        <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] text-white rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(0,0,0,0.8)] relative flex flex-col justify-between text-center min-h-[300px]">
+          <div className="my-auto py-6">
+            {syncFailed ? (
               <>
-                <h3 className="font-adventure text-2xl md:text-3xl font-bold text-center text-gold-dark mb-1">Explorer Sign In</h3>
-                <p className="text-center text-xs font-semibold text-jungle-light mb-6">Enter your student credentials to continue</p>
-                <form onSubmit={handleLoginSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder="e.g. student@bytequest.com"
-                      className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Password</label>
-                    <input
-                      type="password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                      required
-                    />
-                  </div>
-                  {authError && (
-                    <div className="bg-red-50 text-red-700 text-xs p-2.5 rounded-lg font-semibold text-center border border-red-200">
-                      {authError}
-                    </div>
-                  )}
+                <span className="text-6xl block mb-6 animate-pulse">⚠️</span>
+                <h3 className="font-adventure text-xl font-bold text-red-500 uppercase tracking-widest mb-2">
+                  Unable to sync explorer profile
+                </h3>
+                <p className="text-white/60 text-xs font-semibold mb-8">
+                  We could not retrieve your explorer profile from the CS campaign records.
+                </p>
+                <div className="space-y-3">
                   <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    onClick={() => {
+                      if (cachedStudentId) {
+                        loadStudentProfile(cachedStudentId);
+                      } else {
+                        onBack();
+                      }
+                    }}
+                    className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
                   >
-                    {loading && <Loader className="w-4 h-4 animate-spin" />}
-                    Sign In
+                    Retry Sync
                   </button>
-                </form>
-                <div className="mt-6 text-center text-xs font-semibold text-jungle-light">
-                  New explorer?{' '}
-                  <button type="button" onClick={() => { setAuthError(''); setAuthMode('signup'); }} className="text-gold-dark hover:underline font-bold">
-                    Create an Account
+                  <button
+                    onClick={() => onBack()}
+                    className="w-full py-3 bg-stone-900 hover:bg-stone-850 text-white/80 font-adventure font-extrabold rounded-xl border border-white/10 uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                  >
+                    Back to Menu
                   </button>
                 </div>
               </>
-            )}
-
-            {authMode === 'signup' && (
+            ) : (
               <>
-                <h3 className="font-adventure text-2xl md:text-3xl font-bold text-center text-gold-dark mb-1">New Explorer Profile</h3>
-                <p className="text-center text-xs font-semibold text-jungle-light mb-6">Create your account to start the quest</p>
-                <form onSubmit={handleSignupSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">First Name</label>
-                      <input
-                        type="text"
-                        value={signupFirstName}
-                        onChange={(e) => setSignupFirstName(e.target.value)}
-                        placeholder="Aarav"
-                        className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Last Name</label>
-                      <input
-                        type="text"
-                        value={signupLastName}
-                        onChange={(e) => setSignupLastName(e.target.value)}
-                        placeholder="Sharma"
-                        className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Grade</label>
-                    <select
-                      value={signupGrade}
-                      onChange={(e) => setSignupGrade(e.target.value)}
-                      className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-bold text-sm"
-                    >
-                      <option value="10">Grade 10</option>
-                      <option value="11">Grade 11</option>
-                      <option value="12">Grade 12</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      placeholder="e.g. explorer@student.com"
-                      className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Password</label>
-                    <input
-                      type="password"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      placeholder="Min 6 characters"
-                      className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-semibold text-sm"
-                      required
-                    />
-                  </div>
-                  {authError && (
-                    <div className="bg-red-50 text-red-700 text-xs p-2.5 rounded-lg font-semibold text-center border border-red-200">
-                      {authError}
-                    </div>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {loading && <Loader className="w-4 h-4 animate-spin" />}
-                    Create Profile
-                  </button>
-                </form>
-                <div className="mt-6 text-center text-xs font-semibold text-jungle-light">
-                  Already have an account?{' '}
-                  <button type="button" onClick={() => { setAuthError(''); setAuthMode('login'); }} className="text-gold-dark hover:underline font-bold">
-                    Sign In
-                  </button>
+                <div className="flex justify-center mb-6">
+                  <Loader className="w-12 h-12 animate-spin text-[#D32F2F]" />
                 </div>
+                <h3 className="font-adventure text-xl font-bold text-[#FFD700] uppercase tracking-widest mb-2 animate-pulse">
+                  Syncing Explorer Profile...
+                </h3>
+                <p className="text-white/60 text-xs font-semibold">
+                  Connecting to ByteQuest database, please wait.
+                </p>
               </>
             )}
-
-            {authMode === 'wizard' && (
-              <>
-                <h3 className="font-adventure text-2xl md:text-3xl font-bold text-center text-gold-dark mb-1">Select Your Class</h3>
-                <p className="text-center text-xs font-semibold text-jungle-light mb-6">Choose your school and class section to enroll</p>
-                <form onSubmit={handleEnrollSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">1. Choose School</label>
-                    <select
-                      value={wSchoolId}
-                      onChange={(e) => handleSchoolSelect(e.target.value)}
-                      className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-bold text-sm"
-                      required
-                    >
-                      <option value="">Select School...</option>
-                      {schools.map(s => (
-                        <option key={s.id} value={s.id}>{s.name} ({s.district})</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  {wSchoolId && (
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">2. Choose Teacher</label>
-                      <select
-                        value={wTeacherId}
-                        onChange={(e) => handleTeacherSelect(e.target.value)}
-                        className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-bold text-sm"
-                        required
-                      >
-                        <option value="">Select Teacher...</option>
-                        {teachers.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {wTeacherId && (
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">3. Choose Class Section</label>
-                      <select
-                        value={wClassId}
-                        onChange={(e) => setWClassId(e.target.value)}
-                        className="w-full bg-parchment-light border border-gold-dark/40 rounded-lg px-3 py-2 text-jungle-deep focus:outline-none focus:border-gold font-bold text-sm"
-                        required
-                      >
-                        <option value="">Select Section...</option>
-                        {classes.map(c => (
-                          <option key={c.id} value={c.id}>{c.name} - Section {c.section}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loading || !wClassId}
-                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {loading && <Loader className="w-4 h-4 animate-spin" />}
-                    Request Enrollment
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => { setGameState('dashboard'); }}
-                    className="w-full py-2 bg-parchment-dark text-jungle-deep font-bold rounded-lg text-xs"
-                  >
-                    Skip & Play Offline
-                  </button>
-                </form>
-              </>
-            )}
-
           </div>
-
-          <button onClick={onBack} className="mt-8 text-center text-xs text-jungle-light font-bold hover:text-jungle-deep">
-            ← Back to Main Menu
-          </button>
         </div>
       </main>
     );
@@ -1087,155 +886,83 @@ export default function StudentGame({
     const pendingAssignments = activeStudent.assignments ? activeStudent.assignments.filter((a: any) => !a.isCompleted) : [];
 
     return (
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* MOBILE TOP APP BAR */}
-        <header className="flex md:hidden sticky top-0 bg-jungle-medium border-b border-jungle-light h-14 items-center px-4 justify-between z-40 select-none shadow-md">
-          <div className="flex items-center gap-3">
-            {activeTab !== 'dashboard' && (
+      <div className="flex-1 flex flex-col min-h-screen bg-gradient-to-b from-[#2A0F0F] via-[#1A0505] to-[#000000] text-white relative pb-20 select-none">
+        
+        {/* PREMIUM GAME OVERLAY HUD (TOP BAR) */}
+        <header className="sticky top-0 z-40 bg-[#1A0505]/95 backdrop-blur border-b-3 border-[#D32F2F] shadow-lg px-4 py-3 select-none text-white">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+            
+            <div className="flex items-center gap-2.5">
               <button
                 onClick={handleGoBack}
-                className="flex items-center justify-center w-8 h-8 rounded-lg bg-gold/10 border border-gold/30 text-gold hover:bg-gold/20 active:scale-95 transition-all text-xs font-bold font-adventure"
+                className="px-3.5 py-2 bg-gradient-to-b from-[#8B0000] to-[#5A0F0F] hover:brightness-110 text-white font-adventure font-extrabold rounded-xl border border-white/20 text-[9px] uppercase tracking-widest transition-all active:scale-95 shadow-md mr-1.5"
+                title="Return to Menu"
               >
-                ←
+                ← Exit
               </button>
-            )}
-            <div className="flex items-center gap-1.5">
-              <Compass className="text-gold w-5 h-5" />
-              <span className="font-adventure text-sm font-bold text-gold uppercase tracking-wider">
-                {activeTab === 'dashboard' && 'ByteQuest'}
-                {activeTab === 'new_adventure' && 'Adventure Hub'}
-                {activeTab === 'practice_quiz' && 'Practice Arena'}
-                {activeTab === 'daily_challenge' && 'Daily Challenge'}
-                {activeTab === 'leaderboard' && 'Roster Rankings'}
-                {activeTab === 'join_classroom' && 'Enroll Class'}
-                {activeTab === 'profile' && 'Explorer Profile'}
-                {activeTab === 'settings' && 'Portal Settings'}
-                {activeTab === 'continue' && 'Saved Matches'}
-              </span>
+              
+              {/* Player Info (Avatar, Name, Grade) */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-xl border border-white/20 bg-gradient-to-br from-[#8B0000] to-[#3B0F0F] flex items-center justify-center text-xl shadow-md">
+                    {editAvatar || '👾'}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 bg-amber-500 text-stone-950 font-adventure text-[7px] font-extrabold px-1 py-0.5 rounded border border-stone-950 shadow">
+                    L{activeStudent.level}
+                  </div>
+                </div>
+                <div className="leading-tight">
+                  <span className="font-adventure text-xs font-extrabold text-white block truncate max-w-[120px] uppercase">{activeStudent.name}</span>
+                  <span className="text-[8px] bg-[#7A0C0C]/55 border border-[#D32F2F]/40 text-amber-250 px-1.5 py-0.5 rounded-lg font-bold uppercase">Class {activeStudent.grade || 11}</span>
+                </div>
+              </div>
             </div>
-          </div>
-          
-          <div className="text-[10px] font-bold text-gold-light/80 bg-jungle-deep/45 px-2 py-1 rounded border border-jungle-light/20">
-            LVL {activeStudent.level}
+
+            {/* XP progress bar */}
+            <div className="flex-1 max-w-[180px] sm:max-w-xs space-y-1 hidden min-[380px]:block">
+              <div className="flex justify-between text-[8px] font-bold text-white/50 uppercase tracking-wider font-adventure leading-none">
+                <span>XP Level Progress</span>
+                <span>{activeStudent.xp} / 1000</span>
+              </div>
+              <div className="w-full h-2 bg-stone-950 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                <div 
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" 
+                  style={{ width: `${Math.min(100, (activeStudent.xp / 1000) * 100)}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Coins Counter & Utility Buttons */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 bg-[#3B0F0F] border border-[#FFD700]/30 px-2.5 py-1 rounded-xl text-amber-400 font-bold text-xs shadow-md">
+                <span>🪙</span>
+                <span className="font-mono">{activeStudent.coins}</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setAudioOn(!audioOn)}
+                  className="p-2 rounded-xl border border-white/10 bg-black/40 hover:border-white/20 text-white/70 hover:text-white transition-all active:scale-95 shadow-md"
+                  title="Toggle Sound"
+                >
+                  {audioOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-red-500" />}
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="p-2 rounded-xl border border-red-900/40 bg-[#7A0C0C]/40 hover:bg-[#7A0C0C]/60 text-red-200 transition-all active:scale-95 shadow-md"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
           </div>
         </header>
 
-        <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full px-4 py-4 md:py-8 gap-4 md:gap-8 select-text pb-20 md:pb-8">
-        {/* DESKTOP SIDEBAR */}
-        <aside className="hidden md:flex md:w-64 bg-jungle-medium border border-jungle-light rounded-2xl p-6 flex-col justify-between">
-          <div className="space-y-6">
-            <div className="flex items-center gap-2 border-b border-jungle-light pb-4">
-              <Compass className="text-gold w-6 h-6" />
-              <span className="font-adventure text-lg font-bold text-gold">Student Portal</span>
-            </div>
-
-            <nav className="flex flex-col gap-2">
-              <button 
-                onClick={() => { playBeep(350, 'sine', 0.05); setActiveTab('dashboard'); }}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'dashboard' ? 'bg-gold text-jungle-deep shadow-md' : 'text-offwhite hover:bg-jungle-deep/40'}`}
-              >
-                Dashboard
-              </button>
-              <button 
-                disabled={!roomCode}
-                onClick={() => { playBeep(370, 'sine', 0.05); setActiveTab('continue'); }}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 ${activeTab === 'continue' ? 'bg-gold text-jungle-deep shadow-md' : 'text-offwhite hover:bg-jungle-deep/40'}`}
-              >
-                Continue Adventure
-              </button>
-              <button 
-                onClick={() => { playBeep(390, 'sine', 0.05); setActiveTab('new_adventure'); }}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'new_adventure' ? 'bg-gold text-jungle-deep shadow-md' : 'text-offwhite hover:bg-jungle-deep/40'}`}
-              >
-                New Adventure
-              </button>
-              <button 
-                onClick={() => { playBeep(410, 'sine', 0.05); setActiveTab('practice_quiz'); }}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'practice_quiz' ? 'bg-gold text-jungle-deep shadow-md' : 'text-offwhite hover:bg-jungle-deep/40'}`}
-              >
-                Practice Quiz
-              </button>
-              <button 
-                onClick={() => { playBeep(430, 'sine', 0.05); setActiveTab('daily_challenge'); }}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'daily_challenge' ? 'bg-gold text-jungle-deep shadow-md' : 'text-offwhite hover:bg-jungle-deep/40'}`}
-              >
-                Daily Challenge
-              </button>
-              <button 
-                onClick={() => { playBeep(450, 'sine', 0.05); setActiveTab('leaderboard'); }}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'leaderboard' ? 'bg-gold text-jungle-deep shadow-md' : 'text-offwhite hover:bg-jungle-deep/40'}`}
-              >
-                Leaderboard
-              </button>
-              <button 
-                onClick={() => { playBeep(460, 'sine', 0.05); setActiveTab('join_classroom'); }}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'join_classroom' ? 'bg-gold text-jungle-deep shadow-md' : 'text-offwhite hover:bg-jungle-deep/40'}`}
-              >
-                Join Classroom
-              </button>
-              <button 
-                onClick={() => { playBeep(470, 'sine', 0.05); setActiveTab('profile'); }}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'profile' ? 'bg-gold text-jungle-deep shadow-md' : 'text-offwhite hover:bg-jungle-deep/40'}`}
-              >
-                Profile
-              </button>
-              <button 
-                onClick={() => { playBeep(490, 'sine', 0.05); setActiveTab('settings'); }}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'settings' ? 'bg-gold text-jungle-deep shadow-md' : 'text-offwhite hover:bg-jungle-deep/40'}`}
-              >
-                Settings
-              </button>
-            </nav>
-          </div>
-
-          <div className="pt-4 border-t border-jungle-light space-y-2">
-            <div className="flex items-center gap-2 px-2 text-offwhite/70 text-[10px] font-bold uppercase">
-              <User className="w-3.5 h-3.5 text-gold" />
-              <span>{activeStudent.name}</span>
-            </div>
-            <button 
-              onClick={handleLogout}
-              className="w-full flex items-center justify-between text-left px-4 py-2 rounded-lg text-xs font-bold text-rose-400 hover:bg-rose-950/40 transition-colors"
-            >
-              <span>Sign Out</span>
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </aside>
-
-        {/* MOBILE BOTTOM NAVIGATION BAR */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-jungle-medium border-t border-jungle-light flex md:hidden items-center justify-around z-50 px-2 shadow-2xl pb-safe">
-          <button
-            onClick={() => { playBeep(350, 'sine', 0.05); setActiveTab('dashboard'); }}
-            className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] font-bold ${activeTab === 'dashboard' ? 'text-gold' : 'text-offwhite/60'}`}
-          >
-            <span className="text-lg">🏠</span>
-            <span className="mt-0.5">Home</span>
-          </button>
-          <button
-            onClick={() => { playBeep(390, 'sine', 0.05); setActiveTab('new_adventure'); }}
-            className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] font-bold ${activeTab === 'new_adventure' ? 'text-gold' : 'text-offwhite/60'}`}
-          >
-            <span className="text-lg">🎮</span>
-            <span className="mt-0.5">Play</span>
-          </button>
-          <button
-            onClick={() => { playBeep(450, 'sine', 0.05); setActiveTab('leaderboard'); }}
-            className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] font-bold ${activeTab === 'leaderboard' ? 'text-gold' : 'text-offwhite/60'}`}
-          >
-            <span className="text-lg">🏆</span>
-            <span className="mt-0.5">Rankings</span>
-          </button>
-          <button
-            onClick={() => { playBeep(470, 'sine', 0.05); setActiveTab('profile'); }}
-            className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] font-bold ${activeTab === 'profile' ? 'text-gold' : 'text-offwhite/60'}`}
-          >
-            <span className="text-lg">👤</span>
-            <span className="mt-0.5">Profile</span>
-          </button>
-        </nav>
-
-        <section className="flex-1 min-h-[50vh]">
+        {/* MAIN GAME CONTENT VIEWPORT - Center Center Layout */}
+        <main className="max-w-4xl mx-auto w-full px-4 py-8 flex-1 flex flex-col justify-center select-text">
+          <section className="flex-1 min-h-[50vh] animate-scale-in">
           {activeTab === 'dashboard' && (
             <div className="space-y-4 md:space-y-6">
               {/* PROFILE CARD */}
@@ -1619,42 +1346,44 @@ export default function StudentGame({
                 <div className="max-w-lg mx-auto flex justify-start">
                   <button
                     onClick={handleGoBack}
-                    className="px-4 py-2 bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold rounded-lg text-xs uppercase font-adventure transition-all"
+                    className="px-4 py-2 bg-stone-850 hover:bg-stone-800 text-white font-bold rounded-full text-xs uppercase font-adventure transition-all"
                   >
                     ← Back
                   </button>
                 </div>
               )}
               {!quizActive ? (
-                <div className="parchment-panel rounded-2xl p-8 text-jungle-deep max-w-lg mx-auto space-y-4">
-                  <h3 className="font-adventure text-2xl font-bold text-center text-gold-dark">Practice Quiz Mode</h3>
-                  <p className="text-center text-xs font-semibold text-jungle-light">Select a study subject and difficulty. No board coordinates, no bots, just pure CS revision!</p>
+                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] rounded-[2rem] p-8 text-white max-w-lg mx-auto space-y-6 shadow-2xl font-sans">
+                  <h3 className="font-adventure text-2xl font-bold text-center text-[#D32F2F] uppercase tracking-wide">Practice Quiz Mode</h3>
+                  <p className="text-center text-xs font-semibold text-white/50">Select a study subject and difficulty. No board coordinates, no bots, just pure CS revision!</p>
 
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-jungle-light uppercase mb-0.5">Subject Topic</label>
+                      <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Subject Topic</label>
                       <select 
                         value={quizTopic} 
                         onChange={(e) => setQuizTopic(e.target.value)}
-                        className="w-full bg-parchment-light border border-gold-dark/45 rounded-lg px-3 py-2 text-xs font-bold"
+                        className="w-full bg-[#2A0F0F] border border-white/10 rounded-xl px-3 py-3 text-xs font-bold text-white focus:outline-none focus:border-[#D32F2F]"
                       >
-                        <option value="Python Programming">Python programming</option>
-                        <option value="Relational Databases">Relational Databases & SQL</option>
-                        <option value="Boolean Logic">Boolean Logic & Gates</option>
-                        <option value="Computer Networks">Computer Networking Basics</option>
+                        <option value="Python Programming" className="bg-stone-900 text-white">Python programming</option>
+                        <option value="Relational Databases" className="bg-stone-900 text-white">Relational Databases & SQL</option>
+                        <option value="Boolean Logic" className="bg-stone-900 text-white">Boolean Logic & Gates</option>
+                        <option value="Computer Networks" className="bg-stone-900 text-white">Computer Networking Basics</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-jungle-light uppercase mb-0.5">Select Difficulty</label>
+                      <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Select Difficulty</label>
                       <div className="grid grid-cols-3 gap-2">
                         {(['easy', 'medium', 'hard'] as const).map(diff => (
                           <button
                             key={diff}
                             onClick={() => setQuizDifficulty(diff)}
                             type="button"
-                            className={`py-2 border font-bold text-xs uppercase rounded-lg ${
-                              quizDifficulty === diff ? 'bg-gold border-gold text-jungle-deep' : 'bg-parchment-light border-gold-dark/30 text-jungle-light'
+                            className={`py-2.5 border font-bold text-xs uppercase rounded-xl transition-all ${
+                              quizDifficulty === diff 
+                                ? 'bg-[#D32F2F] border-[#D32F2F] text-white shadow-md' 
+                                : 'bg-[#2A0F0F] border-white/10 text-white/55 hover:bg-[#5A0F0F]'
                             }`}
                           >
                             {diff}
@@ -1666,44 +1395,45 @@ export default function StudentGame({
 
                   <button 
                     onClick={handleStartPracticeQuiz}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg shadow-md uppercase text-xs tracking-wider"
+                    className="w-full py-4 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold border-b-4 border-[#991B1B] rounded-xl shadow-lg uppercase text-xs tracking-wider transition-colors"
                   >
                     Start Training Quiz
                   </button>
                 </div>
               ) : (
-                <div className="parchment-panel rounded-2xl p-8 text-jungle-deep max-w-xl mx-auto space-y-6 relative">
-                  <div className="flex justify-between border-b border-gold-dark/20 pb-2 text-xs">
-                    <span>Topic: {quizTopic} ({quizDifficulty})</span>
+                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] rounded-[2rem] p-8 text-white max-w-xl mx-auto space-y-6 relative shadow-2xl font-sans">
+                  <div className="flex justify-between border-b border-white/10 pb-3 text-xs text-white/50 font-bold">
+                    <span>📚 Practice Quiz</span>
                     <span>Question {quizQIdx + 1} of 5</span>
                   </div>
 
-                  <p className="text-lg font-bold leading-relaxed">{quizQs[quizQIdx]?.question}</p>
+                  <p className="text-lg font-bold leading-relaxed text-white font-sans">{quizQs[quizQIdx]?.question}</p>
 
                   <div className="space-y-3">
                     {quizQs[quizQIdx]?.options.map((opt, oIdx) => {
-                      let style = 'bg-parchment-light border-gold-dark/35';
+                      let style = 'bg-[#2A0F0F] border-2 border-white/10 text-white/90 hover:bg-[#5A0F0F] hover:border-[#D32F2F]';
                       if (quizChecked) {
-                        if (oIdx === quizQs[quizQIdx].correctIndex) style = 'bg-emerald-100 border-emerald-500 text-emerald-950';
-                        else if (quizSelectedOpt === oIdx) style = 'bg-rose-100 border-rose-500 text-rose-950';
+                        if (oIdx === quizQs[quizQIdx].correctIndex) style = 'bg-emerald-950/80 border-2 border-emerald-500 text-emerald-355 font-bold';
+                        else if (quizSelectedOpt === oIdx) style = 'bg-red-950/80 border-2 border-red-500 text-red-355 font-bold';
                       } else if (quizSelectedOpt === oIdx) {
-                        style = 'bg-indigo-50 border-indigo-500 text-indigo-950 ring-2 ring-indigo-500';
+                        style = 'bg-[#7A0C0C]/60 border-2 border-[#D32F2F] text-white font-bold';
                       }
 
                       return (
                         <button
                           key={oIdx}
                           onClick={() => handleQuizAnswerSelect(oIdx)}
-                          className={`w-full text-left p-3.5 border rounded-xl text-xs font-semibold ${style}`}
+                          className={`w-full text-left p-4 border-2 rounded-xl text-xs font-bold transition-all ${style}`}
                         >
-                          {opt}
+                          {String.fromCharCode(65 + oIdx)}. {opt}
                         </button>
                       );
                     })}
                   </div>
 
                   {quizChecked && (
-                    <div className="bg-jungle-deep text-offwhite p-3.5 rounded-lg text-xs">
+                    <div className="bg-stone-900/60 border border-white/5 p-4 rounded-xl text-xs text-white/70 leading-relaxed font-semibold">
+                      <strong className="text-[#FFD700] block mb-1">Explanation:</strong>
                       {quizQs[quizQIdx]?.explanation}
                     </div>
                   )}
@@ -1713,14 +1443,14 @@ export default function StudentGame({
                       <button 
                         onClick={handleQuizCheck}
                         disabled={quizSelectedOpt === null}
-                        className="flex-1 py-3 bg-gold text-jungle-deep font-bold rounded-lg uppercase text-xs"
+                        className="flex-1 py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase text-xs disabled:opacity-50 transition-colors"
                       >
                         Check Answer
                       </button>
                     ) : (
                       <button 
                         onClick={handleQuizNext}
-                        className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-lg uppercase text-xs"
+                        className="flex-1 py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase text-xs transition-colors"
                       >
                         {quizQIdx === 4 ? 'Complete Quiz' : 'Next Question'}
                       </button>
@@ -1733,68 +1463,80 @@ export default function StudentGame({
 
           {activeTab === 'daily_challenge' && (
             <div className="space-y-6">
-              {!dailyActive && (
-                <div className="max-w-lg mx-auto flex justify-start">
-                  <button
-                    onClick={handleGoBack}
-                    className="px-4 py-2 bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold rounded-lg text-xs uppercase font-adventure transition-all"
-                  >
-                    ← Back
-                  </button>
+              {dailyLoading && (
+                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in">
+                  <div className="flex justify-center mb-6">
+                    <Loader className="w-12 h-12 animate-spin text-[#D32F2F]" />
+                  </div>
+                  <h3 className="font-adventure text-xl font-bold text-[#FFD700] uppercase tracking-widest mb-2 animate-pulse">
+                    LOADING DAILY CHALLENGE...
+                  </h3>
+                  <p className="text-white/60 text-xs font-semibold">
+                    Fetching today's curriculum questions, please wait.
+                  </p>
                 </div>
               )}
-              {!dailyActive ? (
-                <div className="parchment-panel rounded-2xl p-8 text-jungle-deep max-w-lg mx-auto space-y-4 text-center">
-                  <span className="text-6xl block">⚡</span>
-                  <h3 className="font-adventure text-2xl font-bold text-gold-dark">CS Daily Challenge</h3>
-                  <p className="text-xs font-semibold text-jungle-light">Complete one mixed curriculum quiz of 5 questions per day to unlock +20 XP and +10 Coins!</p>
-                  
-                  {dailyPlayedToday ? (
-                    <div className="bg-amber-50 text-amber-800 text-xs p-3.5 rounded-xl border border-amber-300 font-bold">
-                      ✔ You have completed today's daily challenge. Check back tomorrow!
-                    </div>
-                  ) : (
-                    <button 
+
+              {!dailyLoading && !dailyActive && !showDailyResults && (
+                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in">
+                  <span className="text-5xl block mb-6 animate-pulse">⚠️</span>
+                  <h3 className="font-adventure text-xl font-bold text-red-500 uppercase tracking-widest mb-2">
+                    Unable to load today's challenge.
+                  </h3>
+                  <p className="text-white/60 text-xs font-semibold mb-8">
+                    No questions could be loaded from the challenge bank.
+                  </p>
+                  <div className="space-y-3">
+                    <button
                       onClick={handleStartDailyChallenge}
-                      className="px-8 py-3 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg border-2 border-gold-dark text-xs uppercase"
+                      className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
                     >
-                      Start Challenge
+                      Retry
                     </button>
-                  )}
+                    <button
+                      onClick={() => onBack()}
+                      className="w-full py-3 bg-stone-900 hover:bg-stone-850 text-white/80 font-adventure font-extrabold rounded-xl border border-white/10 uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                    >
+                      Back to Menu
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="parchment-panel rounded-2xl p-8 text-jungle-deep max-w-xl mx-auto space-y-6 relative">
-                  <div className="flex justify-between border-b border-gold-dark/20 pb-2 text-xs">
+              )}
+
+              {!dailyLoading && dailyActive && (
+                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] p-8 text-white max-w-xl mx-auto space-y-6 relative rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] font-sans animate-scale-in">
+                  <div className="flex justify-between border-b border-white/10 pb-3 text-xs text-white/50 font-bold">
                     <span>⚡ Daily Challenge Quiz</span>
                     <span>Question {dailyQIdx + 1} of 5</span>
                   </div>
 
-                  <p className="text-lg font-bold leading-relaxed">{dailyQs[dailyQIdx]?.question}</p>
+                  <p className="text-lg font-bold leading-relaxed text-white font-sans">{dailyQs[dailyQIdx]?.question}</p>
 
                   <div className="space-y-3">
                     {dailyQs[dailyQIdx]?.options.map((opt, oIdx) => {
-                      let style = 'bg-parchment-light border-gold-dark/35';
+                      let style = 'bg-[#2A0F0F] border-2 border-white/10 text-white/90 hover:bg-[#5A0F0F] hover:border-[#D32F2F]';
                       if (dailyChecked) {
-                        if (oIdx === dailyQs[dailyQIdx].correctIndex) style = 'bg-emerald-100 border-emerald-500 text-emerald-950';
-                        else if (dailySelectedOpt === oIdx) style = 'bg-rose-100 border-rose-500 text-rose-950';
+                        if (oIdx === dailyQs[dailyQIdx].correctIndex) style = 'bg-emerald-950/80 border-2 border-emerald-500 text-emerald-350 font-bold';
+                        else if (dailySelectedOpt === oIdx) style = 'bg-red-950/80 border-2 border-red-500 text-red-350 font-bold';
                       } else if (dailySelectedOpt === oIdx) {
-                        style = 'bg-indigo-50 border-indigo-500 text-indigo-950 ring-2 ring-indigo-500';
+                        style = 'bg-[#7A0C0C]/60 border-2 border-[#D32F2F] text-white font-bold';
                       }
 
                       return (
                         <button
                           key={oIdx}
                           onClick={() => handleDailyAnswerSelect(oIdx)}
-                          className={`w-full text-left p-3.5 border rounded-xl text-xs font-semibold ${style}`}
+                          className={`w-full text-left p-4 border-2 rounded-xl text-xs font-bold transition-all ${style}`}
                         >
-                          {opt}
+                          {String.fromCharCode(65 + oIdx)}. {opt}
                         </button>
                       );
                     })}
                   </div>
 
                   {dailyChecked && (
-                    <div className="bg-jungle-deep text-offwhite p-3.5 rounded-lg text-xs">
+                    <div className="bg-stone-900/60 border border-white/5 p-4 rounded-xl text-xs text-white/70 leading-relaxed font-semibold">
+                      <strong className="text-[#FFD700] block mb-1">Explanation:</strong>
                       {dailyQs[dailyQIdx]?.explanation}
                     </div>
                   )}
@@ -1804,14 +1546,14 @@ export default function StudentGame({
                       <button 
                         onClick={handleDailyCheck}
                         disabled={dailySelectedOpt === null}
-                        className="flex-1 py-3 bg-gold text-jungle-deep font-bold rounded-lg uppercase text-xs"
+                        className="flex-1 py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase text-xs disabled:opacity-50 transition-colors"
                       >
                         Check Answer
                       </button>
                     ) : (
                       <button 
                         onClick={handleDailyNext}
-                        className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-lg uppercase text-xs"
+                        className="flex-1 py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase text-xs transition-colors"
                       >
                         {dailyQIdx === 4 ? 'Finish challenge' : 'Next Question'}
                       </button>
@@ -1819,21 +1561,52 @@ export default function StudentGame({
                   </div>
                 </div>
               )}
+
+              {!dailyLoading && showDailyResults && (
+                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in space-y-6">
+                  <span className="text-5xl block mb-2">🏆</span>
+                  <h3 className="font-adventure text-2xl font-bold text-[#FFD700] uppercase tracking-widest">
+                    CHALLENGE COMPLETE
+                  </h3>
+                  
+                  <div className="bg-[#2A0F0F] border border-white/10 p-5 rounded-2xl max-w-xs mx-auto space-y-2">
+                    <div className="flex justify-between font-bold text-xs text-white/60">
+                      <span>Correct Answers:</span>
+                      <span className="text-emerald-400">{dailyScore} / 5</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-xs text-white/60">
+                      <span>Experience Gained:</span>
+                      <span className="text-purple-400">+20 XP</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-xs text-white/60">
+                      <span>Gold Earned:</span>
+                      <span className="text-amber-400">🪙 +10 Coins</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => onBack()}
+                    className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                  >
+                    Return to Menu
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === 'leaderboard' && (
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-4">
-              <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-2">
+            <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] rounded-[1.5rem] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-white space-y-4 max-w-2xl mx-auto font-sans">
+              <div className="flex items-center gap-3 border-b border-white/10 pb-2 mb-2">
                 <button
                   onClick={handleGoBack}
-                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                  className="px-3 py-1.5 rounded-lg bg-stone-850 hover:bg-stone-800 text-white font-bold text-xs uppercase font-adventure transition-all"
                 >
                   ← Back
                 </button>
-                <h3 className="font-adventure text-xl font-bold text-gold">Class Leaderboard</h3>
+                <h3 className="font-adventure text-xl font-bold text-[#FFD700] uppercase tracking-wide">Class Leaderboard</h3>
               </div>
-              <p className="text-gold-light text-xs">Standings of other students in: <span className="font-bold text-white">{activeStudent.className}</span></p>
+              <p className="text-white/60 text-xs font-semibold">Standings of other students in: <span className="font-bold text-[#D32F2F] uppercase">{activeStudent.className}</span></p>
 
               <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
                 {[
@@ -1844,17 +1617,17 @@ export default function StudentGame({
                 ].sort((a,b)=>b.xp - a.xp).map((student, idx) => (
                   <div 
                     key={idx} 
-                    className={`p-4 rounded-xl flex justify-between items-center border ${
-                      student.isMe ? 'bg-gold border-gold text-jungle-deep' : 'bg-jungle-deep/50 border-jungle-light/20 text-offwhite'
+                    className={`p-4 rounded-xl flex justify-between items-center border-2 ${
+                      student.isMe ? 'bg-[#7A0C0C]/60 border-[#D32F2F] text-white' : 'bg-[#2A0F0F] border-white/5 text-white/80'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="font-bold font-mono">#{idx+1}</span>
-                      <span className="font-bold">{student.name} {student.isMe ? '(You)' : ''}</span>
+                      <span className="font-adventure font-extrabold text-sm text-[#FFD700]">#{idx+1}</span>
+                      <span className="font-bold text-xs">{student.name} {student.isMe ? '(You)' : ''}</span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-semibold">
+                    <div className="flex items-center gap-4 text-xs font-adventure font-extrabold text-[#D32F2F]">
                       <span>⭐ {student.xp} XP</span>
-                      <span>🪙 {student.coins} Coins</span>
+                      <span className="text-amber-400">🪙 {student.coins} Coins</span>
                     </div>
                   </div>
                 ))}
@@ -1863,80 +1636,81 @@ export default function StudentGame({
           )}
 
           {activeTab === 'join_classroom' && (
-            <div className="bg-jungle-medium border border-jungle-light p-6 rounded-2xl space-y-6">
-              <div className="flex items-center gap-3 border-b border-jungle-light pb-2 mb-2">
+            <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] rounded-[1.5rem] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-white space-y-6 max-w-2xl mx-auto font-sans">
+              <div className="flex items-center gap-3 border-b border-white/10 pb-2 mb-2">
                 <button
                   onClick={handleGoBack}
-                  className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                  className="px-3 py-1.5 rounded-lg bg-stone-850 hover:bg-stone-800 text-white font-bold text-xs uppercase font-adventure transition-all"
                 >
                   ← Back
                 </button>
-                <h3 className="font-adventure text-xl font-bold text-gold">Join Classroom</h3>
+                <h3 className="font-adventure text-xl font-bold text-[#FFD700] uppercase tracking-wide">Join Classroom</h3>
               </div>
-              <p className="text-gold-light text-xs">Enter a unique Join Code provided by your teacher to connect with your class.</p>
+              <p className="text-white/60 text-xs font-semibold">Enter a unique Join Code provided by your teacher to connect with your class.</p>
 
               <form onSubmit={handleJoinCodeSubmit} className="space-y-4 max-w-md">
                 <div>
-                  <label className="block text-xs font-bold text-gold-light mb-1.5 uppercase">Classroom Join Code</label>
+                  <label className="block text-xs font-bold text-white/40 mb-1.5 uppercase tracking-wider">Classroom Join Code</label>
                   <input
                     type="text"
                     value={joinCodeInput}
                     onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
                     placeholder="e.g. BQ4X92"
-                    className="w-full bg-jungle-deep border border-jungle-light/40 rounded-xl p-3 text-offwhite text-sm font-mono tracking-widest font-bold focus:border-gold outline-none"
+                    className="w-full bg-[#2A0F0F] border border-white/10 rounded-xl p-3 text-white text-sm font-mono tracking-widest font-bold focus:border-[#D32F2F] outline-none"
                     maxLength={10}
                     required
                   />
                 </div>
                 <button
+                  id="classroom-join-submit-btn"
                   type="submit"
-                  className="w-full py-3 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-xl uppercase transition-all shadow-md"
+                  className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] border-b-4 border-[#991B1B] text-white font-adventure font-extrabold rounded-xl uppercase transition-all shadow-md active:scale-95 text-xs tracking-wider"
                 >
                   Request to Join
                 </button>
               </form>
 
               {joinClassroomStatus && (
-                <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 p-4 rounded-xl text-xs font-semibold">
+                <div className="bg-emerald-950/70 border border-emerald-500/30 text-emerald-400 p-4 rounded-xl text-xs font-semibold">
                   {joinClassroomStatus}
                 </div>
               )}
               {joinClassroomError && (
-                <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-4 rounded-xl text-xs font-semibold">
+                <div className="bg-rose-950/70 border border-rose-500/30 text-rose-400 p-4 rounded-xl text-xs font-semibold">
                   {joinClassroomError}
                 </div>
               )}
 
-              <div className="pt-6 border-t border-jungle-light/25 space-y-4">
-                <h4 className="font-adventure text-md font-bold text-gold">Current Classroom Connection Status</h4>
+              <div className="pt-6 border-t border-white/10 space-y-4">
+                <h4 className="font-adventure text-md font-bold text-[#FFD700] uppercase tracking-wider">Current Classroom Connection Status</h4>
                 {activeStudent.classId ? (
-                  <div className="p-4 bg-jungle-deep/50 border border-jungle-light/35 rounded-xl text-xs text-white space-y-2">
+                  <div className="p-4 bg-[#2A0F0F] border border-white/5 rounded-xl text-xs text-white space-y-2">
                     <div>
-                      <span className="font-bold text-sm block text-gold">Successfully Joined Class</span>
-                      <span className="text-[10px] text-offwhite/60 block">Class ID: {activeStudent.classId}</span>
+                      <span className="font-bold text-sm block text-[#FFD700]">Successfully Joined Class</span>
+                      <span className="text-[10px] text-white/40 block">Class ID: {activeStudent.classId}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-offwhite text-[11px] pt-1">
-                      <div><strong className="text-gold-light">Name:</strong> {activeStudent.className}</div>
-                      <div><strong className="text-gold-light">Section:</strong> {activeStudent.classSection || 'A'}</div>
-                      <div><strong className="text-gold-light">Grade:</strong> Class {activeStudent.classGrade || activeStudent.grade || 11}</div>
-                      <div><strong className="text-gold-light">Subject:</strong> {activeStudent.classSubject || 'Computer Science'}</div>
-                      <div><strong className="text-gold-light">Teacher:</strong> {activeStudent.teacherName || 'Assigned Teacher'}</div>
+                    <div className="grid grid-cols-2 gap-2 text-white/80 text-[11px] pt-1">
+                      <div><strong className="text-white/50">Name:</strong> {activeStudent.className}</div>
+                      <div><strong className="text-white/50">Section:</strong> {activeStudent.classSection || 'A'}</div>
+                      <div><strong className="text-white/50">Grade:</strong> Class {activeStudent.classGrade || activeStudent.grade || 11}</div>
+                      <div><strong className="text-white/50">Subject:</strong> {activeStudent.classSubject || 'Computer Science'}</div>
+                      <div><strong className="text-white/50">Teacher:</strong> {activeStudent.teacherName || 'Assigned Teacher'}</div>
                     </div>
                   </div>
                 ) : activeStudent.pendingClass ? (
-                  <div className="p-4 bg-jungle-deep/50 border border-yellow-500/40 rounded-xl text-xs text-white space-y-2">
+                  <div className="p-4 bg-[#2A0F0F] border border-yellow-500/30 rounded-xl text-xs text-white space-y-2">
                     <span className="font-bold text-sm block text-yellow-400 animate-pulse">Pending Teacher Approval</span>
-                    <p className="text-[11px] text-offwhite/85">Waiting for teacher approval to join class:</p>
-                    <div className="grid grid-cols-2 gap-2 text-offwhite text-[11px] pt-1">
-                      <div><strong className="text-gold-light">Name:</strong> {activeStudent.pendingClass.className}</div>
-                      <div><strong className="text-gold-light">Section:</strong> {activeStudent.pendingClass.classSection || 'A'}</div>
-                      <div><strong className="text-gold-light">Grade:</strong> Class {activeStudent.pendingClass.classGrade || 11}</div>
-                      <div><strong className="text-gold-light">Subject:</strong> {activeStudent.pendingClass.classSubject || 'Computer Science'}</div>
-                      <div><strong className="text-gold-light">Teacher:</strong> {activeStudent.pendingClass.teacherName}</div>
+                    <p className="text-[11px] text-white/60">Waiting for teacher approval to join class:</p>
+                    <div className="grid grid-cols-2 gap-2 text-white/80 text-[11px] pt-1">
+                      <div><strong className="text-white/50">Name:</strong> {activeStudent.pendingClass.className}</div>
+                      <div><strong className="text-white/50">Section:</strong> {activeStudent.pendingClass.classSection || 'A'}</div>
+                      <div><strong className="text-white/50">Grade:</strong> Class {activeStudent.pendingClass.classGrade || 11}</div>
+                      <div><strong className="text-white/50">Subject:</strong> {activeStudent.pendingClass.classSubject || 'Computer Science'}</div>
+                      <div><strong className="text-white/50">Teacher:</strong> {activeStudent.pendingClass.teacherName}</div>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-jungle-deep/50 border border-jungle-light/20 rounded-xl text-xs text-offwhite/50 italic">
+                  <div className="p-4 bg-[#2A0F0F] border border-white/5 rounded-xl text-xs text-white/40 italic font-semibold">
                     Not currently enrolled in any classroom. Please enter a Join Code above to request access.
                   </div>
                 )}
@@ -2238,8 +2012,8 @@ export default function StudentGame({
               </div>
             </div>
           )}
-        </section>
-      </div>
+          </section>
+        </main>
       </div>
     );
   }
@@ -2280,15 +2054,37 @@ export default function StudentGame({
       )}
 
 
+      {/* LOBBY CONNECTING STATE: when lobby gameState is set but socket room not yet established */}
+      {gameState === 'lobby' && !syncState && (
+        <main className="max-w-4xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full font-sans animate-scale-in">
+          <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] text-white rounded-[2.5rem] p-10 shadow-[0_10px_40px_rgba(0,0,0,0.8)] text-center">
+            <div className="text-6xl mb-6 animate-pulse">⚔️</div>
+            <h2 className="font-adventure text-2xl md:text-3xl font-extrabold text-[#D32F2F] uppercase tracking-widest mb-3">Setting Up Lobby...</h2>
+            <p className="text-white/60 text-sm font-semibold mb-8">Connecting to the ByteQuest multiplayer network.</p>
+            <div className="flex items-center justify-center gap-2">
+              <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+              <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+              <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+            </div>
+            <button
+              onClick={() => { onBack(); }}
+              className="mt-10 px-6 py-3 bg-[#3B0F0F] hover:bg-[#5A1A1A] text-white/70 hover:text-white font-adventure font-bold rounded-xl border border-white/15 text-xs uppercase tracking-widest transition-all"
+            >
+              ← Cancel &amp; Return to Menu
+            </button>
+          </div>
+        </main>
+      )}
+
       {gameState === 'lobby' && syncState && (
-        <main className="max-w-4xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full">
-          <div className="parchment-panel rounded-2xl p-8 text-jungle-deep shadow-2xl">
+        <main className="max-w-4xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full font-sans animate-scale-in">
+          <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] text-white rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
             
             {/* Room Success Banner for Host */}
             {(syncState.roomCode.startsWith('BQ') || !syncState.classId) && (
-              <div className="bg-emerald-950/70 border border-emerald-500/50 p-4 rounded-xl mb-6 text-emerald-200 text-xs font-semibold flex flex-col sm:flex-row items-center justify-between gap-4 select-text">
+              <div className="bg-emerald-950/70 border border-emerald-500/50 p-4 rounded-xl mb-6 text-emerald-250 text-xs font-semibold flex flex-col sm:flex-row items-center justify-between gap-4 select-text">
                 <div>
-                  <span className="font-adventure text-sm text-gold block mb-0.5">🎉 Room Created Successfully!</span>
+                  <span className="font-adventure text-sm text-[#FFD700] block mb-0.5">🎉 Room Created Successfully!</span>
                   Share this code with your friends so they can join your adventure lobby.
                 </div>
                 <div className="flex gap-2">
@@ -2297,7 +2093,7 @@ export default function StudentGame({
                       navigator.clipboard.writeText(syncState.roomCode);
                       alert("Room code copied to clipboard!");
                     }}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold uppercase text-[9px]"
+                    className="px-3 py-1.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white rounded font-bold uppercase text-[9px]"
                   >
                     Copy Code
                   </button>
@@ -2313,7 +2109,7 @@ export default function StudentGame({
                         alert(`Share this code: ${syncState.roomCode}`);
                       }
                     }}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-bold uppercase text-[9px]"
+                    className="px-3 py-1.5 bg-[#D32F2F] hover:bg-red-550 text-white rounded font-bold uppercase text-[9px]"
                   >
                     Share
                   </button>
@@ -2321,39 +2117,39 @@ export default function StudentGame({
               </div>
             )}
 
-            <div className="flex justify-between items-center border-b border-gold-dark/25 pb-3 mb-6">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-6">
               <div>
-                <span className="text-[10px] block font-bold text-jungle-light uppercase font-sans">
+                <span className="text-[10px] block font-bold text-white/50 uppercase font-sans">
                   {syncState.roomCode.startsWith('BQ') ? (
                     `${lobbyConfigPrivate ? '🔒 Private' : '🌐 Public'} Lobby • Grade ${lobbyConfigGrade.toUpperCase()}`
                   ) : (
                     'Multiplayer Lobby'
                   )}
                 </span>
-                <h3 className="font-adventure text-2xl md:text-3xl font-bold">
+                <h3 className="font-adventure text-2xl md:text-3xl font-bold text-[#D32F2F] uppercase tracking-wide">
                   {syncState.roomCode.startsWith('BQ') && lobbyConfigName ? lobbyConfigName : `Room Code: ${syncState.roomCode}`}
                 </h3>
                 {syncState.roomCode.startsWith('BQ') && (
-                  <p className="text-[10px] text-jungle-light font-bold mt-1">
-                    Room Code: <span className="font-mono text-xs font-extrabold bg-parchment-dark px-1.5 py-0.5 rounded text-jungle-deep select-all">{syncState.roomCode}</span>
+                  <p className="text-[10px] text-white/60 font-bold mt-1">
+                    Room Code: <span className="font-mono text-xs font-extrabold bg-[#1A0505] border border-[#D32F2F] px-1.5 py-0.5 rounded text-white select-all">{syncState.roomCode}</span>
                     <span className="ml-2">• Capacity: {syncState.teams.length} / {lobbyConfigMaxPlayers} Teams</span>
                   </p>
                 )}
               </div>
-              <span className="px-3 py-1 bg-amber-100 border border-amber-500 rounded-full font-bold text-[10px] text-amber-800 animate-pulse font-sans shrink-0">Waiting for Players</span>
+              <span className="px-3 py-1 bg-amber-950/60 border border-amber-500/30 rounded-full font-bold text-[10px] text-amber-300 animate-pulse font-sans shrink-0">Waiting for Players</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
               <div>
-                <h4 className="font-adventure text-lg font-bold text-gold-dark mb-3">Enrolled Explorers</h4>
+                <h4 className="font-adventure text-lg font-bold text-[#FFD700] mb-3">Enrolled Explorers</h4>
                 <div className="space-y-3 text-xs">
                   {syncState.teams.map((t: any) => (
-                    <div key={t.id} className="p-3 bg-jungle-deep/5 border border-gold-dark/20 rounded-xl flex items-center justify-between font-semibold">
+                    <div key={t.id} className="p-3 bg-[#2A0F0F] border border-white/10 rounded-xl flex items-center justify-between font-semibold">
                       <div className="flex items-center gap-2">
                         <span className={`w-3.5 h-3.5 rounded-full ${t.color}`}></span>
                         <span>{t.name}</span>
                       </div>
-                      <span className="text-[9px] text-jungle-light font-bold">
+                      <span className="text-[9px] text-white/65 font-bold">
                         {t.members.length} {t.members.length === 1 ? 'player' : 'players'} connected
                       </span>
                     </div>
@@ -2361,9 +2157,9 @@ export default function StudentGame({
                 </div>
               </div>
 
-              <div className="bg-parchment-light border border-gold-dark/20 rounded-xl p-5 text-xs text-jungle-light leading-relaxed">
-                <h4 className="font-adventure text-gold-dark text-sm font-bold mb-2 uppercase">Ludo Map Game Rules</h4>
-                <ul className="list-disc pl-4 space-y-1 font-semibold font-sans">
+              <div className="bg-[#2A0F0F] border border-white/5 rounded-xl p-5 text-xs text-white/70 leading-relaxed font-semibold">
+                <h4 className="font-adventure text-[#FFD700] text-sm font-bold mb-2 uppercase">Ludo Map Game Rules</h4>
+                <ul className="list-disc pl-4 space-y-1 font-semibold font-sans font-medium text-white/80">
                   <li>Multiple players can share the same tile safely.</li>
                   <li>Incorrect answers queue the question for retry and prevent forward movement.</li>
                 </ul>
@@ -2375,7 +2171,7 @@ export default function StudentGame({
                 <button 
                   onClick={handleStartPracticeGame}
                   disabled={syncState.teams.length < 2}
-                  className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-500 disabled:opacity-50 text-white font-bold rounded-lg shadow-md transition-colors text-xs uppercase"
+                  className="flex-1 py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] border-b-4 border-[#991B1B] disabled:bg-gray-500 disabled:opacity-50 text-white font-adventure font-extrabold rounded-lg shadow-md transition-all active:scale-95 text-xs uppercase"
                 >
                   {syncState.teams.length < 2 ? 'Need 2+ Players to Start' : 'Start Room'}
                 </button>
@@ -2385,7 +2181,7 @@ export default function StudentGame({
                   if (socket) socket.emit('room:leave', { roomCode: syncState.roomCode });
                   setGameState('dashboard');
                 }}
-                className="px-6 py-3.5 bg-parchment-dark text-jungle-deep font-bold border border-gold-dark/30 rounded-lg text-xs uppercase"
+                className="px-6 py-3.5 bg-stone-800 border border-white/10 hover:bg-stone-750 text-white font-adventure font-extrabold rounded-lg text-xs uppercase transition-colors"
               >
                 Leave Lobby
               </button>
@@ -2787,12 +2583,10 @@ export default function StudentGame({
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
               <button 
                 onClick={() => {
-                  setLobbyConfigName(`${activeStudent.name}'s Party`);
+                  setLobbyConfigName('');
                   setLobbyConfigGrade('mixed');
                   setLobbyConfigMaxPlayers(4);
                   setLobbyConfigPrivate(false);
-                  setGameState('dashboard');
-                  setActiveTab('new_adventure');
                   setShowLobbyConfigModal(true);
                 }}
                 className="px-6 py-3 bg-gold text-jungle-deep font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
@@ -2800,16 +2594,10 @@ export default function StudentGame({
                 Play Again
               </button>
               <button 
-                onClick={() => { setGameState('dashboard'); setActiveTab('new_adventure'); }}
-                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
+                onClick={() => { onBack(); }}
+                className="px-6 py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
               >
-                Back to Explorer Launchpad
-              </button>
-              <button 
-                onClick={() => { setGameState('dashboard'); setActiveTab('dashboard'); }}
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs uppercase shadow-md hover:scale-105 active:scale-95 transition-all"
-              >
-                Return to Dashboard
+                Return to Main Menu
               </button>
             </div>
           </div>

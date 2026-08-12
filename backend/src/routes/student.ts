@@ -299,6 +299,17 @@ router.get('/profile/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Student not found' });
     }
 
+    // Fetch real player statistics
+    const gamesWon = await prisma.sessionResult.count({
+      where: { studentId: student.id, rank: 1 }
+    });
+    const questionsAnswered = await prisma.playerMove.count({
+      where: { studentId: student.id, isAnswerCorrect: { not: null } }
+    });
+    const correctAnswers = await prisma.playerMove.count({
+      where: { studentId: student.id, isAnswerCorrect: true }
+    });
+
     // Check if there is a pending join request
     const pendingRequest = await prisma.joinRequest.findFirst({
       where: { studentId: student.id, status: 'PENDING' },
@@ -324,6 +335,10 @@ router.get('/profile/:id', async (req: Request, res: Response) => {
         classGrade: student.class?.grade || null,
         classSubject: student.class?.subject || null,
         teacherName: student.class?.teacher ? `${student.class.teacher.user.firstName} ${student.class.teacher.user.lastName}` : null,
+        gamesPlayed: student.matchesPlayed,
+        gamesWon,
+        questionsAnswered,
+        correctAnswers,
         pendingClass: pendingRequest ? {
           className: pendingRequest.class.name,
           classSection: pendingRequest.class.section,
