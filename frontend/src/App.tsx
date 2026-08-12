@@ -2168,21 +2168,6 @@ export default function App() {
                     <div className="absolute inset-3">
                       {/* Subtle center radial glow */}
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(211,47,47,0.04),transparent_70%)] pointer-events-none rounded-xl"></div>
-                      {/* Explorer Deck (Decorative card stack) */}
-                      <div className="absolute bottom-4 left-4 z-10 flex flex-col items-center select-none group pointer-events-auto">
-                        <div className="relative w-12 h-16 sm:w-16 sm:h-22">
-                          <div className="absolute inset-0 rounded-lg bg-slate-200 border-2 border-slate-300 translate-x-2 translate-y-2 opacity-40"></div>
-                          <div className="absolute inset-0 rounded-lg bg-slate-100 border-2 border-slate-200 translate-x-1 translate-y-1 opacity-70"></div>
-                          <div className="absolute inset-0 rounded-lg bg-white border-2 border-[#D32F2F] flex flex-col items-center justify-center p-1.5 transition-transform duration-300 group-hover:-translate-y-1">
-                            <div className="w-full h-full border border-[#D32F2F]/30 rounded-md flex items-center justify-center bg-slate-50">
-                              <div className="w-4 h-4 bg-[#D32F2F] rotate-45 flex items-center justify-center shadow-sm">
-                                <div className="w-1.5 h-1.5 bg-white"></div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-[8px] font-adventure text-slate-400 mt-1 opacity-75 tracking-wider uppercase">Explorer Deck</span>
-                      </div>
 
                       {/* SVG path mapping */}
                       <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
