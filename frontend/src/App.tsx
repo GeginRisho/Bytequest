@@ -545,7 +545,6 @@ export default function App() {
   }, [viewMode, localScreen, localPlayers, localTurnIdx, localMapName, localAskedQs, localPendingBotQuestions, localPlayerSolvedQuestionIds, localBotSolvedQuestionIds]);
 
   // local quiz timer hook
-  localHandleTimeOutRef.current = localHandleTimeOut;
   useEffect(() => {
     if (localActiveQuestion && localQuizPhase === 'answering' && viewMode === 'local' && localScreen === 'board') {
       if (localTimerIntervalRef.current) clearInterval(localTimerIntervalRef.current);
@@ -1226,6 +1225,7 @@ export default function App() {
       localPassTurn();
     }, 3500);
   };
+  localHandleTimeOutRef.current = localHandleTimeOut;
 
   const localApplyBacktrack = (steps: number) => {
     setLocalScorePopup({ text: `Retreating ${steps} Tiles! 🕸️`, success: false });
