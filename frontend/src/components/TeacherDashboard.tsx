@@ -68,6 +68,8 @@ interface TeacherDashboardProps {
   setActiveTab: (tab: 'dashboard' | 'classes' | 'teachers' | 'students' | 'questions' | 'leaderboard' | 'reports' | 'settings' | 'profile' | 'requests') => void;
   showTeacherModal: 'create' | 'edit' | 'reset-password' | null;
   setShowTeacherModal: (modal: 'create' | 'edit' | 'reset-password' | null) => void;
+  theme: string;
+  setTheme: (theme: string) => void;
 }
 
 export default function TeacherDashboard({ 
@@ -76,7 +78,9 @@ export default function TeacherDashboard({
   activeTab,
   setActiveTab,
   showTeacherModal,
-  setShowTeacherModal
+  setShowTeacherModal,
+  theme,
+  setTheme
 }: TeacherDashboardProps) {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -936,7 +940,7 @@ export default function TeacherDashboard({
       <div className="max-w-md mx-auto px-6 py-16 flex flex-col justify-center min-h-[85vh]">
         <div className="bg-white border border-slate-200 rounded-2xl p-8 text-slate-800 shadow-xl relative">
           <div className="flex items-center gap-2 mb-6 justify-center">
-            <Compass className="w-8 h-8 text-[#D32F2F] animate-spin-slow" />
+            <Compass className="w-8 h-8 text-[var(--primary-color)] animate-spin-slow" />
             <h2 className="font-adventure text-3xl font-bold tracking-wide text-slate-900">Teacher Portal</h2>
           </div>
           
@@ -947,7 +951,7 @@ export default function TeacherDashboard({
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold text-sm"
                 required
               />
             </div>
@@ -958,14 +962,14 @@ export default function TeacherDashboard({
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold text-sm"
                 required
               />
             </div>
 
             {authError && (
-              <div className="bg-red-50 text-red-700 text-xs p-2.5 rounded-xl border border-red-150 font-bold flex gap-1.5 items-center justify-center">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <div className="bg-[var(--primary-subtle-bg)] text-[var(--primary-subtle-text)] text-xs p-2.5 rounded-xl border border-[var(--primary-subtle-border)] font-bold flex gap-1.5 items-center justify-center">
+                <AlertCircle className="w-4 h-4 shrink-0 text-[var(--primary-color)]" />
                 <span>{authError}</span>
               </div>
             )}
@@ -973,7 +977,7 @@ export default function TeacherDashboard({
             <div className="pt-2">
               <button 
                 type="submit"
-                className="w-full py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl shadow-md transition-colors"
+                className="w-full py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl shadow-md transition-colors"
               >
                 Log In
               </button>
@@ -1000,7 +1004,7 @@ export default function TeacherDashboard({
       <aside className="w-full md:w-64 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-xl shrink-0 select-none">
         <div className="space-y-6">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-            <Compass className="text-[#D32F2F] w-6 h-6" />
+            <Compass className="text-[var(--primary-color)] w-6 h-6" />
             <span className="font-adventure text-lg font-bold text-slate-900">Teacher Console</span>
           </div>
 
@@ -1022,7 +1026,7 @@ export default function TeacherDashboard({
                 onClick={() => setActiveTab(t.id as any)}
                 className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                   activeTab === t.id 
-                    ? 'bg-[#D32F2F] text-white shadow-md shadow-red-600/10' 
+                    ? 'bg-[var(--primary-color)] text-white shadow-md shadow-[var(--primary-color)]/10' 
                     : 'text-slate-550 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
@@ -1035,7 +1039,7 @@ export default function TeacherDashboard({
 
         <div className="pt-4 border-t border-slate-100 space-y-2">
           <div className="flex items-center gap-2 px-2 text-slate-450 text-[10px] font-bold uppercase tracking-wider">
-            <User className="w-3.5 h-3.5 text-[#D32F2F]" />
+            <User className="w-3.5 h-3.5 text-[var(--primary-color)]" />
             <span className="truncate">{teacherInfo?.name || 'Teacher User'}</span>
           </div>
           <button 
@@ -1045,10 +1049,10 @@ export default function TeacherDashboard({
               setIsAuthenticated(false); 
               onBack(); 
             }}
-            className="w-full flex items-center justify-between text-left px-4 py-2.5 rounded-xl text-xs font-bold text-red-650 hover:bg-red-50 transition-colors"
+            className="w-full flex items-center justify-between text-left px-4 py-2.5 rounded-xl text-xs font-bold text-[var(--primary-subtle-text)] hover:bg-[var(--primary-subtle-bg)] transition-colors"
           >
             <span>Sign Out</span>
-            <X className="w-4 h-4 text-red-500" />
+            <X className="w-4 h-4 text-[var(--primary-color)]" />
           </button>
         </div>
       </aside>
@@ -1059,7 +1063,7 @@ export default function TeacherDashboard({
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Quick Actions Header Banner */}
-            <div className="bg-gradient-to-r from-[#991B1B] via-[#D32F2F] to-[#7F1D1D] text-white border-4 border-[#991B1B] rounded-2xl p-8 shadow-[6px_6px_0px_rgba(153,27,27,0.3)] relative overflow-hidden animate-scale-in">
+            <div className="bg-gradient-to-r from-[var(--primary-dark)] via-[var(--primary-color)] to-[var(--primary-deep-medium)] text-white border-4 border-[var(--primary-dark)] rounded-2xl p-8 shadow-[6px_6px_0px_rgba(153,27,27,0.3)] relative overflow-hidden animate-scale-in">
               <div className="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4 scale-150">
                 <Compass className="w-80 h-80 animate-spin-slow" />
               </div>
@@ -1071,25 +1075,25 @@ export default function TeacherDashboard({
                 <div className="flex flex-wrap gap-2.5 pt-2">
                   <button 
                     onClick={() => setActiveTab('classes')}
-                    className="px-4 py-2 bg-white text-[#D32F2F] hover:bg-red-50 font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+                    className="px-4 py-2 bg-white text-[var(--primary-color)] hover:bg-[var(--primary-subtle-bg)] font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 shadow-sm"
                   >
                     🏫 Create Classroom
                   </button>
                   <button 
                     onClick={() => setActiveTab('classes')}
-                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-red-400/30"
+                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-[var(--primary-subtle-border)]/30"
                   >
                     🎲 Launch Live Match
                   </button>
                   <button 
                     onClick={() => setActiveTab('classes')}
-                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-red-400/30"
+                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-[var(--primary-subtle-border)]/30"
                   >
                     🔗 Invite Students
                   </button>
                   <button 
                     onClick={() => setActiveTab('teachers')}
-                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-red-400/30"
+                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-[var(--primary-subtle-border)]/30"
                   >
                     ➕ Create Teacher
                   </button>
@@ -1135,7 +1139,7 @@ export default function TeacherDashboard({
             <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl space-y-4">
               <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                 <h3 className="font-adventure text-lg font-bold text-slate-900">Student Access Requests</h3>
-                <span className="bg-red-50 text-[#D32F2F] border border-cyan-95 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-[var(--primary-subtle-bg)] text-[var(--primary-color)] border border-cyan-95 text-[10px] font-bold px-2 py-0.5 rounded-full">
                   {joinRequests.length} Action Needed
                 </span>
               </div>
@@ -1147,7 +1151,7 @@ export default function TeacherDashboard({
                     <div key={req.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex justify-between items-center text-xs">
                       <div>
                         <h4 className="font-bold text-slate-900 text-sm mb-0.5">{req.studentName}</h4>
-                        <p className="text-slate-450 font-semibold">Wants to join: <span className="text-[#D32F2F]">{req.className}</span></p>
+                        <p className="text-slate-450 font-semibold">Wants to join: <span className="text-[var(--primary-color)]">{req.className}</span></p>
                       </div>
                       <div className="flex gap-2">
                         <button 
@@ -1267,7 +1271,7 @@ export default function TeacherDashboard({
                           </button>
                           <button
                             onClick={() => handleDeleteTeacher(t.id)}
-                            className="px-2 py-1 bg-red-950 hover:bg-red-900 text-red-400 border border-red-800 rounded font-bold uppercase text-[9px] transition-colors"
+                            className="px-2 py-1 bg-[var(--primary-deep-dark)] hover:bg-red-900 text-[var(--primary-light)] border border-red-800 rounded font-bold uppercase text-[9px] transition-colors"
                           >
                             Delete
                           </button>
@@ -1399,7 +1403,7 @@ export default function TeacherDashboard({
                     )}
 
                     {teacherFormError && (
-                      <p className="text-red-600 text-xs font-semibold">{teacherFormError}</p>
+                      <p className="text-[var(--primary-subtle-text)] text-xs font-semibold">{teacherFormError}</p>
                     )}
                     {teacherFormSuccess && (
                       <p className="text-emerald-600 text-xs font-semibold">{teacherFormSuccess}</p>
@@ -1450,7 +1454,7 @@ export default function TeacherDashboard({
                     value={newClassName}
                     onChange={(e) => setNewClassName(e.target.value)}
                     placeholder="e.g. Computer Science"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                     required
                   />
                 </div>
@@ -1461,7 +1465,7 @@ export default function TeacherDashboard({
                     value={newClassSection}
                     onChange={(e) => setNewClassSection(e.target.value)}
                     placeholder="e.g. A"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                     required
                   />
                 </div>
@@ -1470,7 +1474,7 @@ export default function TeacherDashboard({
                   <select
                     value={newClassGrade}
                     onChange={(e) => setNewClassGrade(Number(e.target.value))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold font-sans"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold font-sans"
                   >
                     <option value={10}>Class 10 (Basics)</option>
                     <option value={11}>Class 11 (Functions)</option>
@@ -1484,12 +1488,12 @@ export default function TeacherDashboard({
                     value={newClassSubject}
                     onChange={(e) => setNewClassSubject(e.target.value)}
                     placeholder="e.g. Computer Science"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                     required
                   />
                 </div>
                 <div className="flex items-end">
-                  <button type="submit" className="w-full py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl shadow-md uppercase transition-colors">Create Class</button>
+                  <button type="submit" className="w-full py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl shadow-md uppercase transition-colors">Create Class</button>
                 </div>
               </form>
             </div>
@@ -1498,7 +1502,7 @@ export default function TeacherDashboard({
             {showDeleteConfirm && (
               <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                 <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 text-center text-slate-800 shadow-2xl">
-                  <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-3" />
+                  <AlertCircle className="w-16 h-16 text-[var(--primary-subtle-text)] mx-auto mb-3" />
                   <h3 className="font-adventure text-2xl font-bold mb-2 text-slate-900">Delete Classroom?</h3>
                   <p className="text-xs text-slate-450 mb-6 font-semibold">
                     Warning: Deleting this class will permanently remove all student rosters, student progress stats, team configurations, and assignment history.
@@ -1536,7 +1540,7 @@ export default function TeacherDashboard({
                             onChange={(e) => setEditingClass({ ...editingClass, name: e.target.value })}
                             onBlur={() => handleEditClassName(cls.id, editingClass.name)}
                             onKeyDown={(e) => e.key === 'Enter' && handleEditClassName(cls.id, editingClass.name)}
-                            className="bg-white border border-[#D32F2F] text-slate-800 p-2 rounded-xl text-sm font-bold focus:outline-none"
+                            className="bg-white border border-[var(--primary-color)] text-slate-800 p-2 rounded-xl text-sm font-bold focus:outline-none"
                             autoFocus
                           />
                         ) : (
@@ -1547,7 +1551,7 @@ export default function TeacherDashboard({
                         )}
                         <span className="text-[10px] text-slate-550 font-bold block mt-1 uppercase tracking-wider">Syllabus Grade {cls.grade} | Subject: {cls.subject || 'Computer Science'} | {cls.students?.length || 0} Students | {cls.teams?.length || 0} Teams</span>
                         <div className="flex flex-wrap gap-4 mt-2 font-semibold">
-                          <span className="text-xs text-slate-700 font-bold">Join Code: <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-[#D32F2F] font-extrabold select-all">{cls.joinCode || `BQ${cls.id.replace(/-/g, '').substring(0, 4).toUpperCase()}`}</span></span>
+                          <span className="text-xs text-slate-700 font-bold">Join Code: <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-[var(--primary-color)] font-extrabold select-all">{cls.joinCode || `BQ${cls.id.replace(/-/g, '').substring(0, 4).toUpperCase()}`}</span></span>
                           <span className="text-[10px] text-slate-550 font-bold">Class ID: <span className="font-mono select-all bg-white px-1.5 py-0.5 rounded border border-slate-200">{cls.id}</span></span>
                         </div>
                       </div>
@@ -1562,7 +1566,7 @@ export default function TeacherDashboard({
                         </button>
                         <button 
                           onClick={() => setEditingClass({ id: cls.id, name: cls.name })}
-                          className="p-2 text-[#D32F2F] hover:bg-red-50 rounded-xl transition-colors"
+                          className="p-2 text-[var(--primary-color)] hover:bg-[var(--primary-subtle-bg)] rounded-xl transition-colors"
                           title="Rename Class"
                         >
                           <Edit3 className="w-4 h-4" />
@@ -1576,7 +1580,7 @@ export default function TeacherDashboard({
                         </button>
                         <button 
                           onClick={() => setShowDeleteConfirm(cls.id)}
-                          className="p-2 text-red-650 hover:bg-red-50 rounded-xl transition-colors"
+                          className="p-2 text-[var(--primary-subtle-text)] hover:bg-[var(--primary-subtle-bg)] rounded-xl transition-colors"
                           title="Delete Class"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1600,10 +1604,10 @@ export default function TeacherDashboard({
                                   setRosterNamesText(e.target.value);
                               }}
                               placeholder="Aarav Sharma&#10;Diya Verma&#10;Kabir Roy"
-                              className="w-full bg-white border border-slate-200 rounded-xl p-3 text-slate-800 text-xs h-18 resize-none focus:outline-none focus:border-[#D32F2F] font-bold"
+                              className="w-full bg-white border border-slate-200 rounded-xl p-3 text-slate-800 text-xs h-18 resize-none focus:outline-none focus:border-[var(--primary-color)] font-bold"
                               required
                             />
-                            <button type="submit" className="px-4 py-2 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl transition-colors shadow-sm">Add to roster</button>
+                            <button type="submit" className="px-4 py-2 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl transition-colors shadow-sm">Add to roster</button>
                           </form>
                         </div>
 
@@ -1613,9 +1617,9 @@ export default function TeacherDashboard({
                           <button 
                             onClick={() => {
                               const autoTeams = [
-                                { name: 'Team Crimson', color: 'bg-red-600 text-white border-red-300', studentIds: cls.students.slice(0, 3).map((s:any)=>s.id) },
-                                { name: 'Team Cobalt', color: 'bg-[#D32F2F] text-white border-blue-300', studentIds: cls.students.slice(3, 6).map((s:any)=>s.id) },
-                                { name: 'Team Jade', color: 'bg-[#D32F2F] text-white border-emerald-300', studentIds: cls.students.slice(6, 9).map((s:any)=>s.id) }
+                                { name: 'Team Crimson', color: 'bg-red-600 text-white border-[var(--primary-subtle-border)]', studentIds: cls.students.slice(0, 3).map((s:any)=>s.id) },
+                                { name: 'Team Cobalt', color: 'bg-[var(--primary-color)] text-white border-blue-300', studentIds: cls.students.slice(3, 6).map((s:any)=>s.id) },
+                                { name: 'Team Jade', color: 'bg-[var(--primary-color)] text-white border-emerald-300', studentIds: cls.students.slice(6, 9).map((s:any)=>s.id) }
                               ];
                               handleConfigureTeams(cls.id, autoTeams);
                             }}
@@ -1627,7 +1631,7 @@ export default function TeacherDashboard({
                           <button 
                             onClick={() => handleStartLobby(cls.id)}
                             disabled={cls.students.length === 0}
-                            className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white rounded-xl font-bold mt-2 disabled:opacity-50 transition-colors shadow-md text-xs uppercase"
+                            className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white rounded-xl font-bold mt-2 disabled:opacity-50 transition-colors shadow-md text-xs uppercase"
                           >
                             Launch Live Session Lobby 🚀
                           </button>
@@ -1693,7 +1697,7 @@ export default function TeacherDashboard({
                       setAddStudentError('');
                       setAddStudentSuccess('');
                     }}
-                    className="px-4 py-2 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl text-xs uppercase flex items-center gap-1 shadow-md"
+                    className="px-4 py-2 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl text-xs uppercase flex items-center gap-1 shadow-md"
                   >
                     {showAddStudentForm ? '✕ Close Form' : '➕ Add Student'}
                   </button>
@@ -1767,9 +1771,9 @@ export default function TeacherDashboard({
                       />
                     </div>
                   </div>
-                  {addStudentError && <p className="text-red-650 font-bold text-center text-[10px]">{addStudentError}</p>}
+                  {addStudentError && <p className="text-[var(--primary-subtle-text)] font-bold text-center text-[10px]">{addStudentError}</p>}
                   {addStudentSuccess && <p className="text-green-650 font-bold text-center text-[10px]">{addStudentSuccess}</p>}
-                  <button type="submit" className="px-5 py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl uppercase text-[10px] tracking-wide transition-colors">Add Explorer</button>
+                  <button type="submit" className="px-5 py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl uppercase text-[10px] tracking-wide transition-colors">Add Explorer</button>
                 </form>
               )}
             </div>
@@ -1789,7 +1793,7 @@ export default function TeacherDashboard({
                         }}
                         className={`w-full text-left p-3 rounded-xl border font-bold transition-all ${
                           selectedStudentProfile?.id === student.id 
-                            ? 'bg-red-50 border-cyan-95 text-[#B91C1C] shadow-sm' 
+                            ? 'bg-[var(--primary-subtle-bg)] border-cyan-95 text-[var(--primary-light)] shadow-sm' 
                             : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
@@ -1801,7 +1805,7 @@ export default function TeacherDashboard({
                             </span>
                           )}
                         </div>
-                        {student.isSuspended && <span className="block text-[8px] text-red-500 font-bold uppercase tracking-wider mt-0.5">(Suspended)</span>}
+                        {student.isSuspended && <span className="block text-[8px] text-[var(--primary-color)] font-bold uppercase tracking-wider mt-0.5">(Suspended)</span>}
                       </button>
                     ))}
                     {rosterStudents.length === 0 && <p className="text-slate-550 italic py-6 text-center font-semibold">No students registered.</p>}
@@ -1868,7 +1872,7 @@ export default function TeacherDashboard({
                             />
                           </div>
                         </div>
-                        <button type="submit" className="w-full py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl uppercase transition-colors shadow-md">Save Explorer Changes</button>
+                        <button type="submit" className="w-full py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl uppercase transition-colors shadow-md">Save Explorer Changes</button>
                       </form>
                     ) : (
                       /* STATISTICS VIEW MODE */
@@ -1908,7 +1912,7 @@ export default function TeacherDashboard({
                                 setEditStudentClassId(selectedStudentProfile.classId || selectedStudentClassId);
                                 setEditStudentPassword('');
                               }}
-                              className="py-2.5 bg-red-50 hover:bg-red-100 text-[#D32F2F] border border-cyan-95 rounded-xl transition-colors"
+                              className="py-2.5 bg-[var(--primary-subtle-bg)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-color)] border border-cyan-95 rounded-xl transition-colors"
                             >
                               ✏️ Edit Info
                             </button>
@@ -1935,7 +1939,7 @@ export default function TeacherDashboard({
                             </button>
                             <button 
                               onClick={() => handleRemoveStudent(selectedStudentProfile.id)}
-                              className="py-2.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl transition-colors"
+                              className="py-2.5 bg-[var(--primary-subtle-bg)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-subtle-text)] border border-[var(--primary-subtle-border)] rounded-xl transition-colors"
                             >
                               Remove Student
                             </button>
@@ -1980,7 +1984,7 @@ export default function TeacherDashboard({
                     correctIndex: 0,
                     explanation: ''
                   })}
-                  className="px-4 py-2.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl text-xs uppercase tracking-wide transition-colors"
+                  className="px-4 py-2.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl text-xs uppercase tracking-wide transition-colors"
                 >
                   Create New Question
                 </button>
@@ -2096,7 +2100,7 @@ export default function TeacherDashboard({
                   </div>
 
                   <div className="flex gap-2 pt-2">
-                    <button type="submit" className="px-5 py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl uppercase transition-colors shadow-md text-xs">
+                    <button type="submit" className="px-5 py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl uppercase transition-colors shadow-md text-xs">
                       Save Question
                     </button>
                     <button
@@ -2121,10 +2125,10 @@ export default function TeacherDashboard({
                     value={csvText}
                     onChange={(e) => setCsvText(e.target.value)}
                     placeholder="11;Functions;medium;Define Python module;Script;Package;Library;Core;0;Modules are script files."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-800 h-32 resize-y font-mono focus:outline-none focus:border-[#D32F2F] font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-800 h-32 resize-y font-mono focus:outline-none focus:border-[var(--primary-color)] font-bold"
                     required
                   />
-                  {csvStatus && <p className="text-xs font-bold text-[#D32F2F]">{csvStatus}</p>}
+                  {csvStatus && <p className="text-xs font-bold text-[var(--primary-color)]">{csvStatus}</p>}
                   <button type="submit" className="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs uppercase shadow-md transition-colors">Upload CSV</button>
                 </form>
               </div>
@@ -2150,7 +2154,7 @@ export default function TeacherDashboard({
                         key={g}
                         onClick={() => setGradeFilter(g)}
                         className={`px-3 py-1.5 border rounded-lg font-bold uppercase transition-all ${
-                          gradeFilter === g ? 'bg-[#D32F2F] border-[#D32F2F] text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-650'
+                          gradeFilter === g ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-650'
                         }`}
                       >
                         {g === 'all' ? 'All Grades' : `Class ${g}`}
@@ -2193,7 +2197,7 @@ export default function TeacherDashboard({
                         </button>
                         <button
                           onClick={() => setIsEditingQuestion(q)}
-                          className="p-1.5 text-[#D32F2F] hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-[var(--primary-color)] hover:bg-[var(--primary-subtle-bg)] rounded-lg transition-colors"
                           title="Edit"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -2207,7 +2211,7 @@ export default function TeacherDashboard({
                         </button>
                         <button 
                           onClick={() => handleDeleteQuestion(q.id)}
-                          className="p-1.5 text-red-650 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-[var(--primary-subtle-text)] hover:bg-[var(--primary-subtle-bg)] rounded-lg transition-colors"
                           title="Delete"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -2322,7 +2326,7 @@ export default function TeacherDashboard({
                         <div>
                           <span className="font-extrabold text-slate-900 text-sm block">{req.studentName}</span>
                           <span className="text-[10px] text-slate-550 font-bold block uppercase tracking-wider">Wants to join: {req.className}</span>
-                          <span className="text-[10px] text-[#D32F2F] font-bold block">Grade Level: Class {req.studentGrade || 11}</span>
+                          <span className="text-[10px] text-[var(--primary-color)] font-bold block">Grade Level: Class {req.studentGrade || 11}</span>
                         </div>
                         <span className="text-[9px] text-slate-450 font-bold">{new Date(req.createdAt).toLocaleDateString()}</span>
                       </div>
@@ -2444,7 +2448,7 @@ export default function TeacherDashboard({
                     {classes.flatMap(cls => cls.students || []).map((student: any) => (
                       <tr key={student.id} className="border-b border-slate-100 text-slate-700 font-bold hover:bg-slate-50 transition-colors">
                         <td className="py-3 font-bold flex items-center gap-1.5 text-slate-900">
-                          <span className={`w-2 h-2 rounded-full ${student.isSuspended ? 'bg-red-500' : 'bg-green-500'}`} title={student.isSuspended ? 'Suspended' : 'Active'}></span>
+                          <span className={`w-2 h-2 rounded-full ${student.isSuspended ? 'bg-[var(--primary-subtle-bg)]0' : 'bg-green-500'}`} title={student.isSuspended ? 'Suspended' : 'Active'}></span>
                           <span>{student.name}</span>
                         </td>
                         <td className="py-3 text-slate-550 font-mono text-[11px]">{student.email || 'N/A'}</td>
@@ -2536,6 +2540,34 @@ export default function TeacherDashboard({
               </select>
             </div>
 
+            <div className="space-y-3 py-3 border-b border-slate-100 text-left">
+              <span className="text-xs font-bold text-slate-450 block uppercase tracking-wider">ByteQuest Theme</span>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'red-gold', name: 'Red + Gold', emoji: '❤️' },
+                  { id: 'blue-gold', name: 'Blue + Gold', emoji: '💙' },
+                  { id: 'green-gold', name: 'Green + Gold', emoji: '💚' },
+                  { id: 'purple-gold', name: 'Purple + Gold', emoji: '💜' }
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      playBeep(440, 'sine', 0.05);
+                      setTheme(t.id);
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border-2 text-[10px] font-extrabold font-adventure transition-all ${
+                      theme === t.id
+                        ? 'bg-slate-900 border-slate-900 text-white shadow-inner scale-[1.02]'
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <span>{t.emoji}</span>
+                    <span>{t.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex justify-between items-center py-3 border-b border-slate-100">
               <span className="text-xs font-bold text-slate-450">Authentication Logs</span>
               <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide">SSL Secured</span>
@@ -2580,7 +2612,7 @@ export default function TeacherDashboard({
                     setProfileSaveError('');
                   }
                 }}
-                className="px-4 py-2 bg-red-50 border border-cyan-95 text-[#D32F2F] text-xs font-bold rounded-full hover:bg-red-100 transition-colors font-sans"
+                className="px-4 py-2 bg-[var(--primary-subtle-bg)] border border-cyan-95 text-[var(--primary-color)] text-xs font-bold rounded-full hover:bg-[var(--primary-subtle-hover)] transition-colors font-sans"
               >
                 {editingProfile ? 'Cancel' : '✏️ Edit Profile'}
               </button>
@@ -2598,7 +2630,7 @@ export default function TeacherDashboard({
                   </div>
                   <div>
                     <span className="text-2xl font-adventure font-extrabold text-slate-900 block leading-tight">{teacherInfo.name}</span>
-                    <span className="bg-red-50 text-[#D32F2F] border border-cyan-95 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider inline-block mt-1">Certified Instructor</span>
+                    <span className="bg-[var(--primary-subtle-bg)] text-[var(--primary-color)] border border-cyan-95 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider inline-block mt-1">Certified Instructor</span>
                   </div>
                 </div>
 
@@ -2643,7 +2675,7 @@ export default function TeacherDashboard({
                       value={profileFirstName}
                       onChange={(e) => setProfileFirstName(e.target.value)}
                       placeholder="First name"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                       required
                     />
                   </div>
@@ -2654,7 +2686,7 @@ export default function TeacherDashboard({
                       value={profileLastName}
                       onChange={(e) => setProfileLastName(e.target.value)}
                       placeholder="Last name"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                       required
                     />
                   </div>
@@ -2668,7 +2700,7 @@ export default function TeacherDashboard({
                       value={profileEmail}
                       onChange={(e) => setProfileEmail(e.target.value)}
                       placeholder="Email address"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                       required
                     />
                   </div>
@@ -2679,7 +2711,7 @@ export default function TeacherDashboard({
                       value={profileSchool}
                       onChange={(e) => setProfileSchool(e.target.value)}
                       placeholder="School name"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                       required
                     />
                   </div>
@@ -2693,7 +2725,7 @@ export default function TeacherDashboard({
                       value={profileSubject}
                       onChange={(e) => setProfileSubject(e.target.value)}
                       placeholder="Subject taught"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                     />
                   </div>
                   <div>
@@ -2703,7 +2735,7 @@ export default function TeacherDashboard({
                       value={profilePhone}
                       onChange={(e) => setProfilePhone(e.target.value)}
                       placeholder="Phone number"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                     />
                   </div>
                   <div>
@@ -2713,7 +2745,7 @@ export default function TeacherDashboard({
                       value={profileExperience}
                       onChange={(e) => setProfileExperience(e.target.value)}
                       placeholder="Years"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                     />
                   </div>
                 </div>
@@ -2753,7 +2785,7 @@ export default function TeacherDashboard({
                     onChange={(e) => setProfileBio(e.target.value)}
                     placeholder="Tell your students about yourself..."
                     rows={3}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-sans font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-sans font-bold"
                   />
                 </div>
 
@@ -2767,7 +2799,7 @@ export default function TeacherDashboard({
                         value={profileCurrentPw}
                         onChange={(e) => setProfileCurrentPw(e.target.value)}
                         placeholder="Current password"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                       />
                     </div>
                     <div>
@@ -2777,14 +2809,14 @@ export default function TeacherDashboard({
                         value={profileNewPw}
                         onChange={(e) => setProfileNewPw(e.target.value)}
                         placeholder="Min 6 characters"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
                       />
                     </div>
                   </div>
                 </div>
 
                 {profileSaveError && (
-                  <div className="bg-red-50 text-red-650 text-xs p-2.5 rounded-xl border border-red-200 font-bold text-center">
+                  <div className="bg-[var(--primary-subtle-bg)] text-[var(--primary-subtle-text)] text-xs p-2.5 rounded-xl border border-[var(--primary-subtle-border)] font-bold text-center">
                     {profileSaveError}
                   </div>
                 )}
@@ -2796,7 +2828,7 @@ export default function TeacherDashboard({
 
                 <button
                   type="submit"
-                  className="w-full py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-bold rounded-xl shadow-md uppercase transition-colors"
+                  className="w-full py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl shadow-md uppercase transition-colors"
                 >
                   Save Changes
                 </button>

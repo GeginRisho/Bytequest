@@ -134,6 +134,14 @@ const sounds = new SoundEffects();
 export default function App() {
   console.log("App Component Function Executing!");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [theme, setTheme] = useState<string>(() => {
+    return localStorage.getItem('bytequest-theme') || 'blue-gold';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('bytequest-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -764,7 +772,7 @@ export default function App() {
       case 'QUESTION':
         return (
           <div className={wrapperClass}>
-            <span className="text-red-400 font-adventure text-xs font-bold block uppercase animate-pulse">❓ QUESTION TIME</span>
+            <span className="text-[var(--primary-light)] font-adventure text-xs font-bold block uppercase animate-pulse">❓ QUESTION TIME</span>
             <span className="text-[9px] text-amber-200 font-bold uppercase tracking-wider">ANSWER THE QUESTION</span>
           </div>
         );
@@ -1557,7 +1565,7 @@ export default function App() {
   useEffect(() => {
     const isDark = (viewMode === 'local' && localScreen === 'board') || viewMode === 'student' || viewMode === 'selection';
     if (isDark) {
-      document.body.style.backgroundColor = '#1A0505';
+      document.body.style.backgroundColor = 'var(--primary-deep-dark)';
       document.body.style.color = '#FFFFFF';
     } else {
       document.body.style.backgroundColor = '#FDFBF7';
@@ -1574,12 +1582,12 @@ export default function App() {
   return (
     <div className={`min-h-screen flex flex-col font-sans relative select-none ${
       isDarkThemeActive 
-        ? 'bg-gradient-to-b from-[#2A0F0F] via-[#1A0505] to-[#000000] text-white' 
+        ? 'bg-gradient-to-b from-[var(--primary-deep-dark)] via-[var(--primary-deep-dark)] to-[#000000] text-white' 
         : 'bg-jungle-deep text-[#0F172A]'
     }`}>
       {toastMessage && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-bounce pointer-events-none">
-          <div className="bg-[#7A0C0C] border-2 border-[#D32F2F] text-white px-6 py-3 rounded-2xl font-adventure font-extrabold text-sm uppercase tracking-widest shadow-[0_5px_20px_rgba(0,0,0,0.8)] flex items-center gap-2">
+          <div className="bg-[var(--primary-deep-medium)] border-2 border-[var(--primary-color)] text-white px-6 py-3 rounded-2xl font-adventure font-extrabold text-sm uppercase tracking-widest shadow-[0_5px_20px_rgba(0,0,0,0.8)] flex items-center gap-2">
             <span>⚠️</span> {toastMessage}
           </div>
         </div>
@@ -1589,11 +1597,11 @@ export default function App() {
       {viewMode !== 'selection' && (() => {
         const isGameBoardActive = (viewMode === 'local' && localScreen === 'board') || viewMode === 'student';
         return (
-          <header className={`border-b-3 ${isGameBoardActive ? 'border-[#D4AF37] bg-[#2A0F0F] text-white' : 'border-[#D32F2F] bg-white/98 text-stone-900'} backdrop-blur px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-md`}>
+          <header className={`border-b-3 ${isGameBoardActive ? 'border-[#D4AF37] bg-[var(--primary-deep-dark)] text-white' : 'border-[var(--primary-color)] bg-white/98 text-stone-900'} backdrop-blur px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-md`}>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleGlobalBack}
-                className={`mr-2 px-4 py-2 rounded-xl border-2 active:scale-95 transition-all text-xs font-bold font-adventure flex items-center gap-1.5 shadow-sm uppercase tracking-wider ${isGameBoardActive ? 'bg-[#3B0F0F] border-[#D4AF37] text-[#FFD700] hover:bg-[#5A1A1A]/50' : 'bg-red-50 border-[#D32F2F] text-[#D32F2F] hover:bg-red-100/50'}`}
+                className={`mr-2 px-4 py-2 rounded-xl border-2 active:scale-95 transition-all text-xs font-bold font-adventure flex items-center gap-1.5 shadow-sm uppercase tracking-wider ${isGameBoardActive ? 'bg-[var(--primary-deep-medium)] border-[#D4AF37] text-[#FFD700] hover:bg-[var(--primary-deep)]/50' : 'bg-[var(--primary-subtle-bg)] border-[var(--primary-color)] text-[var(--primary-color)] hover:bg-[var(--primary-subtle-hover)]/50'}`}
               >
                 ← Back
               </button>
@@ -1605,19 +1613,19 @@ export default function App() {
                   navigateTo({ viewMode: 'selection' });
                 }
               }}>
-                <Compass className={`w-8 h-8 animate-pulse-slow shrink-0 ${isGameBoardActive ? 'text-[#FFD700]' : 'text-[#D32F2F]'}`} />
-                <h1 className={`font-adventure text-xl sm:text-2xl font-extrabold tracking-wider truncate uppercase ${isGameBoardActive ? 'text-[#FFD700]' : 'text-[#D32F2F]'}`}>ByteQuest</h1>
+                <Compass className={`w-8 h-8 animate-pulse-slow shrink-0 ${isGameBoardActive ? 'text-[#FFD700]' : 'text-[var(--primary-color)]'}`} />
+                <h1 className={`font-adventure text-xl sm:text-2xl font-extrabold tracking-wider truncate uppercase ${isGameBoardActive ? 'text-[#FFD700]' : 'text-[var(--primary-color)]'}`}>ByteQuest</h1>
               </div>
             </div>
             
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => setAudioOn(!audioOn)}
-                className={`p-2.5 rounded-xl border transition-colors shadow-sm ${isGameBoardActive ? 'border-[#D4AF37]/45 text-[#FFD700] hover:bg-[#3B0F0F]' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                className={`p-2.5 rounded-xl border transition-colors shadow-sm ${isGameBoardActive ? 'border-[#D4AF37]/45 text-[#FFD700] hover:bg-[var(--primary-deep-medium)]' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
               >
                 {audioOn 
                   ? <Volume2 className="w-4 h-4" /> 
-                  : <VolumeX className={`w-4 h-4 ${isGameBoardActive ? 'text-rose-500' : 'text-red-500'}`} />
+                  : <VolumeX className={`w-4 h-4 ${isGameBoardActive ? 'text-[var(--primary-light)]' : 'text-[var(--primary-color)]'}`} />
                 }
               </button>
             </div>
@@ -1742,25 +1750,54 @@ export default function App() {
           {/* MAIN MENU SETTINGS OVERLAY MODAL */}
           {showMainMenuSettings && (
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white text-stone-900 border-3 border-[#D32F2F] p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-[6px_6px_0px_#991B1B] relative select-text">
-                <h3 className="font-adventure text-2xl font-extrabold text-[#D32F2F] border-b-2 border-red-100 pb-3 mb-6 uppercase tracking-wider text-center">
+              <div className="bg-white text-stone-900 border-3 border-gold p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-[6px_6px_0px_var(--primary-dark)] relative select-text">
+                <h3 className="font-adventure text-2xl font-extrabold text-gold border-b-2 border-[var(--primary-subtle-border)] pb-3 mb-6 uppercase tracking-wider text-center">
                   System Settings
                 </h3>
 
                 <div className="space-y-6">
                   {/* Audio Toggle */}
-                  <div className="flex items-center justify-between font-adventure">
+                  <div className="flex items-center justify-between font-adventure border-b border-slate-100 pb-4">
                     <span className="font-bold text-sm text-slate-700">Audio Synthesizer</span>
                     <button
                       onClick={() => setAudioOn(!audioOn)}
                       className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border-2 ${
                         audioOn 
                           ? 'bg-emerald-50 border-emerald-400 text-emerald-700' 
-                          : 'bg-red-50 border-red-300 text-red-600'
+                          : 'bg-[var(--primary-subtle-bg)] border-[var(--primary-subtle-border)] text-[var(--primary-subtle-text)]'
                       }`}
                     >
                       {audioOn ? "Enabled 🔊" : "Muted 🔇"}
                     </button>
+                  </div>
+
+                  {/* Theme Switcher */}
+                  <div className="space-y-2.5 font-adventure border-b border-slate-100 pb-4">
+                    <span className="font-bold text-sm text-slate-700 block text-left">Interface Theme</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'red-gold', name: 'Red + Gold', emoji: '❤️' },
+                        { id: 'blue-gold', name: 'Blue + Gold', emoji: '💙' },
+                        { id: 'green-gold', name: 'Green + Gold', emoji: '💚' },
+                        { id: 'purple-gold', name: 'Purple + Gold', emoji: '💜' }
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            sounds.playBeep(440, 'sine', 0.05);
+                            setTheme(t.id);
+                          }}
+                          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border-2 text-[10px] font-extrabold transition-all ${
+                            theme === t.id
+                              ? 'bg-slate-900 border-slate-900 text-white shadow-inner scale-[1.02]'
+                              : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                          }`}
+                        >
+                          <span className="text-xs">{t.emoji}</span>
+                          <span>{t.name}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Auth Status details */}
@@ -1781,7 +1818,7 @@ export default function App() {
                             setShowMainMenuSettings(false);
                             window.location.reload();
                           }}
-                          className="px-2.5 py-1.5 bg-[#D32F2F] text-white font-bold rounded-lg uppercase tracking-wider text-[9px] hover:bg-[#B91C1C] active:scale-95 transition-all border-b-2 border-[#991B1B]"
+                          className="px-2.5 py-1.5 bg-gold text-white font-bold rounded-lg uppercase tracking-wider text-[9px] hover:bg-gold-light active:scale-95 transition-all border-b-2 border-gold-dark"
                         >
                           Sign Out
                         </button>
@@ -1793,7 +1830,7 @@ export default function App() {
 
                   {/* Gameplay details */}
                   <div className="text-[10px] text-slate-500 font-semibold leading-relaxed border-t border-slate-100 pt-4">
-                    <p className="font-bold text-[#D32F2F] mb-1 font-adventure uppercase tracking-wider">Adventure Rules:</p>
+                    <p className="font-bold text-gold mb-1 font-adventure uppercase tracking-wider">Adventure Rules:</p>
                     <ul className="list-disc pl-4 space-y-1">
                       <li>Roll the dice to advance on the map track.</li>
                       <li>Land on Trap or Treasure tiles to prompt CS questions.</li>
@@ -1804,7 +1841,7 @@ export default function App() {
                   {/* Close button */}
                   <button
                     onClick={() => { sounds.playBeep(350, 'sine', 0.05); setShowMainMenuSettings(false); }}
-                    className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white border-b-4 border-[#991B1B] rounded-xl font-adventure font-extrabold text-sm uppercase tracking-wider transition-all shadow-md"
+                    className="w-full py-3 bg-gold hover:bg-gold-light text-white border-b-4 border-gold-dark rounded-xl font-adventure font-extrabold text-sm uppercase tracking-wider transition-all shadow-md"
                   >
                     Return to Menu
                   </button>
@@ -1851,7 +1888,7 @@ export default function App() {
                 <div>
                   {showAuthModal === 'login' ? (
                     <>
-                      <h3 className="font-adventure text-3xl font-extrabold text-[#D32F2F] tracking-widest text-center uppercase mb-1">
+                      <h3 className="font-adventure text-3xl font-extrabold text-[var(--primary-color)] tracking-widest text-center uppercase mb-1">
                         Welcome Back
                       </h3>
                       <p className="text-center text-[10px] text-slate-400 font-bold tracking-wide uppercase mb-6">
@@ -1860,7 +1897,7 @@ export default function App() {
                     </>
                   ) : (
                     <>
-                      <h3 className="font-adventure text-2xl font-extrabold text-[#D32F2F] tracking-wider text-center uppercase mb-1">
+                      <h3 className="font-adventure text-2xl font-extrabold text-[var(--primary-color)] tracking-wider text-center uppercase mb-1">
                         Create Account
                       </h3>
                       <p className="text-center text-[10px] text-slate-400 font-bold tracking-wide uppercase mb-6">
@@ -1879,7 +1916,7 @@ export default function App() {
                           value={authEmail}
                           onChange={(e) => setAuthEmail(e.target.value)}
                           placeholder="e.g. explorer@bytequest.edu"
-                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3.5 py-3 text-white focus:outline-none focus:border-[#D32F2F] font-bold transition-all"
+                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3.5 py-3 text-white focus:outline-none focus:border-[var(--primary-color)] font-bold transition-all"
                           required
                         />
                       </div>
@@ -1890,13 +1927,13 @@ export default function App() {
                           value={authPassword}
                           onChange={(e) => setAuthPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3.5 py-3 text-white focus:outline-none focus:border-[#D32F2F] font-bold transition-all"
+                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3.5 py-3 text-white focus:outline-none focus:border-[var(--primary-color)] font-bold transition-all"
                           required
                         />
                       </div>
                       
                       {authError && (
-                        <p className="text-red-400 text-[10px] font-bold bg-red-950/30 p-2.5 rounded-xl text-center border border-red-900/50 font-sans">
+                        <p className="text-[var(--primary-light)] text-[10px] font-bold bg-[var(--primary-deep-dark)]/30 p-2.5 rounded-xl text-center border border-[var(--primary-dark)]/50 font-sans">
                           {authError}
                         </p>
                       )}
@@ -1914,7 +1951,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => { setAuthError(''); setShowAuthModal('signup'); }}
-                          className="text-[#D32F2F] hover:text-[#EF4444] font-adventure font-extrabold tracking-widest text-xs transition-colors"
+                          className="text-[var(--primary-color)] hover:text-[var(--primary-light)] font-adventure font-extrabold tracking-widest text-xs transition-colors"
                         >
                           Create Account →
                         </button>
@@ -1933,7 +1970,7 @@ export default function App() {
                             value={authFirstName}
                             onChange={(e) => setAuthFirstName(e.target.value)}
                             placeholder="Aarav"
-                            className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-2.5 py-2.5 text-white focus:outline-none focus:border-[#D32F2F] font-bold"
+                            className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-2.5 py-2.5 text-white focus:outline-none focus:border-[var(--primary-color)] font-bold"
                             required
                           />
                         </div>
@@ -1944,7 +1981,7 @@ export default function App() {
                             value={authLastName}
                             onChange={(e) => setAuthLastName(e.target.value)}
                             placeholder="Sharma"
-                            className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-2.5 py-2.5 text-white focus:outline-none focus:border-[#D32F2F] font-bold"
+                            className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-2.5 py-2.5 text-white focus:outline-none focus:border-[var(--primary-color)] font-bold"
                             required
                           />
                         </div>
@@ -1954,7 +1991,7 @@ export default function App() {
                         <select
                           value={authGrade}
                           onChange={(e) => setAuthGrade(e.target.value)}
-                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[#D32F2F] font-bold font-adventure"
+                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[var(--primary-color)] font-bold font-adventure"
                         >
                           <option value="10">Class 10 (Basics)</option>
                           <option value="11">Class 11 (Functions)</option>
@@ -1968,7 +2005,7 @@ export default function App() {
                           value={authEmail}
                           onChange={(e) => setAuthEmail(e.target.value)}
                           placeholder="aarav@student.com"
-                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[#D32F2F] font-bold"
+                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[var(--primary-color)] font-bold"
                           required
                         />
                       </div>
@@ -1979,13 +2016,13 @@ export default function App() {
                           value={authPassword}
                           onChange={(e) => setAuthPassword(e.target.value)}
                           placeholder="Min 6 characters"
-                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[#D32F2F] font-bold"
+                          className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[var(--primary-color)] font-bold"
                           required
                         />
                       </div>
                       
                       {authError && (
-                        <p className="text-red-400 text-[10px] font-bold bg-red-950/30 p-2 rounded-lg text-center border border-red-900/50 font-sans">
+                        <p className="text-[var(--primary-light)] text-[10px] font-bold bg-[var(--primary-deep-dark)]/30 p-2 rounded-lg text-center border border-[var(--primary-dark)]/50 font-sans">
                           {authError}
                         </p>
                       )}
@@ -2003,7 +2040,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => { setAuthError(''); setShowAuthModal('login'); }}
-                          className="text-[#D32F2F] hover:text-[#EF4444] font-bold"
+                          className="text-[var(--primary-color)] hover:text-[var(--primary-light)] font-bold"
                         >
                           Sign In
                         </button>
@@ -2025,6 +2062,8 @@ export default function App() {
           setActiveTab={handleTeacherActiveTab}
           showTeacherModal={teacherShowModal}
           setShowTeacherModal={handleTeacherShowModal}
+          theme={theme}
+          setTheme={setTheme}
         />
       )}
 
@@ -2051,6 +2090,8 @@ export default function App() {
           activeStudent={activeStudent}
           onUpdateStudent={loadStudentProfile}
           sounds={sounds}
+          theme={theme}
+          setTheme={setTheme}
         />
       )}
 
@@ -2059,7 +2100,7 @@ export default function App() {
           {localScorePopup && (
             <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-bounce">
               <div className={`px-6 py-3 rounded-full shadow-2xl font-bold border-2 text-sm ${
-                localScorePopup.success ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-red-600 border-red-400 text-white'
+                localScorePopup.success ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-red-600 border-[var(--primary-subtle-border)] text-white'
               }`}>
                 {localScorePopup.text}
               </div>
@@ -2070,11 +2111,11 @@ export default function App() {
           {localScreen === 'setup' && (
             <main className="max-w-4xl mx-auto px-6 py-10 w-full flex-1">
               <div className="text-center mb-8">
-                <h2 className="font-adventure text-3xl font-extrabold text-[#D32F2F] uppercase tracking-wide">Configure Offline Game</h2>
+                <h2 className="font-adventure text-3xl font-extrabold text-[var(--primary-color)] uppercase tracking-wide">Configure Offline Game</h2>
                 <p className="text-slate-500 text-xs font-semibold">Pass the device among players to take turns</p>
               </div>
 
-              <div className="bg-white border-3 border-[#D32F2F] p-6 rounded-2xl mb-8 flex flex-col items-center gap-3 shadow-[4px_4px_0px_#991B1B] text-slate-800">
+              <div className="bg-white border-3 border-[var(--primary-color)] p-6 rounded-2xl mb-8 flex flex-col items-center gap-3 shadow-[4px_4px_0px_var(--primary-dark)] text-slate-800">
                 <label className="text-slate-700 font-adventure text-sm font-extrabold uppercase tracking-wider">Select Player Count</label>
                 <div className="flex gap-2.5">
                   {([1, 2, 3, 4] as const).map(num => (
@@ -2083,7 +2124,7 @@ export default function App() {
                       onClick={() => { sounds.playBeep(300 + num*20, 'sine', 0.1); setLocalPlayerCount(num); }}
                       className={`w-12 h-12 rounded-xl font-adventure font-extrabold text-lg border-2 transition-all flex items-center justify-center ${
                         localPlayerCount === num 
-                          ? 'bg-[#D32F2F] border-[#D32F2F] text-white scale-110 shadow-md' 
+                          ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white scale-110 shadow-md' 
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                       }`}
                     >
@@ -2095,8 +2136,8 @@ export default function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 {Array.from({ length: localPlayerCount }).map((_, idx) => (
-                  <div key={idx} className="bg-white border-3 border-[#D32F2F] p-5 rounded-2xl relative text-xs shadow-[4px_4px_0px_#991B1B] text-slate-850">
-                    <h4 className="font-adventure text-base font-extrabold text-[#D32F2F] mb-3 uppercase tracking-wide">Explorer {idx + 1}</h4>
+                  <div key={idx} className="bg-white border-3 border-[var(--primary-color)] p-5 rounded-2xl relative text-xs shadow-[4px_4px_0px_var(--primary-dark)] text-slate-850">
+                    <h4 className="font-adventure text-base font-extrabold text-[var(--primary-color)] mb-3 uppercase tracking-wide">Explorer {idx + 1}</h4>
                     <div className="space-y-3">
                       <div>
                         <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1">Explorer Name</label>
@@ -2109,7 +2150,7 @@ export default function App() {
                             setLocalSetupPlayers(list);
                           }}
                           placeholder={`Player ${idx + 1}`}
-                          className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-[#D32F2F] font-bold text-xs"
+                          className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold text-xs"
                         />
                       </div>
                       
@@ -2127,7 +2168,7 @@ export default function App() {
                               }}
                               className={`flex-1 py-2 border-2 rounded-xl font-bold uppercase text-[10px] transition-all ${
                                 localSetupPlayers[idx].grade === g 
-                                  ? 'bg-[#D32F2F] border-[#D32F2F] text-white shadow-sm' 
+                                  ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white shadow-sm' 
                                   : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
@@ -2150,7 +2191,7 @@ export default function App() {
                                   list[idx].color = cIdx;
                                   setLocalSetupPlayers(list);
                                 }}
-                                className={`w-5 h-5 rounded-full border border-slate-200 transition-all ${localSetupPlayers[idx].color === cIdx ? 'ring-2 ring-[#D32F2F] ring-offset-1 border-white scale-110' : 'hover:scale-105'}`}
+                                className={`w-5 h-5 rounded-full border border-slate-200 transition-all ${localSetupPlayers[idx].color === cIdx ? 'ring-2 ring-[var(--primary-color)] ring-offset-1 border-white scale-110' : 'hover:scale-105'}`}
                                 style={{ backgroundColor: col.hex }}
                               />
                             ))}
@@ -2169,7 +2210,7 @@ export default function App() {
                                   list[idx].avatar = aIdx;
                                   setLocalSetupPlayers(list);
                                 }}
-                                className={`text-sm p-1 rounded-lg transition-all ${localSetupPlayers[idx].avatar === aIdx ? 'bg-[#D32F2F]/15 scale-110' : ''}`}
+                                className={`text-sm p-1 rounded-lg transition-all ${localSetupPlayers[idx].avatar === aIdx ? 'bg-[var(--primary-color)]/15 scale-110' : ''}`}
                               >
                                 {av.icon}
                               </button>
@@ -2182,8 +2223,8 @@ export default function App() {
                 ))}
 
                 {localPlayerCount === 1 && (
-                  <div className="bg-white border-3 border-[#D32F2F] p-6 rounded-2xl flex flex-col justify-center text-center text-xs shadow-[4px_4px_0px_#991B1B] text-slate-800 md:col-span-2">
-                    <h4 className="font-adventure text-[#D32F2F] font-extrabold text-sm uppercase mb-1">Auto Opponents Added</h4>
+                  <div className="bg-white border-3 border-[var(--primary-color)] p-6 rounded-2xl flex flex-col justify-center text-center text-xs shadow-[4px_4px_0px_var(--primary-dark)] text-slate-800 md:col-span-2">
+                    <h4 className="font-adventure text-[var(--primary-color)] font-extrabold text-sm uppercase mb-1">Auto Opponents Added</h4>
                     <p className="text-[10px] text-slate-550 font-semibold italic">Compiler-Bot (🤖) & Binary-Beast (👾) will race against you.</p>
                   </div>
                 )}
@@ -2192,7 +2233,7 @@ export default function App() {
               <div className="flex justify-center gap-4">
                 <button 
                   onClick={localInitializeGame}
-                  className="px-10 py-4 bg-[#D32F2F] hover:bg-[#B91C1C] text-white rounded-2xl font-adventure font-extrabold text-base uppercase tracking-wider border-b-4 border-[#991B1B] shadow-lg hover:scale-105 active:scale-95 transition-all"
+                  className="px-10 py-4 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white rounded-2xl font-adventure font-extrabold text-base uppercase tracking-wider border-b-4 border-[var(--primary-dark)] shadow-lg hover:scale-105 active:scale-95 transition-all"
                 >
                   Start Game Map
                 </button>
@@ -2213,18 +2254,18 @@ export default function App() {
               {/* S2: LOCAL HANDOFF OVERLAY */}
               {localScreen === 'handoff' && (
                 <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <div className="bg-[#3B0F0F] border-4 border-[#D4AF37] rounded-[2rem] p-8 text-center text-white shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-sm w-full relative animate-scale-in">
+                  <div className="bg-[var(--primary-deep-medium)] border-4 border-[#D4AF37] rounded-[2rem] p-8 text-center text-white shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-sm w-full relative animate-scale-in">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(255,215,0,0.1),transparent_70%)] pointer-events-none"></div>
                     <span className="text-3xl block mb-2 animate-bounce">📱</span>
                     <h3 className="font-adventure text-2xl font-extrabold text-[#FFD700] mb-2 uppercase tracking-wider">Pass the Device</h3>
                     <p className="text-xs text-amber-200/70 font-semibold mb-6">Pass the screen to the next explorer:</p>
-                    <div className="bg-[#2A0F0F] text-[#FFD700] border-2 border-[#D4AF37]/50 p-4 rounded-2xl mb-8 flex items-center justify-center gap-3">
+                    <div className="bg-[var(--primary-deep-dark)] text-[#FFD700] border-2 border-[#D4AF37]/50 p-4 rounded-2xl mb-8 flex items-center justify-center gap-3">
                       <span className="text-3xl">{localPlayers[localTurnIdx]?.avatar}</span>
                       <span className="font-adventure text-xl font-extrabold uppercase tracking-wide">{localPlayers[localTurnIdx]?.name}</span>
                     </div>
                     <button
                       onClick={() => navigateTo({ localScreen: 'board' })}
-                      className="w-full py-3.5 bg-gradient-to-r from-[#D4AF37] to-[#F6E27A] hover:from-[#F6E27A] hover:to-[#D4AF37] text-[#2A0F0F] rounded-xl font-adventure font-extrabold border-b-4 border-[#B8860B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                      className="w-full py-3.5 bg-gradient-to-r from-[#D4AF37] to-[#F6E27A] hover:from-[#F6E27A] hover:to-[#D4AF37] text-[var(--primary-deep-dark)] rounded-xl font-adventure font-extrabold border-b-4 border-[#B8860B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
                     >
                       Ready!
                     </button>
@@ -2233,7 +2274,7 @@ export default function App() {
               )}
               {/* STICKY LOCAL PLAY HUD */}
               {localPlayers[localTurnIdx] && (
-                <div className="sticky top-14 md:top-[60px] z-30 bg-[#3B0F0F] border-3 border-[#D4AF37] px-4 py-3 rounded-2xl flex items-center justify-between gap-4 mb-4 shadow-[0_5px_15px_rgba(0,0,0,0.5)] text-white select-none animate-fade-in">
+                <div className="sticky top-14 md:top-[60px] z-30 bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] px-4 py-3 rounded-2xl flex items-center justify-between gap-4 mb-4 shadow-[0_5px_15px_rgba(0,0,0,0.5)] text-white select-none animate-fade-in">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">{localPlayers[localTurnIdx].avatar}</span>
                     <div>
@@ -2268,7 +2309,7 @@ export default function App() {
 
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 w-full items-start">
                 {/* GAME BOARD PANEL */}
-                <div className="lg:col-span-3 bg-[#3B0F0F] border-3 border-[#D4AF37] p-3 md:p-5 rounded-3xl relative w-full flex flex-col gap-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
+                <div className="lg:col-span-3 bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] p-3 md:p-5 rounded-3xl relative w-full flex flex-col gap-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
                   {/* Board viewport — full size, no clipping, tiles 0-17 always visible */}
                   <div className="relative w-full board-bg border-2 border-[#D4AF37]/50 rounded-2xl overflow-visible shadow-inner" style={{ paddingBottom: '75%' }}>
                     {/* Inner absolute container fills the padding-bottom area */}
@@ -2307,7 +2348,7 @@ export default function App() {
                         else if (tile.type === 'treasure') symbol = '🎁';
 
                         const destinationClass = isDestination ? 'active-tile' : '';
-                        const safeClass = isSafe ? 'ring-2 ring-[#FFD700] ring-offset-2 ring-offset-[#2A0F0F]' : '';
+                        const safeClass = isSafe ? 'ring-2 ring-[#FFD700] ring-offset-2 ring-offset-[var(--primary-deep-dark)]' : '';
                         const completedClass = isCompleted ? 'stone-plinth-completed' : '';
 
                         let specialAuraClass = '';
@@ -2322,7 +2363,7 @@ export default function App() {
                             className={`stone-plinth -translate-x-1/2 -translate-y-1/2 flex items-center justify-center font-bold group ${destinationClass} ${safeClass} ${completedClass} ${specialAuraClass}`} 
                             style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                           >
-                            <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#7F1D1D] to-[#2A0F0F] border border-[#D4AF37]/50 flex items-center justify-center text-[10px] sm:text-lg text-white">
+                            <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border border-[#D4AF37]/50 flex items-center justify-center text-[10px] sm:text-lg text-white">
                               <span>{symbol}</span>
                             </div>
                             {isSafe && (
@@ -2381,7 +2422,7 @@ export default function App() {
                     const isMyTurnNow = phase === 'READY_TO_ROLL';
                     const activePName = localPlayers[localTurnIdx]?.name || '';
                     return (
-                      <div className={`flex md:hidden p-3 rounded-2xl flex-col items-center justify-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.5)] text-center w-full max-w-[280px] mx-auto text-white select-none transition-all ${isMyTurnNow ? 'bg-[#3B0F0F] border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'bg-[#3B0F0F] border-3 border-[#D4AF37]'}`}>
+                      <div className={`flex md:hidden p-3 rounded-2xl flex-col items-center justify-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.5)] text-center w-full max-w-[280px] mx-auto text-white select-none transition-all ${isMyTurnNow ? 'bg-[var(--primary-deep-medium)] border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37]'}`}>
                         <div className="w-full">
                           {renderLocalDiceStatusArea(phase, activePName, localCurrentRoll, true)}
                         </div>
@@ -2391,16 +2432,16 @@ export default function App() {
                           <button
                             onClick={localTriggerDiceRoll}
                             disabled={!isMyTurnNow || localIsRolling || localIsMoving || localActiveQuestion !== null || localLandingTile !== null}
-                            className={`relative w-16 h-16 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[#5A1A1A] shadow-[0_0_20px_rgba(255,215,0,0.85)] border-2 border-[#FFD700]' : 'bg-[#2A0F0F] border-2 border-[#D4AF37]/40'}`}
+                            className={`relative w-16 h-16 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_20px_rgba(255,215,0,0.85)] border-2 border-[#FFD700]' : 'bg-[var(--primary-deep-dark)] border-2 border-[#D4AF37]/40'}`}
                             title={isMyTurnNow ? 'Your Turn — Roll Dice!' : 'Not your turn'}
                           >
                             <svg viewBox="0 0 100 100" className={`w-14 h-14 ${localIsRolling ? 'dice-spin-shake' : ''}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 8px rgba(255,215,0,0.8))' : 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
                               {/* Top face */}
-                              <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2.5"/>
+                              <polygon points="50,8 90,30 50,52 10,30" fill="var(--primary-deep)" stroke="#D4AF37" strokeWidth="2.5"/>
                               {/* Left face */}
-                              <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
+                              <polygon points="10,30 50,52 50,92 10,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2.5"/>
                               {/* Right face */}
-                              <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
+                              <polygon points="90,30 50,52 50,92 90,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2.5"/>
                               {/* Top face pips */}
                               <circle cx="38" cy="26" r="3.5" fill="#FFD700"/>
                               <circle cx="50" cy="34" r="3.5" fill="#FFD700"/>
@@ -2409,7 +2450,7 @@ export default function App() {
                           </button>
 
                           {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
-                            <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[#D4AF37] shadow-lg">
+                            <div className="absolute inset-0 bg-[var(--primary-deep)]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[#D4AF37] shadow-lg">
                               <span className="font-adventure text-3xl font-extrabold text-[#FFD700]">
                                 {localCurrentRoll}
                               </span>
@@ -2428,7 +2469,7 @@ export default function App() {
                     const isMyTurnNow = phase === 'READY_TO_ROLL';
                     const activePName = localPlayers[localTurnIdx]?.name || '';
                     return (
-                      <div className={`hidden md:flex p-6 rounded-3xl flex-col items-center justify-center text-center shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white select-none transition-all ${isMyTurnNow ? 'bg-[#3B0F0F] border-3 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]' : 'bg-[#3B0F0F] border-3 border-[#D4AF37]'}`}>
+                      <div className={`hidden md:flex p-6 rounded-3xl flex-col items-center justify-center text-center shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white select-none transition-all ${isMyTurnNow ? 'bg-[var(--primary-deep-medium)] border-3 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]' : 'bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37]'}`}>
                         <span className="text-[10px] block font-bold text-amber-300 uppercase tracking-wider mb-2 font-adventure">Current Turn</span>
                         <div className="mb-2">
                           <span className="font-adventure text-lg font-extrabold text-[#FFD700] block uppercase tracking-wide truncate max-w-[140px]">
@@ -2446,16 +2487,16 @@ export default function App() {
                           <button
                             onClick={localTriggerDiceRoll}
                             disabled={!isMyTurnNow || localIsRolling || localIsMoving || localActiveQuestion !== null || localLandingTile !== null}
-                            className={`relative w-24 h-24 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[#5A1A1A] shadow-[0_0_30px_rgba(255,215,0,0.95)] border-3 border-[#FFD700]' : 'bg-[#2A0F0F] border-2 border-[#D4AF37]/45'}`}
+                            className={`relative w-24 h-24 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_30px_rgba(255,215,0,0.95)] border-3 border-[#FFD700]' : 'bg-[var(--primary-deep-dark)] border-2 border-[#D4AF37]/45'}`}
                             title={isMyTurnNow ? 'Your Turn — Click to Roll!' : 'Not your turn'}
                           >
                             <svg viewBox="0 0 100 100" className={`w-20 h-20 ${localIsRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 12px rgba(255,215,0,0.9))' : 'drop-shadow(0 3px 6px rgba(255,215,0,0.25))' }}>
                               {/* Top face */}
-                              <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2"/>
+                              <polygon points="50,8 90,30 50,52 10,30" fill="var(--primary-deep)" stroke="#D4AF37" strokeWidth="2"/>
                               {/* Left face */}
-                              <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
+                              <polygon points="10,30 50,52 50,92 10,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2"/>
                               {/* Right face */}
-                              <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
+                              <polygon points="90,30 50,52 50,92 90,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2"/>
                               {/* Top face pips */}
                               <circle cx="38" cy="25" r="4" fill="#FFD700"/>
                               <circle cx="50" cy="33" r="4" fill="#FFD700"/>
@@ -2469,7 +2510,7 @@ export default function App() {
                           </button>
 
                           {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
-                            <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[#D4AF37] shadow-lg">
+                            <div className="absolute inset-0 bg-[var(--primary-deep)]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[#D4AF37] shadow-lg">
                               <div className="text-center">
                                 <span className="block text-[8px] text-[#FFD700] uppercase font-extrabold tracking-widest leading-none mb-0.5 font-adventure">ROLLED</span>
                                 <span className="font-adventure text-5xl font-extrabold text-[#FFD700]">
@@ -2487,21 +2528,21 @@ export default function App() {
                   })()}
 
                   {localActiveQuestion && localPlayers[localTurnIdx]?.isBot ? (
-                    <div className="bg-white border-3 border-[#D32F2F] p-5 rounded-3xl shadow-[4px_4px_0px_#991B1B] space-y-4 select-text text-stone-900">
+                    <div className="bg-white border-3 border-[var(--primary-color)] p-5 rounded-3xl shadow-[4px_4px_0px_var(--primary-dark)] space-y-4 select-text text-stone-900">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Bot Thinking...</span>
-                          <span className="font-adventure text-base font-extrabold text-[#D32F2F] block">🤖 {localPlayers[localTurnIdx]?.name}</span>
+                          <span className="font-adventure text-base font-extrabold text-[var(--primary-color)] block">🤖 {localPlayers[localTurnIdx]?.name}</span>
                         </div>
                         {localQuizPhase === 'answering' && (
-                          <span className="text-xs font-bold px-2 py-1 rounded-full border bg-red-50 border-[#D32F2F] text-[#D32F2F] animate-pulse">
+                          <span className="text-xs font-bold px-2 py-1 rounded-full border bg-[var(--primary-subtle-bg)] border-[var(--primary-color)] text-[var(--primary-color)] animate-pulse">
                             ⏰ {localTimerRemaining}s
                           </span>
                         )}
                       </div>
                       
                       <div>
-                        <span className="text-[9px] font-bold text-[#D32F2F] uppercase tracking-wider block mb-1">Question</span>
+                        <span className="text-[9px] font-bold text-[var(--primary-color)] uppercase tracking-wider block mb-1">Question</span>
                         <p className="text-stone-800 text-xs font-semibold leading-relaxed">{localActiveQuestion.question}</p>
                       </div>
 
@@ -2510,7 +2551,7 @@ export default function App() {
                           let chipStyle = 'bg-slate-50 border-slate-200 text-slate-700';
                           if (localQuizPhase === 'result') {
                             if (oi === localActiveQuestion.correctIndex) chipStyle = 'bg-emerald-50 border-emerald-400 text-emerald-800 font-bold';
-                            else if (oi === localSelectedOptIdx) chipStyle = 'bg-red-50 border-red-400 text-red-800 font-bold';
+                            else if (oi === localSelectedOptIdx) chipStyle = 'bg-[var(--primary-subtle-bg)] border-[var(--primary-subtle-border)] text-red-800 font-bold';
                           }
                           return (
                             <div key={oi} className={`w-full text-left px-3 py-2 rounded-xl border text-[10px] font-semibold ${chipStyle}`}>
@@ -2522,7 +2563,7 @@ export default function App() {
 
                       {localQuizPhase === 'result' && (
                         <div className={`p-2 rounded-xl text-[10px] font-bold text-center border ${
-                          localSelectedOptIdx === localActiveQuestion.correctIndex ? 'bg-emerald-50 border-emerald-400 text-emerald-800' : 'bg-red-50 border-red-400 text-red-800'
+                          localSelectedOptIdx === localActiveQuestion.correctIndex ? 'bg-emerald-50 border-emerald-400 text-emerald-800' : 'bg-[var(--primary-subtle-bg)] border-[var(--primary-subtle-border)] text-red-800'
                         }`}>
                           {localSelectedOptIdx === localActiveQuestion.correctIndex ? `✓ Correct` : `✗ Wrong`}
                         </div>
@@ -2530,13 +2571,13 @@ export default function App() {
 
                       {localQuizPhase === 'result' && localActiveQuestion.explanation && (
                         <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-[10px] text-slate-600">
-                          <p className="font-bold text-[#D32F2F] mb-1 font-adventure uppercase tracking-wider">Explanation:</p>
+                          <p className="font-bold text-[var(--primary-color)] mb-1 font-adventure uppercase tracking-wider">Explanation:</p>
                           {localActiveQuestion.explanation}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="bg-[#3B0F0F] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white">
+                    <div className="bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white">
                       <h3 className="font-adventure text-base font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 mb-4 uppercase tracking-wider">Standings</h3>
                       <div className="space-y-3 text-xs">
                         {localPlayers.slice().sort((a, b) => {
@@ -2545,7 +2586,7 @@ export default function App() {
                           if (rA !== rB) return rA - rB;
                           return b.position - a.position || b.xp - a.xp;
                         }).map((p, idx) => (
-                          <div key={p.id} className={`p-3 bg-[#2A0F0F] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
+                          <div key={p.id} className={`p-3 bg-[var(--primary-deep-dark)] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
                             <div className="flex justify-between items-center font-bold mb-2">
                               <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
                                 <span className="font-adventure text-[#FFD700]">
@@ -2556,7 +2597,7 @@ export default function App() {
                               </span>
                               {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
                             </div>
-                            <div className="grid grid-cols-3 gap-1 bg-[#3B0F0F] border border-[#D4AF37]/35 p-1 rounded-xl text-center">
+                            <div className="grid grid-cols-3 gap-1 bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-1 rounded-xl text-center">
                               <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">XP</span><span className="font-bold text-xs text-white">{p.xp}</span></div>
                               <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Gold</span><span className="font-bold text-xs text-white">{p.coins}</span></div>
                               <div><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Tile</span><span className="font-bold text-xs text-[#FFD700]">{p.position}</span></div>
@@ -2617,7 +2658,7 @@ export default function App() {
           {/* LOCAL VICTORY SUMMARY */}
           {localScreen === 'victory' && (
             <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 select-text animate-fade-in font-serif">
-              <div className="bg-[#3B0F0F] border-4 border-[#D4AF37] max-w-xl w-full p-8 text-center rounded-[2rem] relative shadow-[0_0_60px_rgba(255,215,0,0.4)] animate-scale-in flex flex-col items-center text-white">
+              <div className="bg-[var(--primary-deep-medium)] border-4 border-[#D4AF37] max-w-xl w-full p-8 text-center rounded-[2rem] relative shadow-[0_0_60px_rgba(255,215,0,0.4)] animate-scale-in flex flex-col items-center text-white">
                 {/* Shiny confetti glow overlay */}
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(255,215,0,0.15),transparent_70%)] pointer-events-none"></div>
                 
@@ -2641,14 +2682,14 @@ export default function App() {
                   });
                   const winner = sorted[0];
                   return (
-                    <div className="bg-[#2A0F0F] border border-[#D4AF37]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
+                    <div className="bg-[var(--primary-deep-dark)] border border-[#D4AF37]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
                       <h4 className="text-xs font-extrabold text-[#FFD700] uppercase tracking-wider mb-3 text-center">Champion: {winner.avatar} {winner.name}</h4>
                       <div className="grid grid-cols-2 gap-4 text-center">
-                        <div className="bg-[#3B0F0F] border border-[#D4AF37]/35 p-3 rounded-2xl">
+                        <div className="bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-3 rounded-2xl">
                           <span className="text-[10px] block text-amber-200/50 uppercase font-bold">XP Gained</span>
                           <span className="text-lg font-bold text-white">+{winner.xp} XP</span>
                         </div>
-                        <div className="bg-[#3B0F0F] border border-[#D4AF37]/35 p-3 rounded-2xl">
+                        <div className="bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-3 rounded-2xl">
                           <span className="text-[10px] block text-amber-200/50 uppercase font-bold">Coins Earned</span>
                           <span className="text-lg font-bold text-white">+{winner.coins} Gold</span>
                         </div>
@@ -2666,11 +2707,11 @@ export default function App() {
                     if (a.position !== b.position) return b.position - a.position;
                     return b.xp - a.xp;
                   }).map((p, idx) => (
-                    <div key={p.id} className="flex items-center justify-between p-3 bg-[#2A0F0F] border border-[#D4AF37]/30 rounded-xl text-xs text-white">
+                    <div key={p.id} className="flex items-center justify-between p-3 bg-[var(--primary-deep-dark)] border border-[#D4AF37]/30 rounded-xl text-xs text-white">
                       <span className="font-bold">#{idx+1} {p.avatar} {p.name}</span>
                       <div className="flex gap-2">
                         {localCalculateBadges(p).map((b, bIdx) => (
-                          <span key={bIdx} className="bg-[#5A1A1A] border border-[#D4AF37]/45 text-[#FFD700] text-[7px] px-1.5 py-0.5 rounded font-bold">{b}</span>
+                          <span key={bIdx} className="bg-[var(--primary-deep)] border border-[#D4AF37]/45 text-[#FFD700] text-[7px] px-1.5 py-0.5 rounded font-bold">{b}</span>
                         ))}
                       </div>
                       <span className="font-semibold text-amber-200/80">{p.xp} XP | {p.coins} Coins</span>
@@ -2687,7 +2728,7 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'selection' }); }}
-                    className="px-6 py-3 rounded-full bg-[#5A1A1A] hover:bg-[#7F1D1D] text-[#FFD700] border-2 border-[#D4AF37]/80 font-bold text-xs shadow-md active:translate-y-0.5 transition-all font-adventure uppercase tracking-wider"
+                    className="px-6 py-3 rounded-full bg-[var(--primary-deep)] hover:bg-[var(--primary-deep-medium)] text-[#FFD700] border-2 border-[#D4AF37]/80 font-bold text-xs shadow-md active:translate-y-0.5 transition-all font-adventure uppercase tracking-wider"
                   >
                     Exit Game
                   </button>
@@ -2701,8 +2742,8 @@ export default function App() {
       {/* Leave Game Confirmation Dialog */}
       {showExitConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[999999] animate-fade-in select-text">
-          <div className="bg-white border-3 border-[#D32F2F] text-stone-900 p-6 rounded-[2rem] w-full max-w-sm shadow-[6px_6px_0px_#991B1B] relative">
-            <h3 className="font-adventure text-2xl font-extrabold text-[#D32F2F] mb-2 uppercase tracking-wide">
+          <div className="bg-white border-3 border-[var(--primary-color)] text-stone-900 p-6 rounded-[2rem] w-full max-w-sm shadow-[6px_6px_0px_var(--primary-dark)] relative">
+            <h3 className="font-adventure text-2xl font-extrabold text-[var(--primary-color)] mb-2 uppercase tracking-wide">
               Leave Game?
             </h3>
             <p className="text-xs font-semibold text-slate-500 mb-6">
@@ -2724,7 +2765,7 @@ export default function App() {
                   if (pendingExitCallback) pendingExitCallback();
                   setPendingExitCallback(null);
                 }}
-                className="flex-1 py-2.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white border-b-4 border-[#991B1B] font-adventure font-extrabold rounded-xl text-xs uppercase tracking-wide transition-all"
+                className="flex-1 py-2.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white border-b-4 border-[var(--primary-dark)] font-adventure font-extrabold rounded-xl text-xs uppercase tracking-wide transition-all"
               >
                 Leave Match
               </button>
@@ -2734,7 +2775,7 @@ export default function App() {
       )}
       {/* Screen Transition Overlay */}
       {isTransitioning && (
-        <div className="fixed inset-0 z-[99999] bg-[#1A0505]/90 flex items-center justify-center pointer-events-auto backdrop-blur-md">
+        <div className="fixed inset-0 z-[99999] bg-[var(--primary-deep-dark)]/90 flex items-center justify-center pointer-events-auto backdrop-blur-md">
           <div className="relative w-32 h-32 flex items-center justify-center">
             <div className="w-28 h-28 rounded-full border-4 border-[#D4AF37]/20 animate-spin-slow border-dashed"></div>
             <Compass className="absolute text-[#D4AF37] w-10 h-10 animate-pulse-slow" />

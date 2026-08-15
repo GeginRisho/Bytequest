@@ -56,7 +56,7 @@ const getCurvedPath = (coords: { x: number; y: number }[]) => {
 };
 
 interface StudentGameProps {
-  onBack: () => void;
+  onBack: (err?: string) => void;
   socket: any;
   onStartSoloPractice: () => void;
   onResumeLocalPractice: (savedState: any) => void;
@@ -70,6 +70,8 @@ interface StudentGameProps {
   activeStudent?: any;
   onUpdateStudent?: (studentId: string) => void;
   sounds?: any;
+  theme: string;
+  setTheme: (theme: string) => void;
 }
 
 export default function StudentGame({ 
@@ -85,7 +87,9 @@ export default function StudentGame({
   setShowLobbyConfigModal,
   activeStudent: propActiveStudent,
   onUpdateStudent,
-  sounds: _sounds
+  sounds: _sounds,
+  theme,
+  setTheme
 }: StudentGameProps) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -451,7 +455,6 @@ export default function StudentGame({
     localStorage.removeItem('bytequest_student_id');
     localStorage.removeItem('bytequest_role');
     setActiveStudent(null);
-    setAuthMode('login');
     onBack();
   };
 
@@ -724,7 +727,7 @@ export default function StudentGame({
   const getTimerColorClass = (seconds: number, hasQuestion: boolean) => {
     if (!hasQuestion) return 'text-gold-light/40';
     if (seconds === 5) return 'text-orange-500 animate-pulse';
-    if (seconds < 5) return 'text-red-500 animate-pulse font-extrabold';
+    if (seconds < 5) return 'text-[var(--primary-color)] animate-pulse font-extrabold';
     return 'text-emerald-500';
   };
 
@@ -807,7 +810,7 @@ export default function StudentGame({
       case 'QUESTION':
         return (
           <div className={wrapperClass}>
-            <span className="text-red-400 font-adventure text-xs font-bold block uppercase animate-pulse">❓ QUESTION TIME</span>
+            <span className="text-[var(--primary-light)] font-adventure text-xs font-bold block uppercase animate-pulse">❓ QUESTION TIME</span>
             <span className="text-[9px] text-amber-200 font-bold uppercase tracking-wider">ANSWER THE QUESTION</span>
           </div>
         );
@@ -1042,12 +1045,12 @@ export default function StudentGame({
 
     return (
       <main className="max-w-md mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full min-h-[85vh] select-none font-sans">
-        <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] text-white rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(0,0,0,0.8)] relative flex flex-col justify-between text-center min-h-[300px]">
+        <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] text-white rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(0,0,0,0.8)] relative flex flex-col justify-between text-center min-h-[300px]">
           <div className="my-auto py-6">
             {syncFailed ? (
               <>
                 <span className="text-6xl block mb-6 animate-pulse">⚠️</span>
-                <h3 className="font-adventure text-xl font-bold text-red-500 uppercase tracking-widest mb-2">
+                <h3 className="font-adventure text-xl font-bold text-[var(--primary-color)] uppercase tracking-widest mb-2">
                   Unable to sync explorer profile
                 </h3>
                 <p className="text-white/60 text-xs font-semibold mb-8">
@@ -1062,7 +1065,7 @@ export default function StudentGame({
                         onBack();
                       }
                     }}
-                    className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                    className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
                   >
                     Retry Sync
                   </button>
@@ -1077,7 +1080,7 @@ export default function StudentGame({
             ) : (
               <>
                 <div className="flex justify-center mb-6">
-                  <Loader className="w-12 h-12 animate-spin text-[#D32F2F]" />
+                  <Loader className="w-12 h-12 animate-spin text-[var(--primary-color)]" />
                 </div>
                 <h3 className="font-adventure text-xl font-bold text-[#FFD700] uppercase tracking-widest mb-2 animate-pulse">
                   Syncing Explorer Profile...
@@ -1097,16 +1100,16 @@ export default function StudentGame({
     const pendingAssignments = activeStudent.assignments ? activeStudent.assignments.filter((a: any) => !a.isCompleted) : [];
 
     return (
-      <div className="flex-1 flex flex-col min-h-screen bg-gradient-to-b from-[#2A0F0F] via-[#1A0505] to-[#000000] text-white relative pb-20 select-none">
+      <div className="flex-1 flex flex-col min-h-screen bg-gradient-to-b from-[var(--primary-deep-dark)] via-[var(--primary-deep-dark)] to-[#000000] text-white relative pb-20 select-none">
         
         {/* PREMIUM GAME OVERLAY HUD (TOP BAR) */}
-        <header className="sticky top-0 z-40 bg-[#1A0505]/95 backdrop-blur border-b-3 border-[#D32F2F] shadow-lg px-4 py-3 select-none text-white">
+        <header className="sticky top-0 z-40 bg-[var(--primary-deep-dark)]/95 backdrop-blur border-b-3 border-[var(--primary-color)] shadow-lg px-4 py-3 select-none text-white">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
             
             <div className="flex items-center gap-2.5">
               <button
                 onClick={handleGoBack}
-                className="px-3.5 py-2 bg-gradient-to-b from-[#8B0000] to-[#5A0F0F] hover:brightness-110 text-white font-adventure font-extrabold rounded-xl border border-white/20 text-[9px] uppercase tracking-widest transition-all active:scale-95 shadow-md mr-1.5"
+                className="px-3.5 py-2 bg-gradient-to-b from-[var(--primary-dark)] to-[var(--primary-deep-medium)] hover:brightness-110 text-white font-adventure font-extrabold rounded-xl border border-white/20 text-[9px] uppercase tracking-widest transition-all active:scale-95 shadow-md mr-1.5"
                 title="Return to Menu"
               >
                 ← Exit
@@ -1115,7 +1118,7 @@ export default function StudentGame({
               {/* Player Info (Avatar, Name, Grade) */}
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-xl border border-white/20 bg-gradient-to-br from-[#8B0000] to-[#3B0F0F] flex items-center justify-center text-xl shadow-md">
+                  <div className="w-10 h-10 rounded-xl border border-white/20 bg-gradient-to-br from-[var(--primary-dark)] to-[var(--primary-deep-medium)] flex items-center justify-center text-xl shadow-md">
                     {editAvatar || '👾'}
                   </div>
                   <div className="absolute -bottom-1 -right-1 bg-amber-500 text-stone-950 font-adventure text-[7px] font-extrabold px-1 py-0.5 rounded border border-stone-950 shadow">
@@ -1124,7 +1127,7 @@ export default function StudentGame({
                 </div>
                 <div className="leading-tight">
                   <span className="font-adventure text-xs font-extrabold text-white block truncate max-w-[120px] uppercase">{activeStudent.name}</span>
-                  <span className="text-[8px] bg-[#7A0C0C]/55 border border-[#D32F2F]/40 text-amber-250 px-1.5 py-0.5 rounded-lg font-bold uppercase">Class {activeStudent.grade || 11}</span>
+                  <span className="text-[8px] bg-[var(--primary-deep-medium)]/55 border border-[var(--primary-color)]/40 text-amber-250 px-1.5 py-0.5 rounded-lg font-bold uppercase">Class {activeStudent.grade || 11}</span>
                 </div>
               </div>
             </div>
@@ -1145,7 +1148,7 @@ export default function StudentGame({
 
             {/* Coins Counter & Utility Buttons */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 bg-[#3B0F0F] border border-[#FFD700]/30 px-2.5 py-1 rounded-xl text-amber-400 font-bold text-xs shadow-md">
+              <div className="flex items-center gap-1.5 bg-[var(--primary-deep-medium)] border border-[#FFD700]/30 px-2.5 py-1 rounded-xl text-amber-400 font-bold text-xs shadow-md">
                 <span>🪙</span>
                 <span className="font-mono">{activeStudent.coins}</span>
               </div>
@@ -1156,11 +1159,11 @@ export default function StudentGame({
                   className="p-2 rounded-xl border border-white/10 bg-black/40 hover:border-white/20 text-white/70 hover:text-white transition-all active:scale-95 shadow-md"
                   title="Toggle Sound"
                 >
-                  {audioOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-red-500" />}
+                  {audioOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-[var(--primary-color)]" />}
                 </button>
                 <button 
                   onClick={handleLogout}
-                  className="p-2 rounded-xl border border-red-900/40 bg-[#7A0C0C]/40 hover:bg-[#7A0C0C]/60 text-red-200 transition-all active:scale-95 shadow-md"
+                  className="p-2 rounded-xl border border-[var(--primary-dark)]/40 bg-[var(--primary-deep-medium)]/40 hover:bg-[var(--primary-deep-medium)]/60 text-white/80 transition-all active:scale-95 shadow-md"
                   title="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
@@ -1403,7 +1406,7 @@ export default function StudentGame({
                           className="w-full bg-parchment-light border border-gold-dark/45 rounded px-2.5 py-1 text-xs text-center font-bold font-mono tracking-wider focus:outline-none h-8"
                           required
                         />
-                        {joinError && <p className="text-[8px] text-red-700 text-center font-bold truncate">{joinError}</p>}
+                        {joinError && <p className="text-[8px] text-[var(--primary-subtle-text)] text-center font-bold truncate">{joinError}</p>}
                         <button type="submit" className="w-full h-11 bg-gold text-jungle-deep font-bold text-[10px] md:text-xs rounded-lg uppercase tracking-wide min-h-[44px] flex items-center justify-center">Verify</button>
                       </form>
                     ) : (
@@ -1564,8 +1567,8 @@ export default function StudentGame({
                 </div>
               )}
               {!quizActive ? (
-                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] rounded-[2rem] p-8 text-white max-w-lg mx-auto space-y-6 shadow-2xl font-sans">
-                  <h3 className="font-adventure text-2xl font-bold text-center text-[#D32F2F] uppercase tracking-wide">Practice Quiz Mode</h3>
+                <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] rounded-[2rem] p-8 text-white max-w-lg mx-auto space-y-6 shadow-2xl font-sans">
+                  <h3 className="font-adventure text-2xl font-bold text-center text-[var(--primary-color)] uppercase tracking-wide">Practice Quiz Mode</h3>
                   <p className="text-center text-xs font-semibold text-white/50">Select a study subject and difficulty. No board coordinates, no bots, just pure CS revision!</p>
 
                   <div className="space-y-4">
@@ -1574,7 +1577,7 @@ export default function StudentGame({
                       <select 
                         value={quizTopic} 
                         onChange={(e) => setQuizTopic(e.target.value)}
-                        className="w-full bg-[#2A0F0F] border border-white/10 rounded-xl px-3 py-3 text-xs font-bold text-white focus:outline-none focus:border-[#D32F2F]"
+                        className="w-full bg-[var(--primary-deep-dark)] border border-white/10 rounded-xl px-3 py-3 text-xs font-bold text-white focus:outline-none focus:border-[var(--primary-color)]"
                       >
                         <option value="Python Programming" className="bg-stone-900 text-white">Python programming</option>
                         <option value="Relational Databases" className="bg-stone-900 text-white">Relational Databases & SQL</option>
@@ -1593,8 +1596,8 @@ export default function StudentGame({
                             type="button"
                             className={`py-2.5 border font-bold text-xs uppercase rounded-xl transition-all ${
                               quizDifficulty === diff 
-                                ? 'bg-[#D32F2F] border-[#D32F2F] text-white shadow-md' 
-                                : 'bg-[#2A0F0F] border-white/10 text-white/55 hover:bg-[#5A0F0F]'
+                                ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white shadow-md' 
+                                : 'bg-[var(--primary-deep-dark)] border-white/10 text-white/55 hover:bg-[var(--primary-deep-medium)]'
                             }`}
                           >
                             {diff}
@@ -1606,13 +1609,13 @@ export default function StudentGame({
 
                   <button 
                     onClick={handleStartPracticeQuiz}
-                    className="w-full py-4 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold border-b-4 border-[#991B1B] rounded-xl shadow-lg uppercase text-xs tracking-wider transition-colors"
+                    className="w-full py-4 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold border-b-4 border-[var(--primary-dark)] rounded-xl shadow-lg uppercase text-xs tracking-wider transition-colors"
                   >
                     Start Training Quiz
                   </button>
                 </div>
               ) : (
-                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] rounded-[2rem] p-8 text-white max-w-xl mx-auto space-y-6 relative shadow-2xl font-sans">
+                <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] rounded-[2rem] p-8 text-white max-w-xl mx-auto space-y-6 relative shadow-2xl font-sans">
                   <div className="flex justify-between border-b border-white/10 pb-3 text-xs text-white/50 font-bold">
                     <span>📚 Practice Quiz</span>
                     <span>Question {quizQIdx + 1} of 5</span>
@@ -1622,12 +1625,12 @@ export default function StudentGame({
 
                   <div className="space-y-3">
                     {quizQs[quizQIdx]?.options.map((opt, oIdx) => {
-                      let style = 'bg-[#2A0F0F] border-2 border-white/10 text-white/90 hover:bg-[#5A0F0F] hover:border-[#D32F2F]';
+                      let style = 'bg-[var(--primary-deep-dark)] border-2 border-white/10 text-white/90 hover:bg-[var(--primary-deep-medium)] hover:border-[var(--primary-color)]';
                       if (quizChecked) {
                         if (oIdx === quizQs[quizQIdx].correctIndex) style = 'bg-emerald-950/80 border-2 border-emerald-500 text-emerald-355 font-bold';
-                        else if (quizSelectedOpt === oIdx) style = 'bg-red-950/80 border-2 border-red-500 text-red-355 font-bold';
+                        else if (quizSelectedOpt === oIdx) style = 'bg-[var(--primary-deep-dark)]/80 border-2 border-red-500 text-red-355 font-bold';
                       } else if (quizSelectedOpt === oIdx) {
-                        style = 'bg-[#7A0C0C]/60 border-2 border-[#D32F2F] text-white font-bold';
+                        style = 'bg-[var(--primary-deep-medium)]/60 border-2 border-[var(--primary-color)] text-white font-bold';
                       }
 
                       return (
@@ -1654,14 +1657,14 @@ export default function StudentGame({
                       <button 
                         onClick={handleQuizCheck}
                         disabled={quizSelectedOpt === null}
-                        className="flex-1 py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase text-xs disabled:opacity-50 transition-colors"
+                        className="flex-1 py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase text-xs disabled:opacity-50 transition-colors"
                       >
                         Check Answer
                       </button>
                     ) : (
                       <button 
                         onClick={handleQuizNext}
-                        className="flex-1 py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase text-xs transition-colors"
+                        className="flex-1 py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase text-xs transition-colors"
                       >
                         {quizQIdx === 4 ? 'Complete Quiz' : 'Next Question'}
                       </button>
@@ -1675,9 +1678,9 @@ export default function StudentGame({
           {activeTab === 'daily_challenge' && (
             <div className="space-y-6">
               {dailyLoading && (
-                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in">
+                <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in">
                   <div className="flex justify-center mb-6">
-                    <Loader className="w-12 h-12 animate-spin text-[#D32F2F]" />
+                    <Loader className="w-12 h-12 animate-spin text-[var(--primary-color)]" />
                   </div>
                   <h3 className="font-adventure text-xl font-bold text-[#FFD700] uppercase tracking-widest mb-2 animate-pulse">
                     LOADING DAILY CHALLENGE...
@@ -1689,9 +1692,9 @@ export default function StudentGame({
               )}
 
               {!dailyLoading && !dailyActive && !showDailyResults && (
-                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in">
+                <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in">
                   <span className="text-5xl block mb-6 animate-pulse">⚠️</span>
-                  <h3 className="font-adventure text-xl font-bold text-red-500 uppercase tracking-widest mb-2">
+                  <h3 className="font-adventure text-xl font-bold text-[var(--primary-color)] uppercase tracking-widest mb-2">
                     Unable to load today's challenge.
                   </h3>
                   <p className="text-white/60 text-xs font-semibold mb-8">
@@ -1700,7 +1703,7 @@ export default function StudentGame({
                   <div className="space-y-3">
                     <button
                       onClick={handleStartDailyChallenge}
-                      className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                      className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
                     >
                       Retry
                     </button>
@@ -1715,7 +1718,7 @@ export default function StudentGame({
               )}
 
               {!dailyLoading && dailyActive && (
-                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] p-8 text-white max-w-xl mx-auto space-y-6 relative rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] font-sans animate-scale-in">
+                <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] p-8 text-white max-w-xl mx-auto space-y-6 relative rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] font-sans animate-scale-in">
                   <div className="flex justify-between border-b border-white/10 pb-3 text-xs text-white/50 font-bold">
                     <span>⚡ Daily Challenge Quiz</span>
                     <span>Question {dailyQIdx + 1} of 5</span>
@@ -1725,12 +1728,12 @@ export default function StudentGame({
 
                   <div className="space-y-3">
                     {dailyQs[dailyQIdx]?.options.map((opt, oIdx) => {
-                      let style = 'bg-[#2A0F0F] border-2 border-white/10 text-white/90 hover:bg-[#5A0F0F] hover:border-[#D32F2F]';
+                      let style = 'bg-[var(--primary-deep-dark)] border-2 border-white/10 text-white/90 hover:bg-[var(--primary-deep-medium)] hover:border-[var(--primary-color)]';
                       if (dailyChecked) {
                         if (oIdx === dailyQs[dailyQIdx].correctIndex) style = 'bg-emerald-950/80 border-2 border-emerald-500 text-emerald-350 font-bold';
-                        else if (dailySelectedOpt === oIdx) style = 'bg-red-950/80 border-2 border-red-500 text-red-350 font-bold';
+                        else if (dailySelectedOpt === oIdx) style = 'bg-[var(--primary-deep-dark)]/80 border-2 border-red-500 text-red-350 font-bold';
                       } else if (dailySelectedOpt === oIdx) {
-                        style = 'bg-[#7A0C0C]/60 border-2 border-[#D32F2F] text-white font-bold';
+                        style = 'bg-[var(--primary-deep-medium)]/60 border-2 border-[var(--primary-color)] text-white font-bold';
                       }
 
                       return (
@@ -1757,14 +1760,14 @@ export default function StudentGame({
                       <button 
                         onClick={handleDailyCheck}
                         disabled={dailySelectedOpt === null}
-                        className="flex-1 py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase text-xs disabled:opacity-50 transition-colors"
+                        className="flex-1 py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase text-xs disabled:opacity-50 transition-colors"
                       >
                         Check Answer
                       </button>
                     ) : (
                       <button 
                         onClick={handleDailyNext}
-                        className="flex-1 py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase text-xs transition-colors"
+                        className="flex-1 py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase text-xs transition-colors"
                       >
                         {dailyQIdx === 4 ? 'Finish challenge' : 'Next Question'}
                       </button>
@@ -1774,13 +1777,13 @@ export default function StudentGame({
               )}
 
               {!dailyLoading && showDailyResults && (
-                <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in space-y-6">
+                <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in space-y-6">
                   <span className="text-5xl block mb-2">🏆</span>
                   <h3 className="font-adventure text-2xl font-bold text-[#FFD700] uppercase tracking-widest">
                     CHALLENGE COMPLETE
                   </h3>
                   
-                  <div className="bg-[#2A0F0F] border border-white/10 p-5 rounded-2xl max-w-xs mx-auto space-y-2">
+                  <div className="bg-[var(--primary-deep-dark)] border border-white/10 p-5 rounded-2xl max-w-xs mx-auto space-y-2">
                     <div className="flex justify-between font-bold text-xs text-white/60">
                       <span>Correct Answers:</span>
                       <span className="text-emerald-400">{dailyScore} / 5</span>
@@ -1797,7 +1800,7 @@ export default function StudentGame({
 
                   <button
                     onClick={() => onBack()}
-                    className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                    className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
                   >
                     Return to Menu
                   </button>
@@ -1807,7 +1810,7 @@ export default function StudentGame({
           )}
 
           {activeTab === 'leaderboard' && (
-            <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] rounded-[1.5rem] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-white space-y-4 max-w-2xl mx-auto font-sans">
+            <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] rounded-[1.5rem] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-white space-y-4 max-w-2xl mx-auto font-sans">
               <div className="flex items-center gap-3 border-b border-white/10 pb-2 mb-2">
                 <button
                   onClick={handleGoBack}
@@ -1817,7 +1820,7 @@ export default function StudentGame({
                 </button>
                 <h3 className="font-adventure text-xl font-bold text-[#FFD700] uppercase tracking-wide">Class Leaderboard</h3>
               </div>
-              <p className="text-white/60 text-xs font-semibold">Standings of other students in: <span className="font-bold text-[#D32F2F] uppercase">{activeStudent.className}</span></p>
+              <p className="text-white/60 text-xs font-semibold">Standings of other students in: <span className="font-bold text-[var(--primary-color)] uppercase">{activeStudent.className}</span></p>
 
               <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
                 {[
@@ -1829,14 +1832,14 @@ export default function StudentGame({
                   <div 
                     key={idx} 
                     className={`p-4 rounded-xl flex justify-between items-center border-2 ${
-                      student.isMe ? 'bg-[#7A0C0C]/60 border-[#D32F2F] text-white' : 'bg-[#2A0F0F] border-white/5 text-white/80'
+                      student.isMe ? 'bg-[var(--primary-deep-medium)]/60 border-[var(--primary-color)] text-white' : 'bg-[var(--primary-deep-dark)] border-white/5 text-white/80'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-adventure font-extrabold text-sm text-[#FFD700]">#{idx+1}</span>
                       <span className="font-bold text-xs">{student.name} {student.isMe ? '(You)' : ''}</span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-adventure font-extrabold text-[#D32F2F]">
+                    <div className="flex items-center gap-4 text-xs font-adventure font-extrabold text-[var(--primary-color)]">
                       <span>⭐ {student.xp} XP</span>
                       <span className="text-amber-400">🪙 {student.coins} Coins</span>
                     </div>
@@ -1847,7 +1850,7 @@ export default function StudentGame({
           )}
 
           {activeTab === 'join_classroom' && (
-            <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] rounded-[1.5rem] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-white space-y-6 max-w-2xl mx-auto font-sans">
+            <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] rounded-[1.5rem] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-white space-y-6 max-w-2xl mx-auto font-sans">
               <div className="flex items-center gap-3 border-b border-white/10 pb-2 mb-2">
                 <button
                   onClick={handleGoBack}
@@ -1867,7 +1870,7 @@ export default function StudentGame({
                     value={joinCodeInput}
                     onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
                     placeholder="e.g. BQ4X92"
-                    className="w-full bg-[#2A0F0F] border border-white/10 rounded-xl p-3 text-white text-sm font-mono tracking-widest font-bold focus:border-[#D32F2F] outline-none"
+                    className="w-full bg-[var(--primary-deep-dark)] border border-white/10 rounded-xl p-3 text-white text-sm font-mono tracking-widest font-bold focus:border-[var(--primary-color)] outline-none"
                     maxLength={10}
                     required
                   />
@@ -1875,7 +1878,7 @@ export default function StudentGame({
                 <button
                   id="classroom-join-submit-btn"
                   type="submit"
-                  className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] border-b-4 border-[#991B1B] text-white font-adventure font-extrabold rounded-xl uppercase transition-all shadow-md active:scale-95 text-xs tracking-wider"
+                  className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] border-b-4 border-[var(--primary-dark)] text-white font-adventure font-extrabold rounded-xl uppercase transition-all shadow-md active:scale-95 text-xs tracking-wider"
                 >
                   Request to Join
                 </button>
@@ -1895,7 +1898,7 @@ export default function StudentGame({
               <div className="pt-6 border-t border-white/10 space-y-4">
                 <h4 className="font-adventure text-md font-bold text-[#FFD700] uppercase tracking-wider">Current Classroom Connection Status</h4>
                 {activeStudent.classId ? (
-                  <div className="p-4 bg-[#2A0F0F] border border-white/5 rounded-xl text-xs text-white space-y-2">
+                  <div className="p-4 bg-[var(--primary-deep-dark)] border border-white/5 rounded-xl text-xs text-white space-y-2">
                     <div>
                       <span className="font-bold text-sm block text-[#FFD700]">Successfully Joined Class</span>
                       <span className="text-[10px] text-white/40 block">Class ID: {activeStudent.classId}</span>
@@ -1909,7 +1912,7 @@ export default function StudentGame({
                     </div>
                   </div>
                 ) : activeStudent.pendingClass ? (
-                  <div className="p-4 bg-[#2A0F0F] border border-yellow-500/30 rounded-xl text-xs text-white space-y-2">
+                  <div className="p-4 bg-[var(--primary-deep-dark)] border border-yellow-500/30 rounded-xl text-xs text-white space-y-2">
                     <span className="font-bold text-sm block text-yellow-400 animate-pulse">Pending Teacher Approval</span>
                     <p className="text-[11px] text-white/60">Waiting for teacher approval to join class:</p>
                     <div className="grid grid-cols-2 gap-2 text-white/80 text-[11px] pt-1">
@@ -1921,7 +1924,7 @@ export default function StudentGame({
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-[#2A0F0F] border border-white/5 rounded-xl text-xs text-white/40 italic font-semibold">
+                  <div className="p-4 bg-[var(--primary-deep-dark)] border border-white/5 rounded-xl text-xs text-white/40 italic font-semibold">
                     Not currently enrolled in any classroom. Please enter a Join Code above to request access.
                   </div>
                 )}
@@ -2217,9 +2220,32 @@ export default function StudentGame({
                 </button>
               </div>
 
-              <div className="flex justify-between items-center py-2">
-                <span className="text-xs font-bold text-jungle-light">Interface Theme</span>
-                <span className="text-xs font-extrabold text-jungle-deep font-adventure">Jungle Wood (Default)</span>
+              <div className="space-y-2 text-left pt-2">
+                <span className="text-xs font-bold text-jungle-light block">Interface Theme</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'red-gold', name: 'Red + Gold', emoji: '❤️' },
+                    { id: 'blue-gold', name: 'Blue + Gold', emoji: '💙' },
+                    { id: 'green-gold', name: 'Green + Gold', emoji: '💚' },
+                    { id: 'purple-gold', name: 'Purple + Gold', emoji: '💜' }
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        playBeep(440, 'sine', 0.05);
+                        setTheme(t.id);
+                      }}
+                      className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border-2 text-[10px] font-extrabold font-adventure transition-all ${
+                        theme === t.id
+                          ? 'bg-gold-dark border-gold-dark text-white shadow-inner scale-[1.02]'
+                          : 'bg-parchment-light hover:bg-gold/15 border-gold-dark/30 text-jungle-deep'
+                      }`}
+                    >
+                      <span>{t.emoji}</span>
+                      <span>{t.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -2266,11 +2292,11 @@ export default function StudentGame({
       {/* LOBBY CONNECTING STATE: when lobby gameState is set but socket room not yet established */}
       {gameState === 'lobby' && !syncState && (
         <main className="max-w-4xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full font-sans animate-scale-in">
-          <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] text-white rounded-[2.5rem] p-10 shadow-[0_10px_40px_rgba(0,0,0,0.8)] text-center">
+          <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] text-white rounded-[2.5rem] p-10 shadow-[0_10px_40px_rgba(0,0,0,0.8)] text-center">
             {lobbyTimeoutError ? (
               <>
                 <div className="text-6xl mb-6">⚠️</div>
-                <h2 className="font-adventure text-2xl md:text-3xl font-extrabold text-[#D32F2F] uppercase tracking-widest mb-3">Connection Timeout</h2>
+                <h2 className="font-adventure text-2xl md:text-3xl font-extrabold text-[var(--primary-color)] uppercase tracking-widest mb-3">Connection Timeout</h2>
                 <p className="text-white/70 text-sm font-semibold mb-8 max-w-md mx-auto leading-relaxed">
                   Unable to connect to the ByteQuest multiplayer server. Please verify your internet connection or the status of the server.
                 </p>
@@ -2283,7 +2309,7 @@ export default function StudentGame({
                   </button>
                   <button
                     onClick={() => { onBack(); }}
-                    className="px-6 py-3 bg-[#3B0F0F] hover:bg-[#5A1A1A] text-white/70 hover:text-white font-adventure font-bold rounded-xl border border-white/15 text-xs uppercase tracking-widest transition-all"
+                    className="px-6 py-3 bg-[var(--primary-deep-medium)] hover:bg-[var(--primary-deep)] text-white/70 hover:text-white font-adventure font-bold rounded-xl border border-white/15 text-xs uppercase tracking-widest transition-all"
                   >
                     Return to Menu
                   </button>
@@ -2292,16 +2318,16 @@ export default function StudentGame({
             ) : (
               <>
                 <div className="text-6xl mb-6 animate-pulse">⚔️</div>
-                <h2 className="font-adventure text-2xl md:text-3xl font-extrabold text-[#D32F2F] uppercase tracking-widest mb-3">Setting Up Lobby...</h2>
+                <h2 className="font-adventure text-2xl md:text-3xl font-extrabold text-[var(--primary-color)] uppercase tracking-widest mb-3">Setting Up Lobby...</h2>
                 <p className="text-white/60 text-sm font-semibold mb-8">Connecting to the ByteQuest multiplayer network.</p>
                 <div className="flex items-center justify-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-                  <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-                  <span className="w-2.5 h-2.5 bg-[#D32F2F] rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                  <span className="w-2.5 h-2.5 bg-[var(--primary-color)] rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                  <span className="w-2.5 h-2.5 bg-[var(--primary-color)] rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                  <span className="w-2.5 h-2.5 bg-[var(--primary-color)] rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
                 </div>
                 <button
                   onClick={() => { onBack(); }}
-                  className="mt-10 px-6 py-3 bg-[#3B0F0F] hover:bg-[#5A1A1A] text-white/70 hover:text-white font-adventure font-bold rounded-xl border border-white/15 text-xs uppercase tracking-widest transition-all"
+                  className="mt-10 px-6 py-3 bg-[var(--primary-deep-medium)] hover:bg-[var(--primary-deep)] text-white/70 hover:text-white font-adventure font-bold rounded-xl border border-white/15 text-xs uppercase tracking-widest transition-all"
                 >
                   ← Cancel &amp; Return to Menu
                 </button>
@@ -2313,7 +2339,7 @@ export default function StudentGame({
 
       {gameState === 'lobby' && syncState && (
         <main className="max-w-4xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full font-sans animate-scale-in">
-          <div className="bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] text-white rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
+          <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] text-white rounded-[2.5rem] p-8 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
             
             {/* Room Success Banner for Host */}
             {(syncState.roomCode.startsWith('BQ') || !syncState.classId) && (
@@ -2328,7 +2354,7 @@ export default function StudentGame({
                       navigator.clipboard.writeText(syncState.roomCode);
                       alert("Room code copied to clipboard!");
                     }}
-                    className="px-3 py-1.5 bg-[#D32F2F] hover:bg-[#B91C1C] text-white rounded font-bold uppercase text-[9px]"
+                    className="px-3 py-1.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white rounded font-bold uppercase text-[9px]"
                   >
                     Copy Code
                   </button>
@@ -2344,7 +2370,7 @@ export default function StudentGame({
                         alert(`Share this code: ${syncState.roomCode}`);
                       }
                     }}
-                    className="px-3 py-1.5 bg-[#D32F2F] hover:bg-red-550 text-white rounded font-bold uppercase text-[9px]"
+                    className="px-3 py-1.5 bg-[var(--primary-color)] hover:bg-red-550 text-white rounded font-bold uppercase text-[9px]"
                   >
                     Share
                   </button>
@@ -2361,12 +2387,12 @@ export default function StudentGame({
                     'Multiplayer Lobby'
                   )}
                 </span>
-                <h3 className="font-adventure text-2xl md:text-3xl font-bold text-[#D32F2F] uppercase tracking-wide">
+                <h3 className="font-adventure text-2xl md:text-3xl font-bold text-[var(--primary-color)] uppercase tracking-wide">
                   {syncState.roomCode.startsWith('BQ') && lobbyConfigName ? lobbyConfigName : `Room Code: ${syncState.roomCode}`}
                 </h3>
                 {syncState.roomCode.startsWith('BQ') && (
                   <p className="text-[10px] text-white/60 font-bold mt-1">
-                    Room Code: <span className="font-mono text-xs font-extrabold bg-[#1A0505] border border-[#D32F2F] px-1.5 py-0.5 rounded text-white select-all">{syncState.roomCode}</span>
+                    Room Code: <span className="font-mono text-xs font-extrabold bg-[var(--primary-deep-dark)] border border-[var(--primary-color)] px-1.5 py-0.5 rounded text-white select-all">{syncState.roomCode}</span>
                     <span className="ml-2">• Capacity: {syncState.teams.length} / {lobbyConfigMaxPlayers} Teams</span>
                   </p>
                 )}
@@ -2379,7 +2405,7 @@ export default function StudentGame({
                 <h4 className="font-adventure text-lg font-bold text-[#FFD700] mb-3">Enrolled Explorers</h4>
                 <div className="space-y-3 text-xs">
                   {syncState.teams.map((t: any) => (
-                    <div key={t.id} className="p-3 bg-[#2A0F0F] border border-white/10 rounded-xl flex items-center justify-between font-semibold">
+                    <div key={t.id} className="p-3 bg-[var(--primary-deep-dark)] border border-white/10 rounded-xl flex items-center justify-between font-semibold">
                       <div className="flex items-center gap-2">
                         <span className={`w-3.5 h-3.5 rounded-full ${t.color}`}></span>
                         <span>{t.name}</span>
@@ -2392,7 +2418,7 @@ export default function StudentGame({
                 </div>
               </div>
 
-              <div className="bg-[#2A0F0F] border border-white/5 rounded-xl p-5 text-xs text-white/70 leading-relaxed font-semibold">
+              <div className="bg-[var(--primary-deep-dark)] border border-white/5 rounded-xl p-5 text-xs text-white/70 leading-relaxed font-semibold">
                 <h4 className="font-adventure text-[#FFD700] text-sm font-bold mb-2 uppercase">Ludo Map Game Rules</h4>
                 <ul className="list-disc pl-4 space-y-1 font-semibold font-sans font-medium text-white/80">
                   <li>Multiple players can share the same tile safely.</li>
@@ -2406,7 +2432,7 @@ export default function StudentGame({
                 <button 
                   onClick={handleStartPracticeGame}
                   disabled={syncState.teams.length < 2}
-                  className="flex-1 py-3.5 bg-[#D32F2F] hover:bg-[#B91C1C] border-b-4 border-[#991B1B] disabled:bg-gray-500 disabled:opacity-50 text-white font-adventure font-extrabold rounded-lg shadow-md transition-all active:scale-95 text-xs uppercase"
+                  className="flex-1 py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] border-b-4 border-[var(--primary-dark)] disabled:bg-gray-500 disabled:opacity-50 text-white font-adventure font-extrabold rounded-lg shadow-md transition-all active:scale-95 text-xs uppercase"
                 >
                   {syncState.teams.length < 2 ? 'Need 2+ Players to Start' : 'Start Room'}
                 </button>
@@ -2428,7 +2454,7 @@ export default function StudentGame({
       {(gameState === 'playing' || gameState === 'victory') && syncState && (
         <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative">
           {activeStudent && (
-            <div className="sticky top-14 md:top-[60px] z-30 bg-[#3B0F0F] border-3 border-[#D4AF37] px-4 py-3 rounded-2xl flex items-center justify-between gap-4 mb-4 shadow-[0_5px_15px_rgba(0,0,0,0.5)] text-white select-none animate-fade-in">
+            <div className="sticky top-14 md:top-[60px] z-30 bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] px-4 py-3 rounded-2xl flex items-center justify-between gap-4 mb-4 shadow-[0_5px_15px_rgba(0,0,0,0.5)] text-white select-none animate-fade-in">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">👤</span>
                 <div>
@@ -2460,7 +2486,7 @@ export default function StudentGame({
               {/* Exit Game button — always visible in playing state */}
               <button
                 onClick={handleGoBack}
-                className="px-3 py-1.5 bg-[#5A1A1A] hover:bg-[#7F1D1D] text-white/80 hover:text-white font-adventure font-bold rounded-xl border border-[#D4AF37]/30 text-[9px] uppercase tracking-widest transition-all active:scale-95 shadow-md"
+                className="px-3 py-1.5 bg-[var(--primary-deep)] hover:bg-[var(--primary-deep-medium)] text-white/80 hover:text-white font-adventure font-bold rounded-xl border border-[#D4AF37]/30 text-[9px] uppercase tracking-widest transition-all active:scale-95 shadow-md"
                 title="Exit Game"
               >
                 ← Exit
@@ -2470,7 +2496,7 @@ export default function StudentGame({
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full items-start">
             
-            <div className="lg:col-span-3 bg-[#3B0F0F] border-3 border-[#D4AF37] p-3 md:p-5 rounded-3xl relative w-full flex flex-col gap-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
+            <div className="lg:col-span-3 bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] p-3 md:p-5 rounded-3xl relative w-full flex flex-col gap-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
               <div className="relative w-full board-bg border-2 border-[#D4AF37]/50 rounded-2xl overflow-visible shadow-inner" style={{ paddingBottom: '75%' }}>
                 <div className="absolute inset-3">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(211,47,47,0.04),transparent_70%)] pointer-events-none rounded-xl"></div>
@@ -2505,7 +2531,7 @@ export default function StudentGame({
                     else if (tile.type === 'treasure') symbol = '🎁';
 
                     const destinationClass = isDestination ? 'active-tile' : '';
-                    const safeClass = isSafe ? 'ring-2 ring-[#FFD700] ring-offset-2 ring-offset-[#2A0F0F]' : '';
+                    const safeClass = isSafe ? 'ring-2 ring-[#FFD700] ring-offset-2 ring-offset-[var(--primary-deep-dark)]' : '';
                     const completedClass = isCompleted ? 'stone-plinth-completed' : '';
 
                     let specialAuraClass = '';
@@ -2520,7 +2546,7 @@ export default function StudentGame({
                         className={`stone-plinth -translate-x-1/2 -translate-y-1/2 flex items-center justify-center font-bold group ${destinationClass} ${safeClass} ${completedClass} ${specialAuraClass}`} 
                         style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                       >
-                        <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#7F1D1D] to-[#2A0F0F] border border-[#D4AF37]/50 flex items-center justify-center text-[10px] sm:text-lg text-white">
+                        <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border border-[#D4AF37]/50 flex items-center justify-center text-[10px] sm:text-lg text-white">
                           <span>{symbol}</span>
                         </div>
                         {isSafe && (
@@ -2584,7 +2610,7 @@ export default function StudentGame({
                 const phase = getOnlineTurnPhase();
                 const isMyTurnNow = phase === 'READY_TO_ROLL';
                 return (
-                  <div className={`flex md:hidden p-3 rounded-2xl flex-col items-center justify-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.5)] text-center w-full max-w-[280px] mx-auto text-white select-none transition-all ${isMyTurnNow ? 'bg-[#3B0F0F] border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'bg-[#3B0F0F] border-3 border-[#D4AF37]'}`}>
+                  <div className={`flex md:hidden p-3 rounded-2xl flex-col items-center justify-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.5)] text-center w-full max-w-[280px] mx-auto text-white select-none transition-all ${isMyTurnNow ? 'bg-[var(--primary-deep-medium)] border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37]'}`}>
                     {/* Dynamic status text */}
                     <div className="w-full">
                       {renderDiceStatusArea(phase, getActivePlayerName(), localRollResult, true)}
@@ -2601,16 +2627,16 @@ export default function StudentGame({
                       <button
                         onClick={handleRollClick}
                         disabled={!isMyTurnNow || diceRolling || activeQuestion !== null || isMovingOnline}
-                        className={`relative w-16 h-16 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[#5A1A1A] shadow-[0_0_20px_rgba(255,215,0,0.85)] border-2 border-[#FFD700]' : 'bg-[#2A0F0F] border-2 border-[#D4AF37]/40'}`}
+                        className={`relative w-16 h-16 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_20px_rgba(255,215,0,0.85)] border-2 border-[#FFD700]' : 'bg-[var(--primary-deep-dark)] border-2 border-[#D4AF37]/40'}`}
                         title={isMyTurnNow ? 'Your Turn — Roll Dice!' : 'Not your turn'}
                       >
                         <svg viewBox="0 0 100 100" className={`w-14 h-14 ${diceRolling ? 'dice-spin-shake' : ''}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 8px rgba(255,215,0,0.8))' : 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
                           {/* Top face */}
-                          <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2.5"/>
+                          <polygon points="50,8 90,30 50,52 10,30" fill="var(--primary-deep)" stroke="#D4AF37" strokeWidth="2.5"/>
                           {/* Left face */}
-                          <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
+                          <polygon points="10,30 50,52 50,92 10,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2.5"/>
                           {/* Right face */}
-                          <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2.5"/>
+                          <polygon points="90,30 50,52 50,92 90,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2.5"/>
                           {/* Top face pips */}
                           <circle cx="38" cy="26" r="3.5" fill="#FFD700"/>
                           <circle cx="50" cy="34" r="3.5" fill="#FFD700"/>
@@ -2619,7 +2645,7 @@ export default function StudentGame({
                       </button>
 
                       {localRollResult !== null && !diceRolling && (
-                        <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[#D4AF37] shadow-lg">
+                        <div className="absolute inset-0 bg-[var(--primary-deep)]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[#D4AF37] shadow-lg">
                           <span className="font-adventure text-3xl font-extrabold text-[#FFD700]">
                             {localRollResult}
                           </span>
@@ -2637,7 +2663,7 @@ export default function StudentGame({
                 const phase = getOnlineTurnPhase();
                 const isMyTurnNow = phase === 'READY_TO_ROLL';
                 return (
-                  <div className={`hidden md:flex p-6 rounded-3xl flex-col items-center justify-center text-center shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white select-none transition-all ${isMyTurnNow ? 'bg-[#3B0F0F] border-3 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]' : 'bg-[#3B0F0F] border-3 border-[#D4AF37]'}`}>
+                  <div className={`hidden md:flex p-6 rounded-3xl flex-col items-center justify-center text-center shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white select-none transition-all ${isMyTurnNow ? 'bg-[var(--primary-deep-medium)] border-3 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]' : 'bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37]'}`}>
                     <span className="text-[10px] block font-bold text-amber-300 uppercase tracking-wider mb-2 font-adventure">Current Turn</span>
                     <div className="mb-2">
                       <span className="font-adventure text-lg font-extrabold text-[#FFD700] block uppercase tracking-wide truncate max-w-[140px]">
@@ -2661,16 +2687,16 @@ export default function StudentGame({
                       <button
                         onClick={handleRollClick}
                         disabled={!isMyTurnNow || diceRolling || activeQuestion !== null || isMovingOnline}
-                        className={`relative w-24 h-24 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[#5A1A1A] shadow-[0_0_30px_rgba(255,215,0,0.95)] border-3 border-[#FFD700]' : 'bg-[#2A0F0F] border-2 border-[#D4AF37]/45'}`}
+                        className={`relative w-24 h-24 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_30px_rgba(255,215,0,0.95)] border-3 border-[#FFD700]' : 'bg-[var(--primary-deep-dark)] border-2 border-[#D4AF37]/45'}`}
                         title={isMyTurnNow ? 'Your Turn — Click to Roll!' : 'Not your turn'}
                       >
                         <svg viewBox="0 0 100 100" className={`w-20 h-20 ${diceRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 12px rgba(255,215,0,0.9))' : 'drop-shadow(0 3px 6px rgba(255,215,0,0.25))' }}>
                           {/* Top face */}
-                          <polygon points="50,8 90,30 50,52 10,30" fill="#5A1A1A" stroke="#D4AF37" strokeWidth="2"/>
+                          <polygon points="50,8 90,30 50,52 10,30" fill="var(--primary-deep)" stroke="#D4AF37" strokeWidth="2"/>
                           {/* Left face */}
-                          <polygon points="10,30 50,52 50,92 10,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
+                          <polygon points="10,30 50,52 50,92 10,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2"/>
                           {/* Right face */}
-                          <polygon points="90,30 50,52 50,92 90,70" fill="#2A0F0F" stroke="#D4AF37" strokeWidth="2"/>
+                          <polygon points="90,30 50,52 50,92 90,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2"/>
                           {/* Top face pips */}
                           <circle cx="38" cy="25" r="4" fill="#FFD700"/>
                           <circle cx="50" cy="33" r="4" fill="#FFD700"/>
@@ -2684,7 +2710,7 @@ export default function StudentGame({
                       </button>
 
                       {localRollResult !== null && !diceRolling && (
-                        <div className="absolute inset-0 bg-[#5A1A1A]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[#D4AF37] shadow-lg">
+                        <div className="absolute inset-0 bg-[var(--primary-deep)]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[#D4AF37] shadow-lg">
                           <div className="text-center">
                             <span className="block text-[8px] text-[#FFD700] uppercase font-extrabold tracking-widest leading-none mb-0.5 font-adventure">ROLLED</span>
                             <span className="font-adventure text-5xl font-extrabold text-[#FFD700]">
@@ -2704,14 +2730,14 @@ export default function StudentGame({
               {/* Roster leaderboard / Opponent Solving Handoff */}
               <div className="flex flex-col gap-6 w-full">
                 {activeQuestion && !checkIsMyTurn() ? (
-                  <div className="bg-[#3B0F0F] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white space-y-4 select-text">
+                  <div className="bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white space-y-4 select-text">
                     <div className="flex justify-between items-center border-b border-[#D4AF37]/35 pb-2">
                       <div>
                         <span className="text-[10px] font-bold text-amber-350 uppercase tracking-widest block font-sans">Explorer Solving...</span>
                         <span className="font-adventure text-lg font-bold text-white">👤 {getActivePlayerName()}</span>
                       </div>
                       {!quizResult && (
-                        <span className="text-xs font-bold px-2 py-1 rounded-full border bg-[#5A1A1A] border-[#D4AF37] text-[#FFD700] animate-pulse">
+                        <span className="text-xs font-bold px-2 py-1 rounded-full border bg-[var(--primary-deep)] border-[#D4AF37] text-[#FFD700] animate-pulse">
                           ⏰ {timerRemaining}s
                         </span>
                       )}
@@ -2724,7 +2750,7 @@ export default function StudentGame({
 
                     <div className="space-y-1.5 font-sans">
                       {activeQuestion.options?.map((opt: string, oi: number) => {
-                        let chipStyle = 'bg-[#2A0F0F] border-white/10 text-white/75';
+                        let chipStyle = 'bg-[var(--primary-deep-dark)] border-white/10 text-white/75';
                         if (quizResult) {
                           if (oi === activeQuestion.correctIndex) chipStyle = 'bg-emerald-950/80 border-emerald-500 text-emerald-200 font-bold';
                           else if (oi === quizResult.answerIndex) chipStyle = 'bg-rose-950/80 border-rose-500 text-rose-200 font-bold';
@@ -2746,14 +2772,14 @@ export default function StudentGame({
                     )}
 
                     {quizResult && activeQuestion.explanation && (
-                      <div className="bg-[#2A0F0F] text-white/80 p-3 rounded-xl text-[10px] border border-white/5 leading-relaxed font-semibold">
+                      <div className="bg-[var(--primary-deep-dark)] text-white/80 p-3 rounded-xl text-[10px] border border-white/5 leading-relaxed font-semibold">
                         <p className="font-bold text-[#FFD700] mb-1 font-sans uppercase tracking-wider">Explanation:</p>
                         {activeQuestion.explanation}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="bg-[#3B0F0F] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white">
+                  <div className="bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white">
                     <h3 className="font-adventure text-base font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 mb-4 uppercase tracking-wider">Standings</h3>
                     <div className="space-y-3 text-xs">
                       {syncState.teams.slice().sort((a: any, b: any) => {
@@ -2762,7 +2788,7 @@ export default function StudentGame({
                         if (rA !== rB) return rA - rB;
                         return b.position - a.position || b.xp - a.xp;
                       }).map((p: any, idx: number) => (
-                        <div key={p.id} className={`p-3 bg-[#2A0F0F] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
+                        <div key={p.id} className={`p-3 bg-[var(--primary-deep-dark)] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
                           <div className="flex justify-between items-center font-bold mb-2">
                             <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
                               <span className="font-adventure text-[#FFD700]">
@@ -2773,7 +2799,7 @@ export default function StudentGame({
                             </span>
                             {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
                           </div>
-                          <div className="grid grid-cols-3 gap-1 bg-[#3B0F0F] border border-[#D4AF37]/35 p-1 rounded-xl text-center font-mono">
+                          <div className="grid grid-cols-3 gap-1 bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-1 rounded-xl text-center font-mono">
                             <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">XP</span><span className="font-bold text-xs text-white">{p.xp}</span></div>
                             <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-[#FFD700]/50 uppercase leading-none">Gold</span><span className="font-bold text-xs text-white">{p.coins}</span></div>
                             <div><span className="text-[7px] block text-[#FFD700]/50 uppercase leading-none">Tile</span><span className="font-bold text-xs text-[#FFD700]">{p.position}</span></div>
@@ -2837,7 +2863,7 @@ export default function StudentGame({
 
       {gameState === 'victory' && syncState && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 select-text animate-fade-in font-serif">
-          <div className="bg-[#3B0F0F] border-4 border-[#D4AF37] max-w-xl w-full p-8 text-center rounded-[2rem] relative shadow-[0_0_60px_rgba(255,215,0,0.4)] animate-scale-in flex flex-col items-center text-white">
+          <div className="bg-[var(--primary-deep-medium)] border-4 border-[#D4AF37] max-w-xl w-full p-8 text-center rounded-[2rem] relative shadow-[0_0_60px_rgba(255,215,0,0.4)] animate-scale-in flex flex-col items-center text-white">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(255,215,0,0.15),transparent_70%)] pointer-events-none"></div>
             
             <span className="text-7xl block mb-4 animate-bounce">🏆</span>
@@ -2859,14 +2885,14 @@ export default function StudentGame({
               });
               const winner = sorted[0];
               return (
-                <div className="bg-[#2A0F0F] border border-[#D4AF37]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
+                <div className="bg-[var(--primary-deep-dark)] border border-[#D4AF37]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
                   <h4 className="text-xs font-extrabold text-[#FFD700] uppercase tracking-wider mb-3 text-center">Champion: 👤 {winner.name}</h4>
                   <div className="grid grid-cols-2 gap-4 text-center">
-                    <div className="bg-[#3B0F0F] border border-[#D4AF37]/35 p-3 rounded-2xl">
+                    <div className="bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-3 rounded-2xl">
                       <span className="text-[10px] block text-amber-200/50 uppercase font-bold">XP Gained</span>
                       <span className="text-lg font-bold text-white">+{winner.xp} XP</span>
                     </div>
-                    <div className="bg-[#3B0F0F] border border-[#D4AF37]/35 p-3 rounded-2xl">
+                    <div className="bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-3 rounded-2xl">
                       <span className="text-[10px] block text-amber-200/50 uppercase font-bold">Coins Earned</span>
                       <span className="text-lg font-bold text-white">+{winner.coins} Gold</span>
                     </div>
@@ -2882,7 +2908,7 @@ export default function StudentGame({
                 if (rA !== rB) return rA - rB;
                 return b.position - a.position || b.xp - a.xp;
               }).map((p: any, idx: number) => (
-                <div key={p.id} className="flex items-center justify-between p-3 bg-[#2A0F0F] border border-[#D4AF37]/30 rounded-xl text-xs text-white">
+                <div key={p.id} className="flex items-center justify-between p-3 bg-[var(--primary-deep-dark)] border border-[#D4AF37]/30 rounded-xl text-xs text-white">
                   <span className="font-bold">#{idx+1} 👤 {p.name} {p.finished && '🏁'}</span>
                   <span className="font-semibold text-amber-200/80">{p.xp} XP | {p.coins} Coins</span>
                 </div>
@@ -2903,7 +2929,7 @@ export default function StudentGame({
               </button>
               <button 
                 onClick={() => { onBack(); }}
-                className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl text-xs uppercase shadow-md active:scale-95 transition-all border-b-4 border-[#991B1B]"
+                className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl text-xs uppercase shadow-md active:scale-95 transition-all border-b-4 border-[var(--primary-dark)]"
               >
                 Main Menu
               </button>

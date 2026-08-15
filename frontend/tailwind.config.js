@@ -1,3 +1,12 @@
+function withOpacity(variableName) {
+  return ({ opacityValue }) => {
+    if (opacityValue !== undefined) {
+      return `rgba(var(${variableName}), ${opacityValue})`;
+    }
+    return `rgb(var(${variableName}))`;
+  };
+}
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -14,10 +23,10 @@ export default {
           pale: '#64748B',      // Dim slate text labels
         },
         gold: {
-          dark: '#991B1B',      // Crimson dark red accent (error / active state)
-          DEFAULT: '#D32F2F',   // Main brand scarlet red (decorative elements / buttons)
-          light: '#EF4444',     // Bright red hover state
-          glow: '#D32F2F',
+          dark: withOpacity('--primary-dark-rgb'),
+          DEFAULT: withOpacity('--primary-rgb'),
+          light: withOpacity('--primary-light-rgb'),
+          glow: withOpacity('--primary-glow-rgb'),
         },
         parchment: {
           DEFAULT: '#FFFFFF',
