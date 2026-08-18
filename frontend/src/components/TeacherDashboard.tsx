@@ -946,7 +946,7 @@ export default function TeacherDashboard({
           
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1.5 tracking-wider">Teacher Email</label>
+              <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 tracking-wider">Teacher Email</label>
               <input 
                 type="email" 
                 value={email}
@@ -957,7 +957,7 @@ export default function TeacherDashboard({
             </div>
             
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1.5 tracking-wider">Password</label>
+              <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 tracking-wider">Password</label>
               <input 
                 type="password" 
                 value={password}
@@ -986,7 +986,7 @@ export default function TeacherDashboard({
 
           <button 
             onClick={onBack}
-            className="w-full mt-4 py-1 text-center text-xs text-slate-450 font-bold hover:text-slate-800 transition-colors"
+            className="w-full mt-4 py-1 text-center text-xs text-slate-500 font-bold hover:text-slate-800 transition-colors"
           >
             ← Return to Selection
           </button>
@@ -1038,7 +1038,7 @@ export default function TeacherDashboard({
         </div>
 
         <div className="pt-4 border-t border-slate-100 space-y-2">
-          <div className="flex items-center gap-2 px-2 text-slate-450 text-[10px] font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-2 px-2 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
             <User className="w-3.5 h-3.5 text-[var(--primary-color)]" />
             <span className="truncate">{teacherInfo?.name || 'Teacher User'}</span>
           </div>
@@ -1063,37 +1063,37 @@ export default function TeacherDashboard({
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Quick Actions Header Banner */}
-            <div className="bg-gradient-to-r from-[var(--primary-dark)] via-[var(--primary-color)] to-[var(--primary-deep-medium)] text-white border-4 border-[var(--primary-dark)] rounded-2xl p-8 shadow-[6px_6px_0px_rgba(153,27,27,0.3)] relative overflow-hidden animate-scale-in">
-              <div className="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4 scale-150">
+            <div className="bg-[var(--primary-subtle-bg)] border-4 border-[var(--primary-color)] rounded-2xl p-8 shadow-[6px_6px_0px_var(--primary-dark)] relative overflow-hidden animate-scale-in">
+              <div className="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4 scale-150 text-[var(--primary-color)]">
                 <Compass className="w-80 h-80 animate-spin-slow" />
               </div>
               <div className="relative z-10 space-y-4">
                 <div>
-                  <h2 className="font-adventure text-3xl md:text-4xl font-extrabold tracking-wide mb-1 leading-tight">Welcome back, {teacherInfo?.name}!</h2>
-                  <p className="text-red-100 text-xs md:text-sm font-semibold">Your ByteQuest classroom workspace portal. Access curriculum logs, configure teams, or host live play rooms.</p>
+                  <h2 className="font-adventure text-3xl md:text-4xl font-extrabold tracking-wide mb-1 leading-tight text-[var(--primary-dark)]">Welcome back, {teacherInfo?.name}!</h2>
+                  <p className="text-[var(--primary-dark)]/80 text-xs md:text-sm font-semibold">Your ByteQuest classroom workspace portal. Access curriculum logs, configure teams, or host live play rooms.</p>
                 </div>
                 <div className="flex flex-wrap gap-2.5 pt-2">
                   <button 
                     onClick={() => setActiveTab('classes')}
-                    className="px-4 py-2 bg-white text-[var(--primary-color)] hover:bg-[var(--primary-subtle-bg)] font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+                    className="px-4 py-2 bg-[var(--primary-dark)] text-white hover:bg-[var(--primary-color)] font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 shadow-sm"
                   >
                     🏫 Create Classroom
                   </button>
                   <button 
                     onClick={() => setActiveTab('classes')}
-                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-[var(--primary-subtle-border)]/30"
+                    className="px-4 py-2 bg-[var(--primary-subtle-hover)] hover:bg-[var(--primary-subtle-border)] text-[var(--primary-subtle-text)] font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-[var(--primary-subtle-border)]"
                   >
                     🎲 Launch Live Match
                   </button>
                   <button 
                     onClick={() => setActiveTab('classes')}
-                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-[var(--primary-subtle-border)]/30"
+                    className="px-4 py-2 bg-[var(--primary-subtle-hover)] hover:bg-[var(--primary-subtle-border)] text-[var(--primary-subtle-text)] font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-[var(--primary-subtle-border)]"
                   >
                     🔗 Invite Students
                   </button>
                   <button 
                     onClick={() => setActiveTab('teachers')}
-                    className="px-4 py-2 bg-red-800/40 hover:bg-red-800/60 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-[var(--primary-subtle-border)]/30"
+                    className="px-4 py-2 bg-[var(--primary-subtle-hover)] hover:bg-[var(--primary-subtle-border)] text-[var(--primary-subtle-text)] font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-[var(--primary-subtle-border)]"
                   >
                     ➕ Create Teacher
                   </button>
@@ -1105,14 +1105,14 @@ export default function TeacherDashboard({
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-sm flex flex-col justify-between min-h-[110px]">
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold text-slate-550 uppercase tracking-wider">Active Classes</span>
+                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Active Classes</span>
                   <span className="text-xl">🏫</span>
                 </div>
                 <span className="font-adventure text-3xl font-extrabold text-slate-900 leading-none">{classes.length}</span>
               </div>
               <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-sm flex flex-col justify-between min-h-[110px]">
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold text-slate-550 uppercase tracking-wider">Total Enrolled</span>
+                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Total Enrolled</span>
                   <span className="text-xl">👥</span>
                 </div>
                 <span className="font-adventure text-3xl font-extrabold text-slate-900 leading-none">
@@ -1121,14 +1121,14 @@ export default function TeacherDashboard({
               </div>
               <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-sm flex flex-col justify-between min-h-[110px]">
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold text-slate-550 uppercase tracking-wider">Question Bank</span>
+                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Question Bank</span>
                   <span className="text-xl">📁</span>
                 </div>
                 <span className="font-adventure text-3xl font-extrabold text-slate-900 leading-none">{questions.length}</span>
               </div>
               <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-sm flex flex-col justify-between min-h-[110px]">
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold text-slate-550 uppercase tracking-wider">Pending Invites</span>
+                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Pending Invites</span>
                   <span className="text-xl">⚡</span>
                 </div>
                 <span className="font-adventure text-3xl font-extrabold text-slate-900 leading-none">{joinRequests.length}</span>
@@ -1185,13 +1185,13 @@ export default function TeacherDashboard({
                 <div className="flex items-start gap-3">
                   <button
                     onClick={handleGoBack}
-                    className="mt-1 px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                    className="mt-1 px-3 py-1.5 rounded-lg bg-[var(--primary-subtle-bg)] border border-[var(--primary-subtle-border)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-dark)] font-bold text-xs uppercase font-adventure transition-all"
                   >
                     ← Back
                   </button>
                   <div>
-                    <h3 className="font-adventure text-2xl font-bold text-gold">Teacher Profiles Controller</h3>
-                    <p className="text-gold-light text-xs">Create, edit, enable/disable, reset passwords, or delete teacher accounts.</p>
+                    <h3 className="font-adventure text-2xl font-bold text-[var(--primary-dark)]">Teacher Profiles Controller</h3>
+                    <p className="text-slate-600 text-xs">Create, edit, enable/disable, reset passwords, or delete teacher accounts.</p>
                   </div>
                 </div>
                 <button
@@ -1199,7 +1199,7 @@ export default function TeacherDashboard({
                     clearTeacherForm();
                     setShowTeacherModal('create');
                   }}
-                  className="px-4 py-2 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg text-xs uppercase tracking-wide transition-colors"
+                  className="px-4 py-2 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-lg text-xs uppercase tracking-wide transition-colors"
                 >
                   + Add Teacher
                 </button>
@@ -1209,7 +1209,7 @@ export default function TeacherDashboard({
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-jungle-light text-gold font-bold">
+                    <tr className="border-b border-jungle-light text-slate-700 font-bold">
                       <th className="py-2.5">Name</th>
                       <th className="py-2.5">Email</th>
                       <th className="py-2.5">Subject</th>
@@ -1221,7 +1221,7 @@ export default function TeacherDashboard({
                   </thead>
                   <tbody>
                     {teachersList.map((t) => (
-                      <tr key={t.id} className="border-b border-jungle-light/40 text-offwhite hover:bg-jungle-deep/20">
+                      <tr key={t.id} className="border-b border-jungle-light/40 text-offwhite hover:bg-slate-50">
                         <td className="py-3 font-semibold">{t.firstName} {t.lastName}</td>
                         <td className="py-3 font-mono">{t.email}</td>
                         <td className="py-3">{t.subject || <span className="text-offwhite/40 italic">None</span>}</td>
@@ -1229,7 +1229,7 @@ export default function TeacherDashboard({
                         <td className="py-3 font-mono">{t.mobileNumber || <span className="text-offwhite/40 italic">-</span>}</td>
                         <td className="py-3">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            t.isActive ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-900'
+                            t.isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
                           }`}>
                             {t.isActive ? 'Active' : 'Disabled'}
                           </span>
@@ -1247,14 +1247,14 @@ export default function TeacherDashboard({
                               setTeacherFormPhone(t.mobileNumber);
                               setShowTeacherModal('edit');
                             }}
-                            className="px-2 py-1 bg-jungle-light hover:bg-jungle-deep text-gold rounded font-bold uppercase text-[9px] transition-colors"
+                            className="px-2 py-1 bg-[var(--primary-subtle-bg)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-subtle-text)] border border-[var(--primary-subtle-border)] rounded font-bold uppercase text-[9px] transition-colors"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleToggleActive(t)}
                             className={`px-2 py-1 rounded font-bold uppercase text-[9px] transition-colors ${
-                              t.isActive ? 'bg-amber-950 hover:bg-amber-900 text-amber-400 border border-amber-800' : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800'
+                              t.isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
                             }`}
                           >
                             {t.isActive ? 'Disable' : 'Enable'}
@@ -1265,13 +1265,13 @@ export default function TeacherDashboard({
                               setSelectedTeacher(t);
                               setShowTeacherModal('reset-password');
                             }}
-                            className="px-2 py-1 bg-purple-950 hover:bg-purple-900 text-purple-400 border border-purple-800 rounded font-bold uppercase text-[9px] transition-colors"
+                            className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded font-bold uppercase text-[9px] transition-colors"
                           >
                             PW Reset
                           </button>
                           <button
                             onClick={() => handleDeleteTeacher(t.id)}
-                            className="px-2 py-1 bg-[var(--primary-deep-dark)] hover:bg-red-900 text-[var(--primary-light)] border border-red-800 rounded font-bold uppercase text-[9px] transition-colors"
+                            className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded font-bold uppercase text-[9px] transition-colors"
                           >
                             Delete
                           </button>
@@ -1291,7 +1291,7 @@ export default function TeacherDashboard({
             {/* Modal for Creating / Editing Teachers */}
             {showTeacherModal && (
               <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                <div className="parchment-panel text-jungle-deep p-6 rounded-2xl w-full max-w-md shadow-2xl relative">
+                <div className="parchment-panel text-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl relative">
                   <h3 className="font-adventure text-xl font-bold text-gold-dark mb-4 uppercase tracking-wide">
                     {showTeacherModal === 'create' && 'Create Teacher Account'}
                     {showTeacherModal === 'edit' && 'Edit Teacher Details'}
@@ -1307,7 +1307,7 @@ export default function TeacherDashboard({
                       <>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">First Name</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">First Name</label>
                             <input
                               type="text"
                               value={teacherFormFirstName}
@@ -1317,7 +1317,7 @@ export default function TeacherDashboard({
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Last Name</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Last Name</label>
                             <input
                               type="text"
                               value={teacherFormLastName}
@@ -1329,19 +1329,20 @@ export default function TeacherDashboard({
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Email</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Email</label>
                           <input
                             type="email"
                             value={teacherFormEmail}
                             onChange={(e) => setTeacherFormEmail(e.target.value)}
                             className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
                             required
+                            disabled={showTeacherModal === 'edit'}
                           />
                         </div>
 
                         {showTeacherModal === 'create' && (
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Password</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Password</label>
                             <input
                               type="password"
                               value={teacherFormPassword}
@@ -1353,12 +1354,11 @@ export default function TeacherDashboard({
                         )}
 
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">School</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">School</label>
                           <input
                             type="text"
                             value={teacherFormSchool}
                             onChange={(e) => setTeacherFormSchool(e.target.value)}
-                            placeholder="e.g. Delhi Public School"
                             className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
                             required
                           />
@@ -1366,17 +1366,16 @@ export default function TeacherDashboard({
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Subject</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Subject</label>
                             <input
                               type="text"
                               value={teacherFormSubject}
                               onChange={(e) => setTeacherFormSubject(e.target.value)}
-                              placeholder="e.g. Computer Science"
                               className="w-full bg-parchment-light border border-gold-dark/40 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-gold font-semibold"
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Mobile Number</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Mobile Number</label>
                             <input
                               type="text"
                               value={teacherFormPhone}
@@ -1391,7 +1390,7 @@ export default function TeacherDashboard({
 
                     {showTeacherModal === 'reset-password' && (
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">New Password</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">New Password</label>
                         <input
                           type="password"
                           value={teacherFormPassword}
@@ -1416,13 +1415,13 @@ export default function TeacherDashboard({
                           setShowTeacherModal(null);
                           clearTeacherForm();
                         }}
-                        className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-jungle-deep font-bold rounded text-xs uppercase"
+                        className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border border-slate-200 rounded text-xs uppercase transition-colors"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="flex-1 py-2 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded text-xs uppercase shadow"
+                        className="flex-1 py-2 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded text-xs uppercase shadow transition-colors"
                       >
                         Save
                       </button>
@@ -1448,7 +1447,7 @@ export default function TeacherDashboard({
               </div>
               <form onSubmit={handleCreateClass} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs font-semibold">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Classroom Name</label>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Classroom Name</label>
                   <input
                     type="text"
                     value={newClassName}
@@ -1459,7 +1458,7 @@ export default function TeacherDashboard({
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Section</label>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Section</label>
                   <input
                     type="text"
                     value={newClassSection}
@@ -1470,7 +1469,7 @@ export default function TeacherDashboard({
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Target Syllabus Grade</label>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Target Syllabus Grade</label>
                   <select
                     value={newClassGrade}
                     onChange={(e) => setNewClassGrade(Number(e.target.value))}
@@ -1482,7 +1481,7 @@ export default function TeacherDashboard({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Subject</label>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Subject</label>
                   <input
                     type="text"
                     value={newClassSubject}
@@ -1504,7 +1503,7 @@ export default function TeacherDashboard({
                 <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 text-center text-slate-800 shadow-2xl">
                   <AlertCircle className="w-16 h-16 text-[var(--primary-subtle-text)] mx-auto mb-3" />
                   <h3 className="font-adventure text-2xl font-bold mb-2 text-slate-900">Delete Classroom?</h3>
-                  <p className="text-xs text-slate-450 mb-6 font-semibold">
+                  <p className="text-xs text-slate-500 mb-6 font-semibold">
                     Warning: Deleting this class will permanently remove all student rosters, student progress stats, team configurations, and assignment history.
                   </p>
                   <div className="flex gap-3">
@@ -1549,17 +1548,17 @@ export default function TeacherDashboard({
                             {cls.isArchived && <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[9px] px-2.5 py-0.5 rounded-full uppercase font-bold">Archived</span>}
                           </div>
                         )}
-                        <span className="text-[10px] text-slate-550 font-bold block mt-1 uppercase tracking-wider">Syllabus Grade {cls.grade} | Subject: {cls.subject || 'Computer Science'} | {cls.students?.length || 0} Students | {cls.teams?.length || 0} Teams</span>
+                        <span className="text-[10px] text-slate-600 font-bold block mt-1 uppercase tracking-wider">Syllabus Grade {cls.grade} | Subject: {cls.subject || 'Computer Science'} | {cls.students?.length || 0} Students | {cls.teams?.length || 0} Teams</span>
                         <div className="flex flex-wrap gap-4 mt-2 font-semibold">
                           <span className="text-xs text-slate-700 font-bold">Join Code: <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-[var(--primary-color)] font-extrabold select-all">{cls.joinCode || `BQ${cls.id.replace(/-/g, '').substring(0, 4).toUpperCase()}`}</span></span>
-                          <span className="text-[10px] text-slate-550 font-bold">Class ID: <span className="font-mono select-all bg-white px-1.5 py-0.5 rounded border border-slate-200">{cls.id}</span></span>
+                          <span className="text-[10px] text-slate-600 font-bold">Class ID: <span className="font-mono select-all bg-white px-1.5 py-0.5 rounded border border-slate-200">{cls.id}</span></span>
                         </div>
                       </div>
 
                       <div className="flex gap-1">
                         <button 
                           onClick={() => handleDuplicateClass(cls.id)}
-                          className="p-2 text-slate-450 hover:bg-slate-200 rounded-xl transition-colors"
+                          className="p-2 text-slate-500 hover:bg-slate-200 rounded-xl transition-colors"
                           title="Duplicate Class"
                         >
                           <Copy className="w-4 h-4" />
@@ -1592,7 +1591,7 @@ export default function TeacherDashboard({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-200/60 text-xs font-semibold">
                         {/* Roster students additions */}
                         <div className="space-y-2">
-                          <h4 className="font-bold text-slate-550 mb-1 uppercase text-[9px] tracking-wider">Add Students (newline separated)</h4>
+                          <h4 className="font-bold text-slate-600 mb-1 uppercase text-[9px] tracking-wider">Add Students (newline separated)</h4>
                           <form onSubmit={(e) => {
                             setRosterClassId(cls.id);
                             handleAddStudentsToClass(e);
@@ -1613,7 +1612,7 @@ export default function TeacherDashboard({
 
                         {/* Team configure option links */}
                         <div className="space-y-2">
-                          <h4 className="font-bold text-slate-550 mb-1 uppercase text-[9px] tracking-wider">Configure Classroom Teams</h4>
+                          <h4 className="font-bold text-slate-600 mb-1 uppercase text-[9px] tracking-wider">Configure Classroom Teams</h4>
                           <button 
                             onClick={() => {
                               const autoTeams = [
@@ -1649,8 +1648,8 @@ export default function TeacherDashboard({
                 <h3 className="font-adventure text-2xl font-bold text-slate-900 border-b border-slate-100 pb-3">Active Classroom Room Lobby</h3>
                 <div className="flex flex-col sm:flex-row justify-between items-center bg-slate-50 border border-slate-200 p-5 rounded-2xl gap-4">
                   <div>
-                    <span className="text-[10px] block text-slate-550 font-bold uppercase tracking-wider mb-1">Session Code</span>
-                    <span className="font-adventure text-3xl font-extrabold text-blue-650 tracking-widest select-all">{activeSession.roomCode}</span>
+                    <span className="text-[10px] block text-slate-600 font-bold uppercase tracking-wider mb-1">Session Code</span>
+                    <span className="font-adventure text-3xl font-extrabold text-[var(--primary-dark)] tracking-widest select-all">{activeSession.roomCode}</span>
                   </div>
                   <button 
                     onClick={handleTriggerStartMatch}
@@ -1661,7 +1660,7 @@ export default function TeacherDashboard({
                   </button>
                 </div>
                 <div className="text-xs">
-                  <h4 className="font-bold text-slate-550 mb-3 uppercase tracking-wider">CONNECTED STUDENTS ({lobbyPlayers.length})</h4>
+                  <h4 className="font-bold text-slate-600 mb-3 uppercase tracking-wider">CONNECTED STUDENTS ({lobbyPlayers.length})</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {lobbyPlayers.map((p: any) => (
                       <div key={p.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-bold text-slate-800 shadow-sm">
@@ -1705,7 +1704,7 @@ export default function TeacherDashboard({
               </div>
               
               <div className="max-w-md text-xs font-semibold">
-                <label className="block text-[10px] font-bold text-slate-550 mb-1.5 uppercase tracking-wider">Select Class roster</label>
+                <label className="block text-[10px] font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Select Class roster</label>
                 <select
                   value={selectedStudentClassId}
                   onChange={(e) => {
@@ -1728,7 +1727,7 @@ export default function TeacherDashboard({
                   <h4 className="font-adventure text-sm font-bold text-slate-900 border-b border-slate-200/55 pb-2">Register Student Manually</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Full Name</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1 tracking-wider">Full Name</label>
                       <input
                         type="text"
                         value={newStudentName}
@@ -1739,7 +1738,7 @@ export default function TeacherDashboard({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Email Address</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1 tracking-wider">Email Address</label>
                       <input
                         type="email"
                         value={newStudentEmail}
@@ -1750,7 +1749,7 @@ export default function TeacherDashboard({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Temporary Password</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1 tracking-wider">Temporary Password</label>
                       <input
                         type="text"
                         value={newStudentPassword}
@@ -1761,7 +1760,7 @@ export default function TeacherDashboard({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Roll Number (Optional)</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1 tracking-wider">Roll Number (Optional)</label>
                       <input
                         type="text"
                         value={newStudentRoll}
@@ -1793,14 +1792,14 @@ export default function TeacherDashboard({
                         }}
                         className={`w-full text-left p-3 rounded-xl border font-bold transition-all ${
                           selectedStudentProfile?.id === student.id 
-                            ? 'bg-[var(--primary-subtle-bg)] border-cyan-95 text-[var(--primary-light)] shadow-sm' 
+                            ? 'bg-[var(--primary-subtle-bg)] border-[var(--primary-subtle-border)] text-[var(--primary-subtle-text)] shadow-sm' 
                             : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
                         <div className="flex justify-between items-center">
                           <span>{student.name}</span>
                           {localStorage.getItem(`bytequest_student_roll_${student.id}`) && (
-                            <span className="text-[9px] bg-white text-slate-550 border border-slate-200 px-1.5 py-0.5 rounded font-mono">
+                            <span className="text-[9px] bg-white text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded font-mono">
                               #{localStorage.getItem(`bytequest_student_roll_${student.id}`)}
                             </span>
                           )}
@@ -1823,14 +1822,14 @@ export default function TeacherDashboard({
                           <button
                             type="button"
                             onClick={() => setEditingStudentId(null)}
-                            className="text-[10px] text-slate-550 font-bold hover:text-slate-700 uppercase tracking-wider"
+                            className="text-[10px] text-slate-600 font-bold hover:text-slate-700 uppercase tracking-wider"
                           >
                             Cancel
                           </button>
                         </div>
                         <div className="space-y-3">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Full Name</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1 tracking-wider">Full Name</label>
                             <input
                               type="text"
                               value={editStudentName}
@@ -1840,7 +1839,7 @@ export default function TeacherDashboard({
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Email Address</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1 tracking-wider">Email Address</label>
                             <input
                               type="email"
                               value={editStudentEmail}
@@ -1850,7 +1849,7 @@ export default function TeacherDashboard({
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Move to Class / Section</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1 tracking-wider">Move to Class / Section</label>
                             <select
                               value={editStudentClassId}
                               onChange={(e) => setEditStudentClassId(e.target.value)}
@@ -1862,7 +1861,7 @@ export default function TeacherDashboard({
                             </select>
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-slate-550 mb-1 tracking-wider">Reset Password (Optional)</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1 tracking-wider">Reset Password (Optional)</label>
                             <input
                               type="password"
                               value={editStudentPassword}
@@ -1879,30 +1878,30 @@ export default function TeacherDashboard({
                       <div className="space-y-6 text-xs select-text">
                         <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                           <h4 className="font-adventure text-sm font-bold text-slate-900">Explorer Statistics</h4>
-                          <span className="text-[10px] text-slate-550 font-bold uppercase tracking-wider">Email: {selectedStudentProfile.email}</span>
+                          <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Email: {selectedStudentProfile.email}</span>
                         </div>
                         <div className="grid grid-cols-2 gap-4 font-bold">
                           <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-sm">
-                            <span className="text-[9px] block text-slate-550 uppercase tracking-wider mb-0.5">XP Score</span>
+                            <span className="text-[9px] block text-slate-600 uppercase tracking-wider mb-0.5">XP Score</span>
                             <span className="text-lg font-extrabold text-purple-600">{selectedStudentProfile.xp} XP</span>
                           </div>
                           <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-sm">
-                            <span className="text-[9px] block text-slate-550 uppercase tracking-wider mb-0.5">Level</span>
-                            <span className="text-lg font-extrabold text-blue-650">Level {selectedStudentProfile.level}</span>
+                            <span className="text-[9px] block text-slate-600 uppercase tracking-wider mb-0.5">Level</span>
+                            <span className="text-lg font-extrabold text-[var(--primary-dark)]">Level {selectedStudentProfile.level}</span>
                           </div>
                           <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-sm">
-                            <span className="text-[9px] block text-slate-550 uppercase tracking-wider mb-0.5">Coins Gained</span>
+                            <span className="text-[9px] block text-slate-600 uppercase tracking-wider mb-0.5">Coins Gained</span>
                             <span className="text-lg font-extrabold text-amber-600">{selectedStudentProfile.coins} Coins</span>
                           </div>
                           <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-sm">
-                            <span className="text-[9px] block text-slate-550 uppercase tracking-wider mb-0.5">Accuracy Rate</span>
+                            <span className="text-[9px] block text-slate-600 uppercase tracking-wider mb-0.5">Accuracy Rate</span>
                             <span className="text-lg font-extrabold text-green-600">{(selectedStudentProfile.accuracy * 100).toFixed(0)}%</span>
                           </div>
                         </div>
 
                         {/* Admin action buttons */}
                         <div className="border-t border-slate-100 pt-4 space-y-3 font-semibold">
-                          <h4 className="font-bold text-slate-550 uppercase text-[9px] tracking-wider mb-1">Roster Controller Actions</h4>
+                          <h4 className="font-bold text-slate-600 uppercase text-[9px] tracking-wider mb-1">Roster Controller Actions</h4>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 font-bold text-center text-[10px]">
                             <button 
                               onClick={() => {
@@ -1912,28 +1911,28 @@ export default function TeacherDashboard({
                                 setEditStudentClassId(selectedStudentProfile.classId || selectedStudentClassId);
                                 setEditStudentPassword('');
                               }}
-                              className="py-2.5 bg-[var(--primary-subtle-bg)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-color)] border border-cyan-95 rounded-xl transition-colors"
+                              className="py-2.5 bg-[var(--primary-subtle-bg)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-subtle-text)] border border-[var(--primary-subtle-border)] rounded-xl transition-colors"
                             >
                               ✏️ Edit Info
                             </button>
                             {selectedStudentProfile.isSuspended ? (
                               <button 
                                 onClick={() => handleSuspendStudent(selectedStudentProfile.id, false)}
-                                className="py-2.5 bg-green-50 hover:bg-green-100 text-green-600 border border-green-200 rounded-xl transition-colors"
+                                className="py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl transition-colors"
                               >
                                 Unsuspend
                               </button>
                             ) : (
                               <button 
                                 onClick={() => handleSuspendStudent(selectedStudentProfile.id, true)}
-                                className="py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 rounded-xl transition-colors"
+                                className="py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl transition-colors"
                               >
                                 Suspend Student
                               </button>
                             )}
                             <button 
                               onClick={() => handleResetStudentProgress(selectedStudentProfile.id)}
-                              className="py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-200 rounded-xl transition-colors"
+                              className="py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl transition-colors"
                             >
                               Reset Progress
                             </button>
@@ -1970,7 +1969,7 @@ export default function TeacherDashboard({
                 </button>
                 <div>
                   <h3 className="font-adventure text-lg font-bold text-slate-900 font-adventure">Curriculum Syllabus Pool</h3>
-                  <span className="text-[10px] text-slate-550 font-bold block uppercase tracking-wider">Create MCQ entries or upload CSV questions</span>
+                  <span className="text-[10px] text-slate-600 font-bold block uppercase tracking-wider">Create MCQ entries or upload CSV questions</span>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -2006,7 +2005,7 @@ export default function TeacherDashboard({
                 <form onSubmit={handleSaveQuestion} className="space-y-4 text-xs select-text">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Grade</label>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Grade</label>
                       <select
                         value={isEditingQuestion.grade || 11}
                         onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, grade: Number(e.target.value) })}
@@ -2018,7 +2017,7 @@ export default function TeacherDashboard({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Topic</label>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Topic</label>
                       <input
                         type="text"
                         value={isEditingQuestion.topic || ''}
@@ -2029,7 +2028,7 @@ export default function TeacherDashboard({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Difficulty</label>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Difficulty</label>
                       <select
                         value={isEditingQuestion.difficulty || 'medium'}
                         onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, difficulty: e.target.value })}
@@ -2043,7 +2042,7 @@ export default function TeacherDashboard({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Question Text</label>
+                    <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Question Text</label>
                     <textarea
                       value={isEditingQuestion.question || ''}
                       onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, question: e.target.value })}
@@ -2056,7 +2055,7 @@ export default function TeacherDashboard({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {(isEditingQuestion.options || ['', '', '', '']).map((opt: string, idx: number) => (
                       <div key={idx}>
-                        <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Option {idx + 1}</label>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Option {idx + 1}</label>
                         <input
                           type="text"
                           value={opt}
@@ -2075,7 +2074,7 @@ export default function TeacherDashboard({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Correct Answer Index (1-4)</label>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Correct Answer Index (1-4)</label>
                       <select
                         value={isEditingQuestion.correctIndex || 0}
                         onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, correctIndex: Number(e.target.value) })}
@@ -2088,7 +2087,7 @@ export default function TeacherDashboard({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">Explanation</label>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Explanation</label>
                       <input
                         type="text"
                         value={isEditingQuestion.explanation || ''}
@@ -2119,7 +2118,7 @@ export default function TeacherDashboard({
             {showCsvImport && (
               <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl text-slate-800 font-semibold select-text">
                 <h3 className="font-adventure text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">Bulk Import MCQ (Semicolon separated)</h3>
-                <p className="text-[10px] text-slate-550 font-bold mb-3 uppercase tracking-wider">Format: Grade;Topic;Difficulty;Question;Opt1;Opt2;Opt3;Opt4;CorrectIndex(0-3);Explanation</p>
+                <p className="text-[10px] text-slate-600 font-bold mb-3 uppercase tracking-wider">Format: Grade;Topic;Difficulty;Question;Opt1;Opt2;Opt3;Opt4;CorrectIndex(0-3);Explanation</p>
                 <form onSubmit={handleCsvImport} className="space-y-3">
                   <textarea
                     value={csvText}
@@ -2138,7 +2137,7 @@ export default function TeacherDashboard({
             <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-xl text-slate-800">
               <div className="flex flex-col lg:flex-row justify-between items-center gap-4 border-b border-slate-100 pb-4 select-text">
                 <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 w-full lg:w-80 shadow-sm">
-                  <Search className="w-4 h-4 text-slate-550 mr-2" />
+                  <Search className="w-4 h-4 text-slate-600 mr-2" />
                   <input
                     type="text"
                     value={questionSearch}
@@ -2154,7 +2153,7 @@ export default function TeacherDashboard({
                         key={g}
                         onClick={() => setGradeFilter(g)}
                         className={`px-3 py-1.5 border rounded-lg font-bold uppercase transition-all ${
-                          gradeFilter === g ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-650'
+                          gradeFilter === g ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-700'
                         }`}
                       >
                         {g === 'all' ? 'All Grades' : `Class ${g}`}
@@ -2167,7 +2166,7 @@ export default function TeacherDashboard({
                         key={d}
                         onClick={() => setDifficultyFilter(d)}
                         className={`px-3 py-1.5 border rounded-lg font-bold uppercase transition-all ${
-                          difficultyFilter === d ? 'bg-purple-650 border-purple-650 text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-650'
+                          difficultyFilter === d ? 'bg-purple-650 border-purple-650 text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-700'
                         }`}
                       >
                         {d === 'all' ? 'All Diff' : d}
@@ -2190,7 +2189,7 @@ export default function TeacherDashboard({
                       <div className="flex gap-1">
                         <button
                           onClick={() => setPreviewQuestion(q)}
-                          className="p-1.5 text-slate-450 hover:bg-slate-200 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-lg transition-colors"
                           title="Student Preview"
                         >
                           👁️
@@ -2245,7 +2244,7 @@ export default function TeacherDashboard({
                 <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 text-slate-800 shadow-2xl relative">
                   <button
                     onClick={() => setPreviewQuestion(null)}
-                    className="absolute top-4 right-4 text-slate-550 hover:text-slate-700 font-bold text-xs"
+                    className="absolute top-4 right-4 text-slate-600 hover:text-slate-700 font-bold text-xs"
                   >
                     Close [X]
                   </button>
@@ -2316,7 +2315,7 @@ export default function TeacherDashboard({
                 </button>
                 <h3 className="font-adventure text-lg font-bold text-slate-900">Join Requests</h3>
               </div>
-              <p className="text-xs text-slate-450 font-semibold mb-6">Review pending requests from students seeking to join your classrooms.</p>
+              <p className="text-xs text-slate-500 font-semibold mb-6">Review pending requests from students seeking to join your classrooms.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 select-text">
                 {joinRequests.map((req: any) => (
@@ -2325,10 +2324,10 @@ export default function TeacherDashboard({
                       <div className="flex justify-between items-start">
                         <div>
                           <span className="font-extrabold text-slate-900 text-sm block">{req.studentName}</span>
-                          <span className="text-[10px] text-slate-550 font-bold block uppercase tracking-wider">Wants to join: {req.className}</span>
+                          <span className="text-[10px] text-slate-600 font-bold block uppercase tracking-wider">Wants to join: {req.className}</span>
                           <span className="text-[10px] text-[var(--primary-color)] font-bold block">Grade Level: Class {req.studentGrade || 11}</span>
                         </div>
-                        <span className="text-[9px] text-slate-450 font-bold">{new Date(req.createdAt).toLocaleDateString()}</span>
+                        <span className="text-[9px] text-slate-500 font-bold">{new Date(req.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
                     <div className="flex gap-2 pt-3 border-t border-slate-200/60">
@@ -2348,7 +2347,7 @@ export default function TeacherDashboard({
                   </div>
                 ))}
                 {joinRequests.length === 0 && (
-                  <div className="col-span-full py-16 text-center text-slate-550 font-bold text-sm italic">
+                  <div className="col-span-full py-16 text-center text-slate-600 font-bold text-sm italic">
                     🎉 No pending join requests. Everything is up to date!
                   </div>
                 )}
@@ -2382,7 +2381,7 @@ export default function TeacherDashboard({
                     <span className="font-bold font-mono text-sm">#{idx+1}</span>
                     <div>
                       <span className="font-extrabold text-slate-900 text-sm block">{student.name}</span>
-                      <span className="text-[10px] text-slate-550 font-bold block uppercase tracking-wider">Class: {student.className}</span>
+                      <span className="text-[10px] text-slate-600 font-bold block uppercase tracking-wider">Class: {student.className}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-xs font-bold text-slate-700">
@@ -2419,9 +2418,9 @@ export default function TeacherDashboard({
                     <div>
                       <span className="text-[9px] uppercase font-bold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full mr-2">Finished</span>
                       <span className="font-extrabold text-slate-900">Roster Code: {report.roomCode}</span>
-                      <p className="text-[10px] text-slate-550 font-bold uppercase tracking-wider mt-1.5">Classroom Grade: {report.className} | Date: {new Date(report.endedAt).toLocaleDateString()}</p>
+                      <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider mt-1.5">Classroom Grade: {report.className} | Date: {new Date(report.endedAt).toLocaleDateString()}</p>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-550" />
+                    <ChevronRight className="w-5 h-5 text-slate-600" />
                   </button>
                 ))}
                 {pastReports.length === 0 && <p className="text-slate-550 italic py-10 text-center font-bold">No completed match sessions saved in database.</p>}
@@ -2434,7 +2433,7 @@ export default function TeacherDashboard({
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs select-text">
                   <thead>
-                    <tr className="border-b border-slate-200 text-slate-550 font-bold uppercase tracking-wider text-[10px]">
+                    <tr className="border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
                       <th className="py-2.5">Student Name</th>
                       <th className="py-2.5">Email</th>
                       <th className="py-2.5 text-center">Grade</th>
@@ -2448,14 +2447,14 @@ export default function TeacherDashboard({
                     {classes.flatMap(cls => cls.students || []).map((student: any) => (
                       <tr key={student.id} className="border-b border-slate-100 text-slate-700 font-bold hover:bg-slate-50 transition-colors">
                         <td className="py-3 font-bold flex items-center gap-1.5 text-slate-900">
-                          <span className={`w-2 h-2 rounded-full ${student.isSuspended ? 'bg-[var(--primary-subtle-bg)]0' : 'bg-green-500'}`} title={student.isSuspended ? 'Suspended' : 'Active'}></span>
+                          <span className={`w-2 h-2 rounded-full ${student.isSuspended ? 'bg-slate-300' : 'bg-green-500'}`} title={student.isSuspended ? 'Suspended' : 'Active'}></span>
                           <span>{student.name}</span>
                         </td>
-                        <td className="py-3 text-slate-550 font-mono text-[11px]">{student.email || 'N/A'}</td>
+                        <td className="py-3 text-slate-600 font-mono text-[11px]">{student.email || 'N/A'}</td>
                         <td className="py-3 text-center text-slate-800">{student.grade || 11}</td>
                         <td className="py-3 text-center text-purple-600">{student.xp}</td>
                         <td className="py-3 text-center text-amber-600">{student.coins}</td>
-                        <td className="py-3 text-center text-blue-650">Level {student.level}</td>
+                        <td className="py-3 text-center text-[var(--primary-dark)]">Level {student.level}</td>
                         <td className="py-3 text-center font-mono font-bold text-green-700">{student.minutesPlayed || 0} min</td>
                       </tr>
                     ))}
@@ -2474,12 +2473,12 @@ export default function TeacherDashboard({
               <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 relative shadow-xl select-text">
                 <button 
                   onClick={() => setSessionReport(null)}
-                  className="absolute top-4 right-4 text-slate-550 hover:text-slate-700 text-xs font-bold font-sans"
+                  className="absolute top-4 right-4 text-slate-600 hover:text-slate-700 text-xs font-bold font-sans"
                 >
                   Close Report [X]
                 </button>
                 <h3 className="font-adventure text-2xl font-bold text-slate-900 border-b border-slate-100 pb-2">Session Summary Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-xs font-bold text-slate-550 pt-2">
+                <div className="grid grid-cols-2 gap-4 text-xs font-bold text-slate-600 pt-2">
                   <div>Session ID: <span className="text-slate-900 font-extrabold">{sessionReport.session.id}</span></div>
                   <div>Classroom: <span className="text-slate-900 font-extrabold">{sessionReport.className}</span></div>
                   <div>Room Code: <span className="text-slate-900 font-extrabold">{sessionReport.session.roomCode}</span></div>
@@ -2489,7 +2488,7 @@ export default function TeacherDashboard({
                 <div className="overflow-x-auto pr-2 text-xs pt-4 select-text">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-200 text-slate-550 font-bold uppercase tracking-wider text-[10px]">
+                      <tr className="border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
                         <th className="py-2.5">Team Explorer</th>
                         <th className="py-2.5 text-center">Final Tile Position</th>
                         <th className="py-2.5 text-center font-bold">Answer Accuracy</th>
@@ -2504,7 +2503,7 @@ export default function TeacherDashboard({
                           <td className="py-3 text-center">{r.position}</td>
                           <td className="py-3 text-center text-green-700 font-bold">{r.accuracy.toFixed(0)}%</td>
                           <td className="py-3 text-center text-purple-600">{r.xp}</td>
-                          <td className="py-3 text-center font-adventure font-extrabold text-blue-650 text-sm">#{r.rank}</td>
+                          <td className="py-3 text-center font-adventure font-extrabold text-[var(--primary-dark)] text-sm">#{r.rank}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -2529,11 +2528,11 @@ export default function TeacherDashboard({
             </div>
             
             <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-xs font-bold text-slate-450">Sidebar Theme Layout</span>
+              <span className="text-xs font-bold text-slate-500">Sidebar Theme Layout</span>
               <select
                 value={themeMode}
                 onChange={(e) => setThemeMode(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-650 font-sans"
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-sans"
               >
                 <option value="Dark Forest">Dark Forest (Jungle)</option>
                 <option value="Parchment Light">Parchment Light</option>
@@ -2541,7 +2540,7 @@ export default function TeacherDashboard({
             </div>
 
             <div className="space-y-3 py-3 border-b border-slate-100 text-left">
-              <span className="text-xs font-bold text-slate-450 block uppercase tracking-wider">ByteQuest Theme</span>
+              <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">ByteQuest Theme</span>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { id: 'red-gold', name: 'Red + Gold', emoji: '❤️' },
@@ -2569,11 +2568,11 @@ export default function TeacherDashboard({
             </div>
 
             <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-xs font-bold text-slate-450">Authentication Logs</span>
+              <span className="text-xs font-bold text-slate-500">Authentication Logs</span>
               <span className="bg-green-50 text-green-700 border border-green-200 text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide">SSL Secured</span>
             </div>
             
-            <div className="pt-2 text-center text-[10px] text-slate-550 font-bold uppercase tracking-wider">
+            <div className="pt-2 text-center text-[10px] text-slate-600 font-bold uppercase tracking-wider">
               ByteQuest Teacher Dashboard controller console build version 1.0.0
             </div>
           </div>
@@ -2619,7 +2618,7 @@ export default function TeacherDashboard({
             </div>
 
             {!editingProfile ? (
-              <div className="space-y-6 text-slate-550 pt-2 font-semibold select-text">
+              <div className="space-y-6 text-slate-600 pt-2 font-semibold select-text">
                 <div className="flex items-center gap-4 border-b border-slate-100 pb-4 mb-2">
                   <div className="w-20 h-20 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-4xl overflow-hidden shadow-sm shrink-0">
                     {localStorage.getItem(`bytequest_teacher_pic_${teacherInfo.id}`) ? (
@@ -2634,33 +2633,33 @@ export default function TeacherDashboard({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs text-slate-550">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs text-slate-600">
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Full Name</span>
+                    <span className="text-[10px] text-slate-600 block uppercase font-bold tracking-wider mb-1">Full Name</span>
                     <span className="text-slate-955 font-extrabold text-sm">{teacherInfo.name}</span>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Registered Email</span>
+                    <span className="text-[10px] text-slate-600 block uppercase font-bold tracking-wider mb-1">Registered Email</span>
                     <span className="text-slate-955 font-extrabold text-sm">{teacherInfo.email}</span>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">School</span>
+                    <span className="text-[10px] text-slate-600 block uppercase font-bold tracking-wider mb-1">School</span>
                     <span className="text-slate-955 font-extrabold text-sm">{teacherInfo.schoolName || 'Delhi Public School'}</span>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Subject</span>
+                    <span className="text-[10px] text-slate-600 block uppercase font-bold tracking-wider mb-1">Subject</span>
                     <span className="text-slate-955 font-extrabold text-sm">{localStorage.getItem(`bytequest_teacher_subject_${teacherInfo.id}`) || 'Computer Science'}</span>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Phone</span>
+                    <span className="text-[10px] text-slate-600 block uppercase font-bold tracking-wider mb-1">Phone</span>
                     <span className="text-slate-955 font-extrabold text-sm">{localStorage.getItem(`bytequest_teacher_phone_${teacherInfo.id}`) || '—'}</span>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Experience</span>
+                    <span className="text-[10px] text-slate-600 block uppercase font-bold tracking-wider mb-1">Experience</span>
                     <span className="text-slate-955 font-extrabold text-sm">{localStorage.getItem(`bytequest_teacher_exp_${teacherInfo.id}`) ? `${localStorage.getItem(`bytequest_teacher_exp_${teacherInfo.id}`)} Years` : '—'}</span>
                   </div>
                   <div className="col-span-1 sm:col-span-2 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="text-[10px] text-slate-550 block uppercase font-bold tracking-wider mb-1">Biography</span>
+                    <span className="text-[10px] text-slate-600 block uppercase font-bold tracking-wider mb-1">Biography</span>
                     <p className="text-slate-700 font-medium mt-1 font-sans leading-relaxed">{localStorage.getItem(`bytequest_teacher_bio_${teacherInfo.id}`) || 'No biography entered yet.'}</p>
                   </div>
                 </div>
@@ -2669,7 +2668,7 @@ export default function TeacherDashboard({
               <form onSubmit={handleSaveTeacherProfile} className="space-y-4 text-xs font-semibold select-text">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">First Name</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">First Name</label>
                     <input
                       type="text"
                       value={profileFirstName}
@@ -2680,7 +2679,7 @@ export default function TeacherDashboard({
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Last Name</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Last Name</label>
                     <input
                       type="text"
                       value={profileLastName}
@@ -2694,7 +2693,7 @@ export default function TeacherDashboard({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Email</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Email</label>
                     <input
                       type="email"
                       value={profileEmail}
@@ -2705,7 +2704,7 @@ export default function TeacherDashboard({
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">School</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">School</label>
                     <input
                       type="text"
                       value={profileSchool}
@@ -2719,7 +2718,7 @@ export default function TeacherDashboard({
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Subject</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Subject</label>
                     <input
                       type="text"
                       value={profileSubject}
@@ -2729,7 +2728,7 @@ export default function TeacherDashboard({
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Phone</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Phone</label>
                     <input
                       type="text"
                       value={profilePhone}
@@ -2739,7 +2738,7 @@ export default function TeacherDashboard({
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Experience (Yrs)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Experience (Yrs)</label>
                     <input
                       type="number"
                       value={profileExperience}
@@ -2751,7 +2750,7 @@ export default function TeacherDashboard({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1.5">Profile Photo</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1.5">Profile Photo</label>
                   <div className="flex items-center gap-3">
                     {profilePhoto && (
                       <img 
@@ -2773,13 +2772,13 @@ export default function TeacherDashboard({
                           reader.readAsDataURL(file);
                         }
                       }}
-                      className="text-xs text-slate-550 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer w-full"
+                      className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer w-full"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-450 mb-1">Biography / Bio</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Biography / Bio</label>
                   <textarea
                     value={profileBio}
                     onChange={(e) => setProfileBio(e.target.value)}
@@ -2790,10 +2789,10 @@ export default function TeacherDashboard({
                 </div>
 
                 <div className="border-t border-slate-100 pt-4">
-                  <p className="text-[10px] font-bold text-slate-450 uppercase mb-2">Change Password (optional)</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Change Password (optional)</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] text-slate-450 mb-1">Current Password</label>
+                      <label className="block text-[10px] text-slate-500 mb-1">Current Password</label>
                       <input
                         type="password"
                         value={profileCurrentPw}
@@ -2803,7 +2802,7 @@ export default function TeacherDashboard({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-slate-450 mb-1">New Password</label>
+                      <label className="block text-[10px] text-slate-500 mb-1">New Password</label>
                       <input
                         type="password"
                         value={profileNewPw}

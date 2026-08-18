@@ -23,19 +23,17 @@ import {
   Loader,
   Flag
 } from 'lucide-react';
-import { Tile, BOARD_TILES, TILE_COORDS_DESKTOP, TILE_COORDS_MOBILE, SAFE_TILES, PRESET_COLORS, PRESET_AVATARS } from '../config';
+import { Tile, BOARD_TILES, TILE_COORDS_DESKTOP, TILE_COORDS_MOBILE, SAFE_TILES, PRESET_COLORS, PRESET_AVATARS, getTileHexClass, getTileSymbol, getArrowColor, getPCBPath, getPCBVias, getTilePositions } from '../config';
 import { questionBank, Question } from '../questions';
 import confetti from 'canvas-confetti';
 
 
 const getTokenOffset = (indexOnTile: number, totalOnTile: number) => {
   if (totalOnTile <= 1) return { x: 0, y: 0 };
-  const angle = (indexOnTile / totalOnTile) * 2 * Math.PI - Math.PI / 2;
-  const isMobile = window.innerWidth < 768;
-  const radius = isMobile ? 8 : 14;
+  const step = window.innerWidth < 768 ? 6 : 10;
   return {
-    x: Math.round(Math.cos(angle) * radius),
-    y: Math.round(Math.sin(angle) * radius)
+    x: (indexOnTile - (totalOnTile - 1) / 2) * step,
+    y: (indexOnTile - (totalOnTile - 1) / 2) * step
   };
 };
 
@@ -92,14 +90,18 @@ export default function StudentGame({
   setTheme
 }: StudentGameProps) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      setWindowWidth(window.innerWidth);
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const TILE_COORDS = isMobile ? TILE_COORDS_MOBILE : TILE_COORDS_DESKTOP;
+  const TILE_COORDS = getTilePositions(BOARD_TILES, isMobile);
 
   // Authentication & Profile States
   const [activeStudent, setActiveStudent] = useState<any>(null);
@@ -249,6 +251,7 @@ export default function StudentGame({
   // Online tile-by-tile movement animation state
   const [displayPositions, setDisplayPositions] = useState<Record<string, number>>({});
   const [isMovingOnline, setIsMovingOnline] = useState<boolean>(false);
+  const [isLeaderboardExpanded, setIsLeaderboardExpanded] = useState<boolean>(false);
   const activeIntervalsRef = useRef<Record<string, any>>({});
   const previousPositionsRef = useRef<Record<string, number>>({});
 
@@ -1234,28 +1237,28 @@ export default function StudentGame({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => { playBeep(370, 'sine', 0.05); setActiveTab('continue'); }}
-                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-jungle-deep hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
+                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-offwhite hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
                   >
                     <span className="text-2xl mb-1">⏳</span>
                     <span className="text-[11px] font-bold leading-tight">Continue Adventure</span>
                   </button>
                   <button
                     onClick={() => { playBeep(390, 'sine', 0.05); setActiveTab('new_adventure'); }}
-                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-jungle-deep hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
+                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-offwhite hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
                   >
                     <span className="text-2xl mb-1">🎲</span>
                     <span className="text-[11px] font-bold leading-tight">New Adventure</span>
                   </button>
                   <button
                     onClick={() => { playBeep(460, 'sine', 0.05); setActiveTab('join_classroom'); }}
-                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-jungle-deep hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
+                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-offwhite hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
                   >
                     <span className="text-2xl mb-1">🏫</span>
                     <span className="text-[11px] font-bold leading-tight">Join Classroom</span>
                   </button>
                   <button
                     onClick={() => { playBeep(410, 'sine', 0.05); setActiveTab('practice_quiz'); }}
-                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-jungle-deep hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
+                    className="parchment-panel rounded-xl p-3 flex flex-col items-center justify-center text-center text-offwhite hover:scale-[1.02] active:scale-[0.98] transition-all min-h-[85px] border border-gold-dark/20"
                   >
                     <span className="text-2xl mb-1">📝</span>
                     <span className="text-[11px] font-bold leading-tight">Practice Quiz</span>
@@ -1277,10 +1280,10 @@ export default function StudentGame({
               </div>
               {/* Option A: Reconnect Live Match */}
               {roomCode && (
-                <div className="parchment-panel rounded-2xl p-8 text-jungle-deep text-center space-y-4 shadow-xl">
+                <div className="parchment-panel rounded-2xl p-8 text-offwhite text-center space-y-4 shadow-xl">
                   <span className="text-5xl block">⏳</span>
                   <h3 className="font-adventure text-2xl font-bold text-gold-dark">Active Multiplayer Lobby</h3>
-                  <p className="text-xs font-semibold text-jungle-light">You have a pending or active multiplayer lobby code: <span className="font-mono text-lg font-bold text-jungle-deep">{roomCode}</span></p>
+                  <p className="text-xs font-semibold text-slate-500">You have a pending or active multiplayer lobby code: <span className="font-mono text-lg font-bold text-[var(--primary-dark)]">{roomCode}</span></p>
                   <button 
                     onClick={handleSelectNameAndJoin}
                     className="px-8 py-3 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded-lg border-2 border-gold-dark shadow-md text-xs uppercase"
@@ -1291,12 +1294,12 @@ export default function StudentGame({
               )}
 
               {/* Option B: Local/Offline Saved Adventure */}
-              <div className="parchment-panel rounded-2xl p-8 text-jungle-deep text-center space-y-4 shadow-xl">
+              <div className="parchment-panel rounded-2xl p-8 text-offwhite text-center space-y-4 shadow-xl">
                 <span className="text-5xl block">🎲</span>
                 <h3 className="font-adventure text-2xl font-bold text-gold-dark font-adventure">Offline Saved Adventure</h3>
                 {localStorage.getItem('bytequest_local_adventure') ? (
                   <>
-                    <p className="text-xs font-semibold text-jungle-light leading-relaxed">
+                    <p className="text-xs font-semibold text-slate-500 leading-relaxed">
                       An unfinished local offline practice game was found! You can resume exactly where you left off.
                     </p>
                     <button 
@@ -1332,45 +1335,45 @@ export default function StudentGame({
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleGoBack}
-                    className="px-3 py-1.5 rounded-lg bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-bold text-xs uppercase font-adventure transition-all"
+                    className="px-3 py-1.5 rounded-lg bg-[var(--primary-subtle-bg)] border border-[var(--primary-subtle-border)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-dark)] font-bold text-xs uppercase font-adventure transition-all"
                   >
                     ← Back
                   </button>
                   <div>
-                    <h3 className="font-adventure text-lg font-bold text-gold uppercase tracking-wider">Explorer Launchpad</h3>
-                    <p className="text-gold-light text-[10px]">Select a game mode to begin your CS learning campaign.</p>
+                    <h3 className="font-adventure text-lg font-bold text-[var(--primary-dark)] uppercase tracking-wider">Explorer Launchpad</h3>
+                    <p className="text-slate-600 text-[10px]">Select a game mode to begin your CS learning campaign.</p>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {/* CARD 1: SOLO SANDBOX */}
-                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-jungle-deep min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
+                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-offwhite min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-1.5 md:mb-3">
                       <span className="text-2xl md:text-4xl">🤖</span>
                       <h4 className="font-adventure text-sm md:text-lg font-bold text-gold-dark truncate">Solo Sandbox</h4>
                     </div>
-                    <p className="text-[10px] md:text-xs font-semibold text-jungle-light leading-tight md:leading-relaxed">
+                    <p className="text-[10px] md:text-xs font-semibold text-slate-500 leading-tight md:leading-relaxed">
                       Fight compilation bots in a completely local, offline practice match.
                     </p>
                   </div>
                   <button 
                     onClick={onStartSoloPractice}
-                    className="w-full h-11 bg-jungle-medium hover:bg-jungle-deep text-offwhite font-bold text-[10px] md:text-xs rounded-lg uppercase transition-all tracking-wide min-h-[44px] mt-4 flex items-center justify-center"
+                    className="w-full h-11 bg-jungle-medium hover:bg-slate-100 border border-slate-200 shadow-sm text-offwhite font-bold text-[10px] md:text-xs rounded-lg uppercase transition-all tracking-wide min-h-[44px] mt-4 flex items-center justify-center"
                   >
                     Start Solo
                   </button>
                 </div>
 
                 {/* CARD 2: CREATE LOBBY */}
-                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-jungle-deep min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
+                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-offwhite min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-1.5 md:mb-3">
                       <span className="text-2xl md:text-4xl">🔑</span>
                       <h4 className="font-adventure text-sm md:text-lg font-bold text-gold-dark truncate">Create Lobby</h4>
                     </div>
-                    <p className="text-[10px] md:text-xs font-semibold text-jungle-light leading-tight md:leading-relaxed">
+                    <p className="text-[10px] md:text-xs font-semibold text-slate-500 leading-tight md:leading-relaxed">
                       Create a custom multiplayer practice room for your friends to join.
                     </p>
                   </div>
@@ -1389,7 +1392,7 @@ export default function StudentGame({
                 </div>
 
                 {/* CARD 3: JOIN LOBBY */}
-                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-jungle-deep min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
+                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-offwhite min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-1.5 md:mb-3">
                       <span className="text-2xl md:text-4xl">🤝</span>
@@ -1407,7 +1410,7 @@ export default function StudentGame({
                           required
                         />
                         {joinError && <p className="text-[8px] text-[var(--primary-subtle-text)] text-center font-bold truncate">{joinError}</p>}
-                        <button type="submit" className="w-full h-11 bg-gold text-jungle-deep font-bold text-[10px] md:text-xs rounded-lg uppercase tracking-wide min-h-[44px] flex items-center justify-center">Verify</button>
+                        <button type="submit" className="w-full h-11 bg-gold text-white font-bold text-[10px] md:text-xs rounded-lg uppercase tracking-wide min-h-[44px] flex items-center justify-center">Verify</button>
                       </form>
                     ) : (
                       <div className="space-y-1.5 text-[9px] md:text-xs text-center">
@@ -1417,18 +1420,18 @@ export default function StudentGame({
                     )}
                   </div>
                   {rosterClass && (
-                    <button onClick={() => setRosterClass(null)} className="text-center text-[9px] md:text-xs text-jungle-light font-bold mt-1">Clear</button>
+                    <button onClick={() => setRosterClass(null)} className="text-center text-[9px] md:text-xs text-slate-500 font-bold mt-1">Clear</button>
                   )}
                 </div>
 
                 {/* CARD 4: DAILY CHALLENGE */}
-                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-jungle-deep min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
+                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-offwhite min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-1.5 md:mb-3">
                       <span className="text-2xl md:text-4xl">⚡</span>
                       <h4 className="font-adventure text-sm md:text-lg font-bold text-gold-dark truncate">Daily Challenge</h4>
                     </div>
-                    <p className="text-[10px] md:text-xs font-semibold text-jungle-light leading-tight md:leading-relaxed">
+                    <p className="text-[10px] md:text-xs font-semibold text-slate-500 leading-tight md:leading-relaxed">
                       Complete daily challenges to earn bonus coins and experience XP!
                     </p>
                   </div>
@@ -1441,13 +1444,13 @@ export default function StudentGame({
                 </div>
 
                 {/* CARD 5: TREASURE HUNT */}
-                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-jungle-deep min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
+                <div className="parchment-panel rounded-xl p-4 flex flex-col justify-between text-offwhite min-h-[195px] md:min-h-[260px] lg:min-h-[290px] shadow-md">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-1.5 md:mb-3">
                       <span className="text-2xl md:text-4xl">👑</span>
                       <h4 className="font-adventure text-sm md:text-lg font-bold text-gold-dark truncate">Treasure Hunt</h4>
                     </div>
-                    <p className="text-[10px] md:text-xs font-semibold text-jungle-light leading-tight md:leading-relaxed">
+                    <p className="text-[10px] md:text-xs font-semibold text-slate-500 leading-tight md:leading-relaxed">
                       Join teacher lobbies or classroom events to compete for rewards.
                     </p>
                   </div>
@@ -1463,14 +1466,14 @@ export default function StudentGame({
               {/* LOBBY CONFIGURATION DIALOG */}
               {showLobbyConfigModal && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[99999]">
-                  <div className="parchment-panel text-jungle-deep p-5 rounded-2xl w-full max-w-sm shadow-2xl relative select-text">
+                  <div className="parchment-panel text-slate-800 p-5 rounded-2xl w-full max-w-sm shadow-2xl relative select-text">
                     <h3 className="font-adventure text-lg font-bold text-gold-dark mb-3 uppercase tracking-wide">
                       Create Practice Lobby
                     </h3>
                     
                     <div className="space-y-3 text-xs">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Lobby Name (Optional)</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Lobby Name (Optional)</label>
                         <input
                           type="text"
                           placeholder={`${activeStudent.name}'s Party`}
@@ -1482,7 +1485,7 @@ export default function StudentGame({
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Max Players</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Max Players</label>
                           <select
                             value={lobbyConfigMaxPlayers}
                             onChange={(e) => setLobbyConfigMaxPlayers(Number(e.target.value))}
@@ -1494,7 +1497,7 @@ export default function StudentGame({
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1">Target Grade</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Target Grade</label>
                           <select
                             value={lobbyConfigGrade}
                             onChange={(e) => setLobbyConfigGrade(e.target.value)}
@@ -1509,19 +1512,19 @@ export default function StudentGame({
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-jungle-light mb-1 font-sans">Lobby Visibility</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-sans">Lobby Visibility</label>
                         <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() => setLobbyConfigPrivate(false)}
-                            className={`flex-1 py-1.5 rounded font-bold uppercase text-[10px] border transition-all ${!lobbyConfigPrivate ? 'bg-gold border-gold-dark text-jungle-deep shadow-sm' : 'bg-parchment-light border-gold-dark/20 text-jungle-light'}`}
+                            className={`flex-1 py-1.5 rounded font-bold uppercase text-[10px] border transition-all ${!lobbyConfigPrivate ? 'bg-gold border-gold-dark text-white shadow-sm' : 'bg-parchment-light border-gold-dark/20 text-slate-500'}`}
                           >
                             Public
                           </button>
                           <button
                             type="button"
                             onClick={() => setLobbyConfigPrivate(true)}
-                            className={`flex-1 py-1.5 rounded font-bold uppercase text-[10px] border transition-all ${lobbyConfigPrivate ? 'bg-gold border-gold-dark text-jungle-deep shadow-sm' : 'bg-parchment-light border-gold-dark/20 text-jungle-light'}`}
+                            className={`flex-1 py-1.5 rounded font-bold uppercase text-[10px] border transition-all ${lobbyConfigPrivate ? 'bg-gold border-gold-dark text-white shadow-sm' : 'bg-parchment-light border-gold-dark/20 text-slate-500'}`}
                           >
                             Private
                           </button>
@@ -1533,7 +1536,7 @@ export default function StudentGame({
                       <button
                         type="button"
                         onClick={() => setShowLobbyConfigModal(false)}
-                        className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-jungle-deep font-bold rounded text-[10px] uppercase transition-colors"
+                        className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border border-slate-200 rounded text-[10px] uppercase transition-colors"
                       >
                         Cancel
                       </button>
@@ -1543,7 +1546,7 @@ export default function StudentGame({
                           setShowLobbyConfigModal(false);
                           handleCreatePracticeRoom();
                         }}
-                        className="flex-1 py-2 bg-gold hover:bg-gold-light text-jungle-deep font-bold rounded text-[10px] uppercase shadow-md transition-colors border border-gold-dark/30"
+                        className="flex-1 py-2 bg-gold hover:bg-gold-light text-white font-bold rounded text-[10px] uppercase shadow-md transition-colors border border-gold-dark/30"
                       >
                         Create Lobby
                       </button>
@@ -2199,11 +2202,11 @@ export default function StudentGame({
 
 
           {activeTab === 'settings' && (
-            <div className="parchment-panel rounded-2xl p-8 text-jungle-deep max-w-md mx-auto space-y-4">
+            <div className="parchment-panel rounded-2xl p-8 text-slate-800 max-w-md mx-auto space-y-4">
               <div className="flex items-center gap-3 border-b border-gold-dark/25 pb-2 mb-2">
                 <button
                   onClick={handleGoBack}
-                  className="px-3 py-1.5 rounded-lg bg-gold/25 border border-gold-dark/30 hover:bg-gold/45 text-jungle-deep font-bold text-xs uppercase font-adventure transition-all"
+                  className="px-3 py-1.5 rounded-lg bg-[var(--primary-subtle-bg)] border border-[var(--primary-subtle-border)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-dark)] font-bold text-xs uppercase font-adventure transition-all"
                 >
                   ← Back
                 </button>
@@ -2211,7 +2214,7 @@ export default function StudentGame({
               </div>
               
               <div className="flex justify-between items-center py-2 border-b border-gold-dark/10">
-                <span className="text-xs font-bold text-jungle-light">Sound Effects</span>
+                <span className="text-xs font-bold text-slate-500">Sound Effects</span>
                 <button 
                   onClick={() => setAudioOn(!audioOn)}
                   className="p-2 rounded-lg bg-parchment-light border border-gold-dark/30 hover:bg-gold/15"
@@ -2221,7 +2224,7 @@ export default function StudentGame({
               </div>
 
               <div className="space-y-2 text-left pt-2">
-                <span className="text-xs font-bold text-jungle-light block">Interface Theme</span>
+                <span className="text-xs font-bold text-slate-500 block">Interface Theme</span>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'red-gold', name: 'Red + Gold', emoji: '❤️' },
@@ -2238,7 +2241,7 @@ export default function StudentGame({
                       className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border-2 text-[10px] font-extrabold font-adventure transition-all ${
                         theme === t.id
                           ? 'bg-gold-dark border-gold-dark text-white shadow-inner scale-[1.02]'
-                          : 'bg-parchment-light hover:bg-gold/15 border-gold-dark/30 text-jungle-deep'
+                          : 'bg-parchment-light hover:bg-gold/15 border-gold-dark/30 text-slate-700'
                       }`}
                     >
                       <span>{t.emoji}</span>
@@ -2454,7 +2457,7 @@ export default function StudentGame({
       {(gameState === 'playing' || gameState === 'victory') && syncState && (
         <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative">
           {activeStudent && (
-            <div className="sticky top-14 md:top-[60px] z-30 bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] px-4 py-3 rounded-2xl flex items-center justify-between gap-4 mb-4 shadow-[0_5px_15px_rgba(0,0,0,0.5)] text-white select-none animate-fade-in">
+            <div className="sticky top-14 md:top-[60px] z-30 pcb-card-panel border-3 border-[#D4AF37] px-4 py-3 flex items-center justify-between gap-4 mb-4 text-white select-none animate-fade-in">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">👤</span>
                 <div>
@@ -2496,65 +2499,136 @@ export default function StudentGame({
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full items-start">
             
-            <div className="lg:col-span-3 bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] p-3 md:p-5 rounded-3xl relative w-full flex flex-col gap-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
-              <div className="relative w-full board-bg border-2 border-[#D4AF37]/50 rounded-2xl overflow-visible shadow-inner" style={{ paddingBottom: '75%' }}>
+            <div className="lg:col-span-3 pcb-card-panel border-3 border-[#D4AF37] p-3 md:p-5 relative w-full flex flex-col gap-3">
+              <div className="relative w-full board-bg border-2 border-[#D4AF37]/50 rounded-2xl overflow-visible shadow-inner" style={{ paddingBottom: isMobile ? (windowWidth < 420 ? '300%' : '135%') : '72%' }}>
                 <div className="absolute inset-3">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(211,47,47,0.04),transparent_70%)] pointer-events-none rounded-xl"></div>
+                  {/* Dark Fantasy Tech map details & circuit lines */}
+                  <div className="absolute inset-0 bg-slate-950/20 pointer-events-none rounded-xl"></div>
                   
+                  {/* Floating Sparkles / Particle Effects */}
+                  <div className="absolute inset-0 pointer-events-none z-0">
+                    <div className="absolute w-1 h-1 bg-blue-400 rounded-full animate-ping" style={{ left: '15%', top: '25%', animationDuration: '3s' }}></div>
+                    <div className="absolute w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{ left: '75%', top: '15%', animationDuration: '4s' }}></div>
+                    <div className="absolute w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{ left: '80%', top: '65%', animationDuration: '5s' }}></div>
+                    <div className="absolute w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" style={{ left: '25%', top: '75%', animationDuration: '3.5s' }}></div>
+                    <div className="absolute w-1 h-1 bg-emerald-400 rounded-full animate-ping" style={{ left: '50%', top: '45%', animationDuration: '4.5s' }}></div>
+                  </div>
+
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.06),transparent_70%)] pointer-events-none rounded-xl"></div>
+                  
+                  {/* Single Winding Board-game Road Path */}
                   <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
                     <defs>
-                      <linearGradient id="goldPathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#D4AF37" />
-                        <stop offset="50%" stopColor="#F6E27A" />
-                        <stop offset="100%" stopColor="#D4AF37" />
+                      <linearGradient id="glowingPathGradOnline" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#3B82F6" />
+                        <stop offset="50%" stopColor="#8B5CF6" />
+                        <stop offset="100%" stopColor="#F59E0B" />
                       </linearGradient>
                     </defs>
-                    <path d={getCurvedPath(TILE_COORDS)} fill="none" className="gold-energy-connector" stroke="url(#goldPathGrad)" strokeWidth="6" strokeLinecap="round" />
+                    
+                    {/* 1. Road Drop Shadow */}
+                    <path 
+                      d={getPCBPath(TILE_COORDS)} 
+                      fill="none" 
+                      stroke="#02080f" 
+                      strokeWidth="5" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                      style={{ opacity: 0.6 }}
+                    />
+                    {/* 2. Raised Copper/Steel Base */}
+                    <path 
+                      d={getPCBPath(TILE_COORDS)} 
+                      fill="none" 
+                      stroke="#132F3C" 
+                      strokeWidth="3.5" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    />
+                    {/* 3. Glowing Neon Core Line */}
+                    <path 
+                      d={getPCBPath(TILE_COORDS)} 
+                      fill="none" 
+                      className="pcb-neon-glow" 
+                      stroke="#22D3EE" 
+                      strokeWidth="1.5" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    />
+                    {/* 4. Glowing Data Packets Signal Flow */}
+                    <path 
+                      d={getPCBPath(TILE_COORDS)} 
+                      fill="none" 
+                      className="pcb-trace-signal" 
+                      stroke="#22D3EE" 
+                      strokeWidth="1.5" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                      style={{ filter: 'drop-shadow(0 0 3px #22D3EE)' }}
+                    />
+
+                    {/* 5. Glowing Via-Dots at Chamfer Bend Points */}
+                    {getPCBVias(TILE_COORDS).map((via, idx) => (
+                      <circle 
+                        key={`via-${idx}`} 
+                        cx={via.x} 
+                        cy={via.y} 
+                        r="0.8" 
+                        fill="#0b1e24" 
+                        stroke="#22D3EE" 
+                        strokeWidth="0.4" 
+                        style={{ filter: 'drop-shadow(0 0 2px #22D3EE)' }}
+                      />
+                    ))}
                   </svg>
 
-                  {/* Plinth Tiles rendering */}
+                  {/* Isometric Hexagonal Tiles */}
                   {BOARD_TILES.map((tile, tIdx) => {
                     const coord = TILE_COORDS[tIdx];
-                    const isSafe = SAFE_TILES.includes(tIdx);
                     const activeTeam = syncState.teams[syncState.activeTeamIdx];
                     const isDestination = activeTeam && activeTeam.position === tIdx;
                     const isCompleted = syncState.teams.some((te: any) => te.position > tIdx);
 
-                    // Icon symbols mapping matching visual description
-                    let symbol = '📜';
-                    if (tIdx === 0) symbol = '⛺';
-                    else if (tIdx === 17) symbol = '👑';
-                    else if ([2, 8, 10, 12].includes(tIdx)) symbol = '🛡️';
-                    else if ([5, 13, 14].includes(tIdx)) symbol = '📦';
-                    else if (tIdx === 16) symbol = '🐉';
-                    else if (tile.type === 'trap') symbol = '🕸️';
-                    else if (tile.type === 'treasure') symbol = '🎁';
-
-                    const destinationClass = isDestination ? 'active-tile' : '';
-                    const safeClass = isSafe ? 'ring-2 ring-[#FFD700] ring-offset-2 ring-offset-[var(--primary-deep-dark)]' : '';
-                    const completedClass = isCompleted ? 'stone-plinth-completed' : '';
-
-                    let specialAuraClass = '';
-                    if (tile.type === 'boss') specialAuraClass = 'boss-tile-aura';
-                    else if (tile.type === 'treasure') specialAuraClass = 'treasure-tile';
-                    else if (tile.type === 'trap') specialAuraClass = 'trap-tile';
-                    else if (tile.type === 'finish') specialAuraClass = 'final-gold-glow';
+                    const hexClass = getTileHexClass(tIdx);
+                    const symbol = getTileSymbol(tIdx);
 
                     return (
                       <div 
                         key={tIdx} 
-                        className={`stone-plinth -translate-x-1/2 -translate-y-1/2 flex items-center justify-center font-bold group ${destinationClass} ${safeClass} ${completedClass} ${specialAuraClass}`} 
+                        className={`stone-plinth ${hexClass} ${isDestination ? 'stone-plinth-destination' : ''} ${isCompleted ? 'stone-plinth-completed' : ''}`} 
                         style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
+                        title={tile.label}
                       >
-                        <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border border-[#D4AF37]/50 flex items-center justify-center text-[10px] sm:text-lg text-white">
-                          <span>{symbol}</span>
+                        {/* Metallic Solder Pins on Left */}
+                        <div className="absolute -left-1.5 top-1.5 bottom-1.5 w-1.5 flex flex-col justify-around pointer-events-none">
+                          <div className="h-0.5 w-full bg-slate-400/80 rounded-l shadow-sm"></div>
+                          <div className="h-0.5 w-full bg-slate-400/80 rounded-l shadow-sm"></div>
+                          <div className="h-0.5 w-full bg-slate-400/80 rounded-l shadow-sm"></div>
                         </div>
-                        {isSafe && (
-                          <div className="absolute -top-1 -left-1 bg-[#D4AF37] text-stone-950 p-0.5 rounded-full border border-stone-955">
-                            <Shield className="w-2.5 h-2.5" />
-                          </div>
-                        )}
-                        <span className="absolute -bottom-1 -right-1 text-[6px] w-3.5 h-3.5 sm:text-[8px] sm:w-5 sm:h-5 bg-stone-900 border border-[#D4AF37]/50 text-[#FFD700] rounded-full flex items-center justify-center font-bold shadow-md">{tIdx}</span>
+                        {/* Metallic Solder Pins on Right */}
+                        <div className="absolute -right-1.5 top-1.5 bottom-1.5 w-1.5 flex flex-col justify-around pointer-events-none">
+                          <div className="h-0.5 w-full bg-slate-400/80 rounded-r shadow-sm"></div>
+                          <div className="h-0.5 w-full bg-slate-400/80 rounded-r shadow-sm"></div>
+                          <div className="h-0.5 w-full bg-slate-400/80 rounded-r shadow-sm"></div>
+                        </div>
+
+
+                        <div className="flex flex-col items-center justify-center text-white select-none">
+                          {tIdx === 0 ? (
+                            <div className="flex flex-col items-center justify-center">
+                              <span className="text-[7px] sm:text-[9px] font-adventure font-extrabold text-[#38BDF8] tracking-tighter uppercase leading-none">START</span>
+                              <span className="text-[10px] sm:text-sm">{symbol}</span>
+                            </div>
+                          ) : tIdx === 17 ? (
+                            <div className="flex flex-col items-center justify-center">
+                              <span className="text-[7px] sm:text-[9px] font-adventure font-extrabold text-yellow-300 tracking-tighter uppercase leading-none">FINISH</span>
+                              <span className="text-xs sm:text-lg animate-bounce">{symbol}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] sm:text-sm font-sans font-bold">{symbol}</span>
+                          )}
+                        </div>
+                        <span className="absolute -top-1.5 -right-1.5 z-10 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-slate-950 border border-slate-700 text-white flex items-center justify-center font-bold font-mono text-[7px] sm:text-[9px] shadow-lg select-none">{tIdx + 1}</span>
                       </div>
                     );
                   })}
@@ -2582,27 +2656,57 @@ export default function StudentGame({
                       return teDisplayPos === displayPos;
                     });
                     const tIndexOnTile = teamsOnSameTile.findIndex((te: any) => te.id === t.id);
-                    const offset = getTokenOffset(tIndexOnTile, teamsOnSameTile.length);
+                    
+                    // Max 3 players fanned. For 4th player, render an overflow badge once. For 5th+, render nothing.
+                    if (tIndexOnTile > 3) return null;
+                    
+                    const offset = getTokenOffset(tIndexOnTile, Math.min(4, teamsOnSameTile.length));
                     const isActive = syncState.activeTeamIdx === idx;
                     
                     return (
                       <div 
                         key={t.id} 
-                        className={`avatar-standee ${isActive ? 'active-token-bounce' : ''}`} 
+                        className="avatar-standee" 
                         style={{ 
                           left: `${coord.x}%`, 
                           top: `${coord.y}%`,
-                          transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px)`
+                          transform: `translate(-50%, -70%) translate(${offset.x}px, ${offset.y}px)`
                         }}
                       >
-                        <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-base border-2 border-white shadow-md text-white ${t.color || 'bg-blue-600'} ${isActive ? 'ring-3 ring-[#D4AF37]' : ''}`}>
-                          👤
+                        <div className={isActive ? 'active-token-bounce' : ''}>
+                          {tIndexOnTile === 3 ? (
+                            <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-slate-850 border border-slate-600 text-white flex items-center justify-center font-bold text-[8px] sm:text-[10px] shadow-md select-none">
+                              +{teamsOnSameTile.length - 3}
+                            </div>
+                          ) : (
+                            <>
+                              <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs border-2 border-white shadow-md text-white ${t.color || 'bg-blue-600'} ${isActive ? 'ring-2 ring-[#FFD700]' : ''}`}>
+                                👤
+                              </div>
+                              {teamsOnSameTile.length === 1 && (
+                                <span className="text-[5px] sm:text-[7px] font-sans font-bold text-white bg-slate-950/80 border border-slate-800 px-1 py-0.5 rounded-md block truncate max-w-[44px] mt-0.5 leading-none text-center shadow-md select-none">
+                                  {t.name}
+                                </span>
+                              )}
+                            </>
+                          )}
                         </div>
-                        <span className="text-[6px] sm:text-[8px] font-sans font-bold text-white bg-black/60 px-1 py-0.5 rounded-md block truncate max-w-[48px] mt-0.5 leading-none text-center">{t.name}</span>
                       </div>
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Compact Legend */}
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 p-2 rounded-xl bg-slate-950/40 border border-slate-800 text-white select-none text-[8px] sm:text-[10px] w-full mt-2">
+                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-600 flex items-center justify-center text-[6px]">❓</span><span>Question</span></div>
+                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-600 flex items-center justify-center text-[6px]">XP</span><span>XP Reward</span></div>
+                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex items-center justify-center text-[6px]">💰</span><span>Treasure</span></div>
+                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-orange-500 flex items-center justify-center text-[6px]">🎯</span><span>Challenge</span></div>
+                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-600 flex items-center justify-center text-[6px]">⏳</span><span>Bug A (Skip Turn)</span></div>
+                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-600 flex items-center justify-center text-[6px]">↩️</span><span>Bug B (Back 2)</span></div>
+                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-600 flex items-center justify-center text-[6px]">👾</span><span>Boss</span></div>
+                <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-600 flex items-center justify-center text-[6px]">👑</span><span>Finish</span></div>
               </div>
 
               {/* MOBILE DOCKED TURN PANEL - dynamic turn phase status */}
@@ -2610,7 +2714,7 @@ export default function StudentGame({
                 const phase = getOnlineTurnPhase();
                 const isMyTurnNow = phase === 'READY_TO_ROLL';
                 return (
-                  <div className={`flex md:hidden p-3 rounded-2xl flex-col items-center justify-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.5)] text-center w-full max-w-[280px] mx-auto text-white select-none transition-all ${isMyTurnNow ? 'bg-[var(--primary-deep-medium)] border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37]'}`}>
+                  <div className={`flex md:hidden p-3 pcb-card-panel flex-col items-center justify-center gap-1.5 text-center w-full max-w-[280px] mx-auto text-white select-none transition-all ${isMyTurnNow ? 'border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'border-3 border-[#D4AF37]'}`}>
                     {/* Dynamic status text */}
                     <div className="w-full">
                       {renderDiceStatusArea(phase, getActivePlayerName(), localRollResult, true)}
@@ -2663,7 +2767,7 @@ export default function StudentGame({
                 const phase = getOnlineTurnPhase();
                 const isMyTurnNow = phase === 'READY_TO_ROLL';
                 return (
-                  <div className={`hidden md:flex p-6 rounded-3xl flex-col items-center justify-center text-center shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white select-none transition-all ${isMyTurnNow ? 'bg-[var(--primary-deep-medium)] border-3 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]' : 'bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37]'}`}>
+                  <div className={`hidden md:flex p-6 pcb-card-panel flex-col items-center justify-center text-center text-white select-none transition-all ${isMyTurnNow ? 'border-3 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]' : 'border-3 border-[#D4AF37]'}`}>
                     <span className="text-[10px] block font-bold text-amber-300 uppercase tracking-wider mb-2 font-adventure">Current Turn</span>
                     <div className="mb-2">
                       <span className="font-adventure text-lg font-extrabold text-[#FFD700] block uppercase tracking-wide truncate max-w-[140px]">
@@ -2779,34 +2883,43 @@ export default function StudentGame({
                     )}
                   </div>
                 ) : (
-                  <div className="bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white">
-                    <h3 className="font-adventure text-base font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 mb-4 uppercase tracking-wider">Standings</h3>
-                    <div className="space-y-3 text-xs">
-                      {syncState.teams.slice().sort((a: any, b: any) => {
-                        const rA = a.finishedRank || (a.finished ? 1 : 99);
-                        const rB = b.finishedRank || (b.finished ? 1 : 99);
-                        if (rA !== rB) return rA - rB;
-                        return b.position - a.position || b.xp - a.xp;
-                      }).map((p: any, idx: number) => (
-                        <div key={p.id} className={`p-3 bg-[var(--primary-deep-dark)] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
-                          <div className="flex justify-between items-center font-bold mb-2">
-                            <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
-                              <span className="font-adventure text-[#FFD700]">
-                                {p.finished ? `🏆 #${p.finishedRank}` : `#${idx+1}`}
+                  <div className="pcb-card-panel border-3 border-[#D4AF37] p-4 text-white">
+                    <button 
+                      onClick={() => setIsLeaderboardExpanded(!isLeaderboardExpanded)}
+                      className="w-full flex justify-between items-center font-adventure text-sm font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 uppercase tracking-wider"
+                    >
+                      <span>📊 Standings</span>
+                      <span>{isLeaderboardExpanded ? '▲ Collapse' : '▼ Expand'}</span>
+                    </button>
+                    
+                    {isLeaderboardExpanded && (
+                      <div className="space-y-3 text-xs mt-3 animate-fade-in">
+                        {syncState.teams.slice().sort((a: any, b: any) => {
+                          const rA = a.finishedRank || (a.finished ? 1 : 99);
+                          const rB = b.finishedRank || (b.finished ? 1 : 99);
+                          if (rA !== rB) return rA - rB;
+                          return b.position - a.position || b.xp - a.xp;
+                        }).map((p: any, idx: number) => (
+                          <div key={p.id} className={`p-3 bg-[var(--primary-deep-dark)] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
+                            <div className="flex justify-between items-center font-bold mb-2">
+                              <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
+                                <span className="font-adventure text-[#FFD700]">
+                                  {p.finished ? `🏆 #${p.finishedRank}` : `#${idx+1}`}
+                                </span>
+                                <span>👤</span>
+                                <span className={`truncate max-w-[90px] ${p.finished ? 'text-emerald-300' : 'text-amber-100'}`}>{p.name} {p.finished && '🏁'}</span>
                               </span>
-                              <span>👤</span>
-                              <span className={`truncate max-w-[90px] ${p.finished ? 'text-emerald-300' : 'text-amber-100'}`}>{p.name} {p.finished && '🏁'}</span>
-                            </span>
-                            {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
+                              {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
+                            </div>
+                            <div className="grid grid-cols-3 gap-1 bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-1 rounded-xl text-center font-mono">
+                              <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">XP</span><span className="font-bold text-xs text-white">{p.xp}</span></div>
+                              <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-[#FFD700]/50 uppercase leading-none">Gold</span><span className="font-bold text-xs text-white">{p.coins}</span></div>
+                              <div><span className="text-[7px] block text-[#FFD700]/50 uppercase leading-none">Tile</span><span className="font-bold text-xs text-[#FFD700]">{p.position + 1}</span></div>
+                            </div>
                           </div>
-                          <div className="grid grid-cols-3 gap-1 bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-1 rounded-xl text-center font-mono">
-                            <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">XP</span><span className="font-bold text-xs text-white">{p.xp}</span></div>
-                            <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-[#FFD700]/50 uppercase leading-none">Gold</span><span className="font-bold text-xs text-white">{p.coins}</span></div>
-                            <div><span className="text-[7px] block text-[#FFD700]/50 uppercase leading-none">Tile</span><span className="font-bold text-xs text-[#FFD700]">{p.position}</span></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

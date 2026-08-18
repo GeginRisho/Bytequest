@@ -499,16 +499,27 @@ export class SocketService {
         activeTeam.xp += 10;
         activeTeam.coins += 15;
         tileText = `🎁 Opened a Treasure! (+15 Coins, +10 XP)`;
-      } else if ([2, 6, 12].includes(activeTeam.position)) {
-        const isMoveBack = Math.random() < 0.5;
-        if (isMoveBack) {
+      } else if ([2, 6, 11, 12].includes(activeTeam.position)) {
+        const isSkipTurnTrap = [11, 12].includes(activeTeam.position);
+        if (isSkipTurnTrap) {
+          activeTeam.skipNextTurn = true;
+          tileText = `🚫 Sprung a Trap! Bug caught you! Skip next turn.`;
+        } else {
           activeTeam.position = Math.max(0, activeTeam.position - 2);
           newPosition = activeTeam.position;
-          tileText = `🕸️ Sprung a Trap! Slipped back 2 spaces.`;
-        } else {
-          activeTeam.skipNextTurn = true;
-          tileText = `🚫 Sprung a Trap! Next turn will be skipped.`;
+          tileText = `⏮️ Sprung a Trap! Bug knocked you back 2 tiles!`;
         }
+      }
+      
+      // Apply Tile Knockback System (Arriving player is knocked back 4 spaces if tile is occupied)
+      const occupiedByTeam = room.teams.find(t => 
+        t.id !== activeTeam.id && t.position === activeTeam.position && !t.finished && activeTeam.position !== 0
+      );
+      if (occupiedByTeam) {
+        const finalPos = Math.max(0, activeTeam.position - 4);
+        activeTeam.position = finalPos;
+        newPosition = finalPos;
+        tileText += ` | 💥 Tile occupied! Knocked back 4 tiles to Tile ${finalPos + 1}!`;
       }
     } else {
       // FIXED: Wrong answer = NO movement at all. Player stays in place.

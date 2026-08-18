@@ -21,6 +21,10 @@
   --board-bg-end: #3B82F6;
   --plinth-bg-start: #1E3A8A;
   --plinth-bg-end: #0F172A;
+
+  --primary-deep: #1E3A8A;
+  --primary-deep-medium: #1E293B;
+  --primary-deep-dark: #0F172A;
 }
 
 [data-theme="blue-gold"] {
@@ -43,6 +47,10 @@
   --board-bg-end: #3B82F6;
   --plinth-bg-start: #1E3A8A;
   --plinth-bg-end: #0F172A;
+
+  --primary-deep: #1E3A8A;
+  --primary-deep-medium: #1E293B;
+  --primary-deep-dark: #0F172A;
 }
 
 [data-theme="red-gold"] {
@@ -65,6 +73,10 @@
   --board-bg-end: #5A1A1A;
   --plinth-bg-start: #5A1A1A;
   --plinth-bg-end: #2A0F0F;
+
+  --primary-deep: #5A1A1A;
+  --primary-deep-medium: #3B0F0F;
+  --primary-deep-dark: #2A0F0F;
 }
 
 [data-theme="green-gold"] {
@@ -87,6 +99,10 @@
   --board-bg-end: #22C55E;
   --plinth-bg-start: #064E3B;
   --plinth-bg-end: #022C22;
+
+  --primary-deep: #064E3B;
+  --primary-deep-medium: #064E3B;
+  --primary-deep-dark: #022C22;
 }
 
 [data-theme="purple-gold"] {
@@ -109,6 +125,10 @@
   --board-bg-end: #8B5CF6;
   --plinth-bg-start: #4C1D95;
   --plinth-bg-end: #2E1065;
+
+  --primary-deep: #4C1D95;
+  --primary-deep-medium: #4C1D95;
+  --primary-deep-dark: #2E1065;
 }
 
 @tailwind base;
@@ -564,81 +584,144 @@
 }
 
 .board-bg {
-  background: linear-gradient(135deg, var(--board-bg-start) 0%, var(--board-bg-mid) 40%, var(--board-bg-end) 100%) !important;
+  background: radial-gradient(circle at 50% 50%, #0a1f24 0%, #030a0d 100%) !important;
   position: relative;
-  overflow: hidden;
+  overflow: visible !important;
 }
 
-.board-bg::after {
+.board-bg::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.7));
+  background-image: 
+    linear-gradient(rgba(34, 211, 238, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.025) 1px, transparent 1px);
+  background-size: 20px 20px;
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
 }
 
 .stone-plinth {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--plinth-bg-start), var(--plinth-bg-end));
-  border: 3px solid #D4AF37;
-  box-shadow:
-    0 6px 15px rgba(0,0,0,0.7),
-    inset 0 0 10px rgba(255,215,0,0.3);
   position: absolute;
-  transition: all 0.3s ease;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 2px solid var(--border-color);
+  box-shadow: 
+    inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15), 
+    inset -1.5px -1.5px 0px rgba(0, 0, 0, 0.5), 
+    0 4px 6px rgba(0, 0, 0, 0.4) !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   z-index: 2;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  user-select: none;
 }
 
 @media (min-width: 640px) {
   .stone-plinth {
-    width: 68px;
-    height: 68px;
-    border-width: 4px;
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
   }
 }
 
+/* 3D Motherboard Microchip Categories */
+.hex-blue {
+  --border-color: #38BDF8 !important;
+  background: linear-gradient(135deg, #07152B 0%, #0F2A56 100%) !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+}
+.hex-green {
+  --border-color: #34D399 !important;
+  background: linear-gradient(135deg, #022011 0%, #063C21 100%) !important;
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+}
+.hex-orange {
+  --border-color: #FB923C !important;
+  background: linear-gradient(135deg, #2E0B02 0%, #541707 100%) !important;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+}
+.hex-red {
+  --border-color: #FCA5A5 !important;
+  background: linear-gradient(135deg, #300303 0%, #5A0808 100%) !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+}
+.hex-gold {
+  --border-color: #FDE047 !important;
+  background: linear-gradient(135deg, #2E1502 0%, #542907 100%) !important;
+  box-shadow: 0 0 14px rgba(253, 224, 71, 0.25), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+}
+.hex-purple {
+  --border-color: #C084FC !important;
+  background: linear-gradient(135deg, #250346 0%, #430B7C 100%) !important;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Glow Ring/Pulse for Destination Tile */
 .stone-plinth-destination {
-  border-color: #FFD700 !important;
-  box-shadow: 0 0 20px #FFD700, 0 6px 15px rgba(0,0,0,0.7), inset 0 0 10px rgba(255,215,0,0.5) !important;
+  transform: translate(-50%, -50%) scale(1.08) !important;
+  animation: chipPulse 1.8s infinite ease-in-out !important;
+}
+
+@keyframes chipPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px var(--border-color), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.25), 0 4px 6px rgba(0, 0, 0, 0.4) !important;
+    transform: translate(-50%, -50%) scale(1.06) !important;
+  }
+  50% {
+    box-shadow: 0 0 20px var(--border-color), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.25), 0 6px 12px rgba(0, 0, 0, 0.5) !important;
+    transform: translate(-50%, -50%) scale(1.12) !important;
+  }
 }
 
 .stone-plinth-completed {
-  filter: brightness(0.65) saturate(0.5);
-  opacity: 0.8;
+  filter: brightness(0.5) saturate(0.4) grayscale(0.4) !important;
+  opacity: 0.7;
 }
 
-/* Special tile designs */
-.treasure-tile {
-  background: radial-gradient(circle, #B45309, #451A03) !important;
-  border-color: #F59E0B !important;
-  box-shadow: 0 0 15px rgba(245, 158, 11, 0.6), 0 6px 15px rgba(0,0,0,0.7), inset 0 0 8px rgba(255,215,0,0.4) !important;
-}
-.trap-tile {
-  background: radial-gradient(circle, var(--primary-dark), #0A0A0A) !important;
-  border-color: var(--primary-light) !important;
-  box-shadow: 0 0 15px rgba(var(--primary-light-rgb), 0.6), 0 6px 15px rgba(0,0,0,0.7), inset 0 0 8px rgba(var(--primary-rgb),0.3) !important;
-}
-.boss-tile-aura {
-  background: radial-gradient(circle, var(--primary-color), var(--plinth-bg-end)) !important;
-  border-color: var(--primary-color) !important;
-  animation: bossAuraPulse 1.5s infinite ease-in-out !important;
-}
-@keyframes bossAuraPulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 12px rgba(var(--primary-rgb), 0.75), 0 6px 15px rgba(0,0,0,0.7); }
-  50% { transform: translate(-50%, -50%) scale(1.06); box-shadow: 0 0 24px rgba(var(--primary-light-rgb), 0.95), 0 6px 15px rgba(0,0,0,0.7); }
+/* Neon Signboards for game paths */
+.neon-sign-board {
+  padding: 4px 10px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.05em;
+  animation: signFlicker 3s infinite alternate;
 }
 
-.final-gold-glow {
-  background: radial-gradient(circle, #EAB308, #713F12) !important;
-  border-color: #FFD700 !important;
-  animation: finalGlowPulse 1.8s infinite ease-in-out !important;
+@media (min-width: 640px) {
+  .neon-sign-board {
+    font-size: 11px;
+    padding: 6px 14px;
+  }
 }
-@keyframes finalGlowPulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 18px #FFD700, 0 6px 15px rgba(0,0,0,0.7); }
-  50% { transform: translate(-50%, -50%) scale(1.08); box-shadow: 0 0 35px #FFD700, 0 6px 15px rgba(0,0,0,0.7); }
+
+.sign-safe {
+  background: rgba(6, 95, 70, 0.2);
+  border: 2.5px solid #10B981;
+  color: #34D399;
+  text-shadow: 0 0 6px #10B981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+
+.sign-risk {
+  background: rgba(154, 52, 18, 0.2);
+  border: 2.5px solid #EA580C;
+  color: #FDBA74;
+  text-shadow: 0 0 6px #EA580C;
+  box-shadow: 0 0 12px rgba(234, 88, 12, 0.35);
+}
+
+@keyframes signFlicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; filter: brightness(1); }
+  20%, 24%, 55% { opacity: 0.85; filter: brightness(0.85); }
 }
 
 /* Active Player Glow and Token Transitions */
@@ -669,8 +752,8 @@
 
 /* Token Bounce animation */
 @keyframes tokenBounce {
-  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
-  50% { transform: translate(-50%, -50%) translateY(-10px); }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 .active-token-bounce {
   animation: tokenBounce 1.5s infinite ease-in-out;
@@ -684,7 +767,23 @@
 .gold-energy-connector {
   stroke-dasharray: 18, 12;
   animation: flow 25s linear infinite;
-  filter: drop-shadow(0 0 6px #FFD700);
+  filter: drop-shadow(0 0 6px #38BDF8);
+}
+
+@keyframes pcbSignalFlow {
+  from { stroke-dashoffset: 80; }
+  to { stroke-dashoffset: 0; }
+}
+.pcb-trace-signal {
+  stroke-dasharray: 10, 30;
+  animation: pcbSignalFlow 2s linear infinite;
+}
+
+.pcb-card-panel {
+  background: rgba(8, 22, 36, 0.75) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 10px rgba(56, 189, 248, 0.15) !important;
+  backdrop-filter: blur(8px) !important;
+  border-radius: 20px !important;
 }
 
 /* Dice roll physics roll */

@@ -23,19 +23,17 @@ import { io } from 'socket.io-client';
 
 // Imports from split files
 import { questionBank, Question } from './questions';
-import { Tile, BOARD_TILES, TILE_COORDS_DESKTOP, TILE_COORDS_MOBILE, PRESET_COLORS, PRESET_AVATARS } from './config';
+import { Tile, BOARD_TILES, TILE_COORDS_DESKTOP, TILE_COORDS_MOBILE, PRESET_COLORS, PRESET_AVATARS, getTileHexClass, getTileSymbol, getArrowColor, getPCBPath, getPCBVias, getTilePositions } from './config';
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentGame from './components/StudentGame';
 import Launchpad from './components/Launchpad';
 
 const getTokenOffset = (indexOnTile: number, totalOnTile: number) => {
   if (totalOnTile <= 1) return { x: 0, y: 0 };
-  const angle = (indexOnTile / totalOnTile) * 2 * Math.PI - Math.PI / 2;
-  const isMobile = window.innerWidth < 768;
-  const radius = isMobile ? 8 : 14;
+  const step = window.innerWidth < 768 ? 6 : 10;
   return {
-    x: Math.round(Math.cos(angle) * radius),
-    y: Math.round(Math.sin(angle) * radius)
+    x: (indexOnTile - (totalOnTile - 1) / 2) * step,
+    y: (indexOnTile - (totalOnTile - 1) / 2) * step
   };
 };
 
@@ -143,13 +141,18 @@ export default function App() {
     localStorage.setItem('bytequest-theme', theme);
   }, [theme]);
 
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      setWindowWidth(window.innerWidth);
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const TILE_COORDS = isMobile ? TILE_COORDS_MOBILE : TILE_COORDS_DESKTOP;
+  const TILE_COORDS = getTilePositions(BOARD_TILES, isMobile);
 
   // Navigation Router: selection, local, student, teacher
   const [viewMode, setViewMode] = useState<'selection' | 'local' | 'student' | 'teacher'>('selection');
@@ -167,6 +170,7 @@ export default function App() {
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
   const [pendingExitCallback, setPendingExitCallback] = useState<(() => void) | null>(null);
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
+  const [isLeaderboardExpanded, setIsLeaderboardExpanded] = useState<boolean>(false);
 
   interface ByteQuestState {
     viewMode: 'selection' | 'local' | 'student' | 'teacher';
@@ -1191,21 +1195,47 @@ export default function App() {
         updatedPlayers = updatedPlayers.map((p, idx) => idx === localTurnIdx ? { ...p, xp: p.xp + 10, coins: p.coins + 15 } : p);
       } else if (tile.type === 'trap') {
         sounds.playTrap();
-        const randTrap = Math.random() < 0.5 ? 'moveBack' : 'skipTurn';
-        if (randTrap === 'moveBack') {
-          setLocalScorePopup({ text: '🕸️ Trap! Back 2 spaces.', success: false });
-          updatedPlayers = updatedPlayers.map((p, idx) => idx === localTurnIdx ? { ...p, position: Math.max(0, p.position - 2) } : p);
-        } else {
-          setLocalScorePopup({ text: '🚫 Trap! Next turn skipped.', success: false });
+        const isSkipTurnTrap = [11, 12].includes(tile.index);
+        if (isSkipTurnTrap) {
+          setLocalScorePopup({ text: '🚫 Bug caught you! Skip next turn.', success: false });
           updatedPlayers = updatedPlayers.map((p, idx) => idx === localTurnIdx ? { ...p, skipNextTurn: true } : p);
+        } else {
+          setLocalScorePopup({ text: '⏮️ Bug knocked you back 2 tiles!', success: false });
+          updatedPlayers = updatedPlayers.map((p, idx) => idx === localTurnIdx ? { ...p, position: Math.max(0, p.position - 2) } : p);
         }
+      }
+
+      // Apply Tile Knockback System (Arriving player is knocked back 4 spaces if tile is occupied)
+      let clashedPlayerName = '';
+      let clashedNewPos = 0;
+      let clashingOccurred = false;
+      const activePFinal = updatedPlayers[localTurnIdx];
+
+      const occupiedByPlayer = updatedPlayers.find((p, idx) => 
+        idx !== localTurnIdx && !activePFinal.finished && p.position === activePFinal.position && activePFinal.position !== 0 && !p.finished
+      );
+
+      if (occupiedByPlayer) {
+        clashedPlayerName = occupiedByPlayer.name;
+        clashedNewPos = Math.max(0, activePFinal.position - 4);
+        clashingOccurred = true;
+        updatedPlayers = updatedPlayers.map((p, idx) => 
+          idx === localTurnIdx ? { ...p, position: clashedNewPos } : p
+        );
+      }
+
+      let delay = 2500;
+      if (clashingOccurred) {
+        delay = 4500;
+        sounds.playWrong();
+        setLocalScorePopup({ text: `💥 Tile occupied — knocked back 4 tiles!`, success: false });
       }
 
       setTimeout(() => {
         setLocalScorePopup(null);
         setLocalLandingTile(null);
         localPassTurn();
-      }, 2500);
+      }, delay);
 
       return updatedPlayers;
     });
@@ -2274,7 +2304,7 @@ export default function App() {
               )}
               {/* STICKY LOCAL PLAY HUD */}
               {localPlayers[localTurnIdx] && (
-                <div className="sticky top-14 md:top-[60px] z-30 bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] px-4 py-3 rounded-2xl flex items-center justify-between gap-4 mb-4 shadow-[0_5px_15px_rgba(0,0,0,0.5)] text-white select-none animate-fade-in">
+                <div className="sticky top-14 md:top-[60px] z-30 pcb-card-panel border-3 border-[#D4AF37] px-4 py-3 flex items-center justify-between gap-4 mb-4 text-white select-none animate-fade-in">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">{localPlayers[localTurnIdx].avatar}</span>
                     <div>
@@ -2309,69 +2339,139 @@ export default function App() {
 
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 w-full items-start">
                 {/* GAME BOARD PANEL */}
-                <div className="lg:col-span-3 bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] p-3 md:p-5 rounded-3xl relative w-full flex flex-col gap-3 shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
+                <div className="lg:col-span-3 pcb-card-panel border-3 border-[#D4AF37] p-3 md:p-5 relative w-full flex flex-col gap-3">
                   {/* Board viewport — full size, no clipping, tiles 0-17 always visible */}
-                  <div className="relative w-full board-bg border-2 border-[#D4AF37]/50 rounded-2xl overflow-visible shadow-inner" style={{ paddingBottom: '75%' }}>
+                  <div className="relative w-full board-bg border-2 border-[#D4AF37]/50 rounded-2xl overflow-visible shadow-inner" style={{ paddingBottom: isMobile ? (windowWidth < 420 ? '300%' : '135%') : '72%' }}>
                     {/* Inner absolute container fills the padding-bottom area */}
                     <div className="absolute inset-3">
-                      {/* Subtle center radial glow */}
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(211,47,47,0.04),transparent_70%)] pointer-events-none rounded-xl"></div>
+                      {/* Dark Fantasy Tech map details & circuit lines */}
+                      <div className="absolute inset-0 bg-slate-950/20 pointer-events-none rounded-xl"></div>
+                      
+                      {/* Floating Sparkles / Particle Effects */}
+                      <div className="absolute inset-0 pointer-events-none z-0">
+                        <div className="absolute w-1 h-1 bg-blue-400 rounded-full animate-ping" style={{ left: '15%', top: '25%', animationDuration: '3s' }}></div>
+                        <div className="absolute w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{ left: '75%', top: '15%', animationDuration: '4s' }}></div>
+                        <div className="absolute w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{ left: '80%', top: '65%', animationDuration: '5s' }}></div>
+                        <div className="absolute w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" style={{ left: '25%', top: '75%', animationDuration: '3.5s' }}></div>
+                        <div className="absolute w-1 h-1 bg-emerald-400 rounded-full animate-ping" style={{ left: '50%', top: '45%', animationDuration: '4.5s' }}></div>
+                      </div>
 
-                      {/* SVG path mapping */}
+                      {/* Subtle center radial glow */}
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.06),transparent_70%)] pointer-events-none rounded-xl"></div>
+
+                      {/* Single Winding Board-game Road Path */}
                       <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
                         <defs>
-                          <linearGradient id="goldPathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#D4AF37" />
-                            <stop offset="50%" stopColor="#F6E27A" />
-                            <stop offset="100%" stopColor="#D4AF37" />
+                          <linearGradient id="glowingPathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#3B82F6" />
+                            <stop offset="50%" stopColor="#8B5CF6" />
+                            <stop offset="100%" stopColor="#F59E0B" />
                           </linearGradient>
                         </defs>
-                        <path d={getCurvedPath(TILE_COORDS)} fill="none" className="gold-energy-connector" stroke="url(#goldPathGrad)" strokeWidth="6" strokeLinecap="round" />
+                        
+                        {/* 1. Road Drop Shadow */}
+                        <path 
+                          d={getPCBPath(TILE_COORDS)} 
+                          fill="none" 
+                          stroke="#02080f" 
+                          strokeWidth="5" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round"
+                          style={{ opacity: 0.6 }}
+                        />
+                        {/* 2. Raised Copper/Steel Base */}
+                        <path 
+                          d={getPCBPath(TILE_COORDS)} 
+                          fill="none" 
+                          stroke="#132F3C" 
+                          strokeWidth="3.5" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round"
+                        />
+                        {/* 3. Glowing Neon Core Line */}
+                        <path 
+                          d={getPCBPath(TILE_COORDS)} 
+                          fill="none" 
+                          className="pcb-neon-glow" 
+                          stroke="#22D3EE" 
+                          strokeWidth="1.5" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round"
+                        />
+                        {/* 4. Glowing Data Packets Signal Flow */}
+                        <path 
+                          d={getPCBPath(TILE_COORDS)} 
+                          fill="none" 
+                          className="pcb-trace-signal" 
+                          stroke="#22D3EE" 
+                          strokeWidth="1.5" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round"
+                          style={{ filter: 'drop-shadow(0 0 3px #22D3EE)' }}
+                        />
+
+                        {/* 5. Glowing Via-Dots at Chamfer Bend Points */}
+                        {getPCBVias(TILE_COORDS).map((via, idx) => (
+                          <circle 
+                            key={`via-${idx}`} 
+                            cx={via.x} 
+                            cy={via.y} 
+                            r="0.8" 
+                            fill="#0b1e24" 
+                            stroke="#22D3EE" 
+                            strokeWidth="0.4" 
+                            style={{ filter: 'drop-shadow(0 0 2px #22D3EE)' }}
+                          />
+                        ))}
                       </svg>
 
-                      {/* Plinth Tiles rendering */}
+                      {/* Isometric Hexagonal Tiles */}
                       {BOARD_TILES.map((tile, tIdx) => {
                         const coord = TILE_COORDS[tIdx];
-                        const isSafe = [0, 4, 10, 15].includes(tIdx); // Offline SAFE_TILES matching config
                         const activePlayer = localPlayers[localTurnIdx];
                         const isDestination = activePlayer && activePlayer.position === tIdx;
                         const isCompleted = localPlayers.some((pl: any) => pl.position > tIdx);
 
-                        // Icon symbols mapping matching visual description
-                        let symbol = '📜';
-                        if (tIdx === 0) symbol = '🧙‍♂️';
-                        else if (tIdx === 17) symbol = '👑';
-                        else if ([2, 8, 10, 12].includes(tIdx)) symbol = '🛡️';
-                        else if ([5, 13, 14].includes(tIdx)) symbol = '📦';
-                        else if (tIdx === 16) symbol = '🐉';
-                        else if (tile.type === 'trap') symbol = '🕸️';
-                        else if (tile.type === 'treasure') symbol = '🎁';
-
-                        const destinationClass = isDestination ? 'active-tile' : '';
-                        const safeClass = isSafe ? 'ring-2 ring-[#FFD700] ring-offset-2 ring-offset-[var(--primary-deep-dark)]' : '';
-                        const completedClass = isCompleted ? 'stone-plinth-completed' : '';
-
-                        let specialAuraClass = '';
-                        if (tile.type === 'boss') specialAuraClass = 'boss-tile-aura';
-                        else if (tile.type === 'treasure') specialAuraClass = 'treasure-tile';
-                        else if (tile.type === 'trap') specialAuraClass = 'trap-tile';
-                        else if (tile.type === 'finish') specialAuraClass = 'final-gold-glow';
+                        const hexClass = getTileHexClass(tIdx);
+                        const symbol = getTileSymbol(tIdx);
 
                         return (
                           <div 
                             key={tIdx} 
-                            className={`stone-plinth -translate-x-1/2 -translate-y-1/2 flex items-center justify-center font-bold group ${destinationClass} ${safeClass} ${completedClass} ${specialAuraClass}`} 
+                            className={`stone-plinth ${hexClass} ${isDestination ? 'stone-plinth-destination' : ''} ${isCompleted ? 'stone-plinth-completed' : ''}`} 
                             style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
+                            title={tile.label}
                           >
-                            <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border border-[#D4AF37]/50 flex items-center justify-center text-[10px] sm:text-lg text-white">
-                              <span>{symbol}</span>
+                            {/* Metallic Solder Pins on Left */}
+                            <div className="absolute -left-1.5 top-1.5 bottom-1.5 w-1.5 flex flex-col justify-around pointer-events-none">
+                              <div className="h-0.5 w-full bg-slate-400/80 rounded-l shadow-sm"></div>
+                              <div className="h-0.5 w-full bg-slate-400/80 rounded-l shadow-sm"></div>
+                              <div className="h-0.5 w-full bg-slate-400/80 rounded-l shadow-sm"></div>
                             </div>
-                            {isSafe && (
-                              <div className="absolute -top-1 -left-1 bg-[#D4AF37] text-stone-950 p-0.5 rounded-full border border-stone-955">
-                                <Shield className="w-2.5 h-2.5" />
-                              </div>
-                            )}
-                            <span className="absolute -bottom-1 -right-1 text-[6px] w-3.5 h-3.5 sm:text-[8px] sm:w-5 sm:h-5 bg-stone-900 border border-[#D4AF37]/50 text-[#FFD700] rounded-full flex items-center justify-center font-bold shadow-md">{tIdx}</span>
+                            {/* Metallic Solder Pins on Right */}
+                            <div className="absolute -right-1.5 top-1.5 bottom-1.5 w-1.5 flex flex-col justify-around pointer-events-none">
+                              <div className="h-0.5 w-full bg-slate-400/80 rounded-r shadow-sm"></div>
+                              <div className="h-0.5 w-full bg-slate-400/80 rounded-r shadow-sm"></div>
+                              <div className="h-0.5 w-full bg-slate-400/80 rounded-r shadow-sm"></div>
+                            </div>
+
+
+                            <div className="flex flex-col items-center justify-center text-white select-none">
+                              {tIdx === 0 ? (
+                                <div className="flex flex-col items-center justify-center">
+                                  <span className="text-[7px] sm:text-[9px] font-adventure font-extrabold text-[#38BDF8] tracking-tighter uppercase leading-none">START</span>
+                                  <span className="text-[10px] sm:text-sm">{symbol}</span>
+                                </div>
+                              ) : tIdx === 17 ? (
+                                <div className="flex flex-col items-center justify-center">
+                                  <span className="text-[7px] sm:text-[9px] font-adventure font-extrabold text-yellow-300 tracking-tighter uppercase leading-none">FINISH</span>
+                                  <span className="text-xs sm:text-lg animate-bounce">{symbol}</span>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] sm:text-sm font-sans font-bold">{symbol}</span>
+                              )}
+                            </div>
+                            <span className="absolute -top-1.5 -right-1.5 z-10 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-slate-950 border border-slate-700 text-white flex items-center justify-center font-bold font-mono text-[7px] sm:text-[9px] shadow-lg select-none">{tIdx + 1}</span>
                           </div>
                         );
                       })}
@@ -2393,27 +2493,57 @@ export default function App() {
                         const coord = TILE_COORDS[p.position];
                         const onTile = localPlayers.filter(pl => pl.position === p.position);
                         const sameIdx = onTile.findIndex(pl => pl.id === p.id);
-                        const offset = getTokenOffset(sameIdx, onTile.length);
+                        
+                        // Max 3 players fanned. For 4th player, render an overflow badge once. For 5th+, render nothing.
+                        if (sameIdx > 3) return null;
+                        
+                        const offset = getTokenOffset(sameIdx, Math.min(4, onTile.length));
                         const isActive = localTurnIdx === idx;
                         
                         return (
                           <div 
                             key={p.id} 
-                            className={`avatar-standee ${isActive ? 'active-token-bounce' : ''}`} 
+                            className="avatar-standee" 
                             style={{ 
                               left: `${coord.x}%`, 
                               top: `${coord.y}%`,
-                              transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px)`
+                              transform: `translate(-50%, -70%) translate(${offset.x}px, ${offset.y}px)`
                             }}
                           >
-                            <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-base border-2 border-white shadow-md text-white ${p.color || 'bg-blue-600'} ${isActive ? 'ring-3 ring-[#D4AF37]' : ''}`}>
-                              {p.avatar}
+                            <div className={isActive ? 'active-token-bounce' : ''}>
+                              {sameIdx === 3 ? (
+                                <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-slate-850 border border-slate-600 text-white flex items-center justify-center font-bold text-[8px] sm:text-[10px] shadow-md select-none">
+                                  +{onTile.length - 3}
+                                </div>
+                              ) : (
+                                <>
+                                  <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs border border-white shadow-md text-white ${p.color || 'bg-blue-600'} ${isActive ? 'ring-2 ring-[#FFD700]' : ''}`}>
+                                    {p.avatar}
+                                  </div>
+                                  {onTile.length === 1 && (
+                                    <span className="text-[5px] sm:text-[7px] font-sans font-bold text-white bg-slate-950/80 border border-slate-800 px-1 py-0.5 rounded-md block truncate max-w-[44px] mt-0.5 leading-none text-center shadow-md select-none">
+                                      {p.name}
+                                    </span>
+                                  )}
+                                </>
+                              )}
                             </div>
-                            <span className="text-[6px] sm:text-[8px] font-sans font-bold text-white bg-black/60 px-1 py-0.5 rounded-md block truncate max-w-[48px] mt-0.5 leading-none text-center">{p.name}</span>
                           </div>
                         );
                       })}
                     </div>
+                  </div>
+
+                  {/* Compact Legend */}
+                  <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 p-2 rounded-xl bg-slate-950/40 border border-slate-800 text-white select-none text-[8px] sm:text-[10px] w-full mt-2">
+                    <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-600 flex items-center justify-center text-[6px]">❓</span><span>Question</span></div>
+                    <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-600 flex items-center justify-center text-[6px]">XP</span><span>XP Reward</span></div>
+                    <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex items-center justify-center text-[6px]">💰</span><span>Treasure</span></div>
+                    <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-orange-500 flex items-center justify-center text-[6px]">🎯</span><span>Challenge</span></div>
+                    <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-600 flex items-center justify-center text-[6px]">⏳</span><span>Bug A (Skip Turn)</span></div>
+                    <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-600 flex items-center justify-center text-[6px]">↩️</span><span>Bug B (Back 2)</span></div>
+                    <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-600 flex items-center justify-center text-[6px]">👾</span><span>Boss</span></div>
+                    <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-600 flex items-center justify-center text-[6px]">👑</span><span>Finish</span></div>
                   </div>
 
                   {/* MOBILE DOCKED TURN PANEL - dynamic turn phase status */}
@@ -2422,7 +2552,7 @@ export default function App() {
                     const isMyTurnNow = phase === 'READY_TO_ROLL';
                     const activePName = localPlayers[localTurnIdx]?.name || '';
                     return (
-                      <div className={`flex md:hidden p-3 rounded-2xl flex-col items-center justify-center gap-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.5)] text-center w-full max-w-[280px] mx-auto text-white select-none transition-all ${isMyTurnNow ? 'bg-[var(--primary-deep-medium)] border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37]'}`}>
+                      <div className={`flex md:hidden p-3 pcb-card-panel flex-col items-center justify-center gap-1.5 text-center w-full max-w-[280px] mx-auto text-white select-none transition-all ${isMyTurnNow ? 'border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'border-3 border-[#D4AF37]'}`}>
                         <div className="w-full">
                           {renderLocalDiceStatusArea(phase, activePName, localCurrentRoll, true)}
                         </div>
@@ -2469,7 +2599,7 @@ export default function App() {
                     const isMyTurnNow = phase === 'READY_TO_ROLL';
                     const activePName = localPlayers[localTurnIdx]?.name || '';
                     return (
-                      <div className={`hidden md:flex p-6 rounded-3xl flex-col items-center justify-center text-center shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white select-none transition-all ${isMyTurnNow ? 'bg-[var(--primary-deep-medium)] border-3 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]' : 'bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37]'}`}>
+                      <div className={`hidden md:flex p-6 pcb-card-panel flex-col items-center justify-center text-center text-white select-none transition-all ${isMyTurnNow ? 'border-3 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]' : 'border-3 border-[#D4AF37]'}`}>
                         <span className="text-[10px] block font-bold text-amber-300 uppercase tracking-wider mb-2 font-adventure">Current Turn</span>
                         <div className="mb-2">
                           <span className="font-adventure text-lg font-extrabold text-[#FFD700] block uppercase tracking-wide truncate max-w-[140px]">
@@ -2577,34 +2707,43 @@ export default function App() {
                       )}
                     </div>
                   ) : (
-                    <div className="bg-[var(--primary-deep-medium)] border-3 border-[#D4AF37] p-5 rounded-3xl shadow-[0_10px_25px_rgba(0,0,0,0.6)] text-white">
-                      <h3 className="font-adventure text-base font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 mb-4 uppercase tracking-wider">Standings</h3>
-                      <div className="space-y-3 text-xs">
-                        {localPlayers.slice().sort((a, b) => {
-                          const rA = a.finishedRank || (a.finished ? 1 : 99);
-                          const rB = b.finishedRank || (b.finished ? 1 : 99);
-                          if (rA !== rB) return rA - rB;
-                          return b.position - a.position || b.xp - a.xp;
-                        }).map((p, idx) => (
-                          <div key={p.id} className={`p-3 bg-[var(--primary-deep-dark)] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
-                            <div className="flex justify-between items-center font-bold mb-2">
-                              <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
-                                <span className="font-adventure text-[#FFD700]">
-                                  {p.finished ? `🏆 #${p.finishedRank}` : `#${idx+1}`}
+                    <div className="pcb-card-panel border-3 border-[#D4AF37] p-4 text-white">
+                      <button 
+                        onClick={() => setIsLeaderboardExpanded(!isLeaderboardExpanded)}
+                        className="w-full flex justify-between items-center font-adventure text-sm font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 uppercase tracking-wider"
+                      >
+                        <span>📊 Standings</span>
+                        <span>{isLeaderboardExpanded ? '▲ Collapse' : '▼ Expand'}</span>
+                      </button>
+                      
+                      {isLeaderboardExpanded && (
+                        <div className="space-y-3 text-xs mt-3 animate-fade-in">
+                          {localPlayers.slice().sort((a, b) => {
+                            const rA = a.finishedRank || (a.finished ? 1 : 99);
+                            const rB = b.finishedRank || (b.finished ? 1 : 99);
+                            if (rA !== rB) return rA - rB;
+                            return b.position - a.position || b.xp - a.xp;
+                          }).map((p, idx) => (
+                            <div key={p.id} className={`p-3 bg-[var(--primary-deep-dark)] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
+                              <div className="flex justify-between items-center font-bold mb-2">
+                                <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
+                                  <span className="font-adventure text-[#FFD700]">
+                                    {p.finished ? `🏆 #${p.finishedRank}` : `#${idx+1}`}
+                                  </span>
+                                  <span>{p.avatar}</span>
+                                  <span className={`truncate max-w-[90px] ${p.finished ? 'text-emerald-300' : 'text-amber-100'}`}>{p.name} {p.finished && '🏁'}</span>
                                 </span>
-                                <span>{p.avatar}</span>
-                                <span className={`truncate max-w-[90px] ${p.finished ? 'text-emerald-300' : 'text-amber-100'}`}>{p.name} {p.finished && '🏁'}</span>
-                              </span>
-                              {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
+                                {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
+                              </div>
+                              <div className="grid grid-cols-3 gap-1 bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-1 rounded-xl text-center">
+                                <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">XP</span><span className="font-bold text-xs text-white">{p.xp}</span></div>
+                                <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Gold</span><span className="font-bold text-xs text-white">{p.coins}</span></div>
+                                <div><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Tile</span><span className="font-bold text-xs text-[#FFD700]">{p.position + 1}</span></div>
+                              </div>
                             </div>
-                            <div className="grid grid-cols-3 gap-1 bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-1 rounded-xl text-center">
-                              <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">XP</span><span className="font-bold text-xs text-white">{p.xp}</span></div>
-                              <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Gold</span><span className="font-bold text-xs text-white">{p.coins}</span></div>
-                              <div><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Tile</span><span className="font-bold text-xs text-[#FFD700]">{p.position}</span></div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
