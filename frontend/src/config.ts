@@ -31,7 +31,7 @@ export const BOARD_TILES: Tile[] = [
 ];
 
 export const getTilePositions = (tiles: Tile[], isMobile: boolean) => {
-  const isNarrowMobile = typeof window !== 'undefined' && window.innerWidth < 420;
+  const isNarrowMobile = typeof window !== 'undefined' && window.innerWidth < 500;
   if (isNarrowMobile) {
     const leftX = 28;
     const rightX = 72;
@@ -119,7 +119,7 @@ export const getArrowColor = (idx: number): string => {
 
 export const getPCBPath = (coords: { x: number; y: number }[]): string => {
   if (coords.length === 0) return '';
-  const isNarrowMobile = typeof window !== 'undefined' && window.innerWidth < 420;
+  const isNarrowMobile = typeof window !== 'undefined' && window.innerWidth < 500;
   if (isNarrowMobile) {
     // Straight line segments for crisp zigzag
     return coords.reduce((d, p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `${d} L ${p.x} ${p.y}`), '');
@@ -149,7 +149,7 @@ export const getPCBPath = (coords: { x: number; y: number }[]): string => {
 };
 
 export const getPCBVias = (coords: { x: number; y: number }[]): { x: number; y: number }[] => {
-  const isNarrowMobile = typeof window !== 'undefined' && window.innerWidth < 420;
+  const isNarrowMobile = typeof window !== 'undefined' && window.innerWidth < 500;
   if (isNarrowMobile) {
     // Return all intermediate nodes as via bends
     return coords.slice(1, -1);

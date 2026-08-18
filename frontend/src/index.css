@@ -982,3 +982,11 @@
     border-color: #ef4444 !important;
   }
 }
+
+@media (max-width: 500px) {
+  .stone-plinth {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 8px !important;
+  }
+}

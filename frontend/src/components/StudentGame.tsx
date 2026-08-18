@@ -2463,33 +2463,34 @@ export default function StudentGame({
       )}
 
       {(gameState === 'playing' || gameState === 'victory') && syncState && (
-        <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex flex-col justify-between relative">
+        <main className={`max-w-7xl mx-auto px-2 md:px-4 py-2 md:py-6 w-full flex-1 flex flex-col justify-between relative ${windowWidth < 500 ? 'h-[calc(100vh-60px)] overflow-hidden' : ''}`}>
           {activeStudent && (
-            <div className="sticky top-14 md:top-[60px] z-30 pcb-card-panel border-3 border-[#D4AF37] px-4 py-3 flex items-center justify-between gap-4 mb-4 text-white select-none animate-fade-in">
+            <div className={`sticky top-14 md:top-[60px] z-30 pcb-card-panel border-3 border-[#D4AF37] px-4 flex items-center justify-between gap-4 text-white select-none animate-fade-in ${windowWidth < 500 ? 'mb-2 h-[48px] py-1 text-[11px]' : 'mb-4 py-3'}`}>
               <div className="flex items-center gap-2">
-                <span className="text-2xl">👤</span>
+                <span className={windowWidth < 500 ? "text-lg" : "text-2xl"}>👤</span>
                 <div>
-                  <span className="text-[#FFD700] font-adventure text-sm font-extrabold block leading-none">{activeStudent.name}</span>
-                  <span className="text-[9px] text-amber-200/70 font-bold uppercase tracking-wider">Level {activeStudent.level} Explorer</span>
+                  <span className={`text-[#FFD700] font-adventure font-extrabold block leading-none ${windowWidth < 500 ? 'text-xs' : 'text-sm'}`}>{activeStudent.name}</span>
+                  <span className={`text-amber-200/70 font-bold uppercase tracking-wider ${windowWidth < 500 ? 'text-[7px]' : 'text-[9px]'}`}>Level {activeStudent.level} Explorer</span>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-amber-200 uppercase tracking-widest">XP</span>
-                <div className="bg-stone-950 border border-[#D4AF37]/30 rounded-full h-3.5 w-24 md:w-40 p-0.5 overflow-hidden flex items-center relative shadow-inner">
+              {/* Progress XP Bar */}
+              <div className="flex items-center gap-1.5">
+                <span className={`font-bold text-amber-200 uppercase tracking-widest ${windowWidth < 500 ? 'text-[8px]' : 'text-[10px]'}`}>XP</span>
+                <div className={`bg-stone-950 border border-[#D4AF37]/30 rounded-full p-0.5 overflow-hidden flex items-center relative shadow-inner ${windowWidth < 500 ? 'h-2.5 w-16' : 'h-3.5 w-24 md:w-40'}`}>
                   <div 
                     className="bg-gradient-to-r from-[#D4AF37] to-[#FFD700] h-full rounded-full transition-all duration-1000 shadow-[0_0_8px_#FFD700]"
                     style={{ width: `${Math.max(15, Math.min(100, (activeStudent.xp % 100)))}%` }}
                   ></div>
-                  <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold font-mono text-white">
+                  <span className={`absolute inset-0 flex items-center justify-center font-bold font-mono text-white ${windowWidth < 500 ? 'text-[7px]' : 'text-[8px]'}`}>
                     {activeStudent.xp}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-[#523B0B] border-2 border-[#D4AF37] px-3 py-1.5 rounded-full shadow-md">
-                <span className="text-base">🪙</span>
-                <span className="font-adventure text-sm font-extrabold text-[#FFD700] tracking-wider font-mono">
+              <div className={`flex items-center gap-1.5 bg-[#523B0B] border-2 border-[#D4AF37] rounded-full shadow-md ${windowWidth < 500 ? 'px-2 py-0.5' : 'px-3 py-1.5'}`}>
+                <span className={windowWidth < 500 ? 'text-xs' : 'text-base'}>🪙</span>
+                <span className={`font-adventure font-extrabold text-[#FFD700] tracking-wider font-mono ${windowWidth < 500 ? 'text-xs' : 'text-sm'}`}>
                   {activeStudent.coins}
                 </span>
               </div>
@@ -2497,7 +2498,7 @@ export default function StudentGame({
               {/* Exit Game button — always visible in playing state */}
               <button
                 onClick={handleGoBack}
-                className="px-3 py-1.5 bg-[var(--primary-deep)] hover:bg-[var(--primary-deep-medium)] text-white/80 hover:text-white font-adventure font-bold rounded-xl border border-[#D4AF37]/30 text-[9px] uppercase tracking-widest transition-all active:scale-95 shadow-md"
+                className={`bg-[var(--primary-deep)] hover:bg-[var(--primary-deep-medium)] text-white/80 hover:text-white font-adventure font-bold rounded-xl border border-[#D4AF37]/30 uppercase tracking-widest transition-all active:scale-95 shadow-md ${windowWidth < 500 ? 'px-2 py-1 text-[8px]' : 'px-3 py-1.5 text-[9px]'}`}
                 title="Exit Game"
               >
                 ← Exit
@@ -2505,10 +2506,10 @@ export default function StudentGame({
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full items-start">
+          <div className={`grid grid-cols-1 lg:grid-cols-4 gap-3 w-full items-start ${windowWidth < 500 ? 'flex-1 flex flex-col justify-between overflow-hidden min-h-0' : ''}`}>
             
-            <div className="lg:col-span-3 pcb-card-panel border-3 border-[#D4AF37] p-3 md:p-5 relative w-full flex flex-col gap-3">
-              <div className="relative w-full board-bg border-2 border-[#D4AF37]/50 rounded-2xl overflow-visible shadow-inner" style={{ paddingBottom: isMobile ? (windowWidth < 420 ? '300%' : '135%') : '72%' }}>
+            <div className={`lg:col-span-3 pcb-card-panel border-3 border-[#D4AF37] p-2 md:p-5 relative w-full flex-col ${windowWidth < 500 ? 'h-full flex overflow-hidden min-h-0 gap-2' : 'flex gap-3'}`}>
+              <div className="relative w-full board-bg border-2 border-[#D4AF37]/50 rounded-2xl overflow-visible shadow-inner" style={windowWidth < 500 ? { height: '80%', paddingBottom: 0 } : { paddingBottom: isMobile ? (windowWidth < 500 ? '300%' : '135%') : '72%' }}>
                 <div className="absolute inset-3">
                   {/* Dark Fantasy Tech map details & circuit lines */}
                   <div className="absolute inset-0 bg-slate-950/20 pointer-events-none rounded-xl"></div>
@@ -2516,7 +2517,6 @@ export default function StudentGame({
                   {/* Floating Sparkles / Particle Effects */}
                   <div className="absolute inset-0 pointer-events-none z-0">
                     <div className="absolute w-1 h-1 bg-blue-400 rounded-full animate-ping" style={{ left: '15%', top: '25%', animationDuration: '3s' }}></div>
-                    <div className="absolute w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style={{ left: '75%', top: '15%', animationDuration: '4s' }}></div>
                     <div className="absolute w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{ left: '80%', top: '65%', animationDuration: '5s' }}></div>
                     <div className="absolute w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" style={{ left: '25%', top: '75%', animationDuration: '3.5s' }}></div>
                     <div className="absolute w-1 h-1 bg-emerald-400 rounded-full animate-ping" style={{ left: '50%', top: '45%', animationDuration: '4.5s' }}></div>
@@ -2641,18 +2641,7 @@ export default function StudentGame({
                     );
                   })}
 
-                  {/* Active Player Glow Ring — follows display position during animation */}
-                  {syncState.teams[syncState.activeTeamIdx] && (() => {
-                    const activeT = syncState.teams[syncState.activeTeamIdx];
-                    const displayPos = displayPositions[activeT.id] ?? activeT.position;
-                    const activeCoord = TILE_COORDS[Math.min(17, Math.max(0, displayPos))];
-                    return (
-                      <div 
-                        className="active-glow-ring" 
-                        style={{ left: `${activeCoord.x}%`, top: `${activeCoord.y}%` }}
-                      />
-                    );
-                  })()}
+
 
                   {/* Characters standees — use displayPositions for smooth tile-by-tile movement */}
                   {syncState.teams.map((t: any, idx: number) => {
@@ -2706,7 +2695,7 @@ export default function StudentGame({
               </div>
 
               {/* Compact Legend */}
-              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 p-2 rounded-xl bg-slate-950/40 border border-slate-800 text-white select-none text-[8px] sm:text-[10px] w-full mt-2">
+              <div className="flex flex-wrap items-center justify-center gap-x-2 sm:gap-x-3 gap-y-0.5 p-1 rounded-xl bg-slate-950/40 border border-slate-800 text-white select-none text-[7px] sm:text-[10px] w-full mt-1" style={windowWidth < 500 ? { height: '4%', minHeight: '18px', margin: 0, padding: '2px' } : undefined}>
                 <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-600 flex items-center justify-center text-[6px]">❓</span><span>Question</span></div>
                 <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-600 flex items-center justify-center text-[6px]">XP</span><span>XP Reward</span></div>
                 <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex items-center justify-center text-[6px]">💰</span><span>Treasure</span></div>
@@ -2722,12 +2711,12 @@ export default function StudentGame({
                 const phase = getOnlineTurnPhase();
                 const isMyTurnNow = phase === 'READY_TO_ROLL';
                 return (
-                  <div className={`flex md:hidden p-3 pcb-card-panel flex-col items-center justify-center gap-1.5 text-center w-full max-w-[280px] mx-auto text-white select-none transition-all ${isMyTurnNow ? 'border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'border-3 border-[#D4AF37]'}`}>
+                  <div className={`flex md:hidden pcb-card-panel items-center select-none transition-all ${isMyTurnNow ? 'border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'border-3 border-[#D4AF37]'} ${windowWidth < 500 ? 'h-[16%] min-h-[82px] max-h-[100px] w-full flex-row justify-between p-2 gap-4' : 'flex-col justify-center p-3 gap-1.5 max-w-[280px] mx-auto'}`}>
                     {/* Dynamic status text */}
-                    <div className="w-full">
+                    <div className={windowWidth < 500 ? 'text-left flex-1 min-w-0' : 'w-full'}>
                       {renderDiceStatusArea(phase, getActivePlayerName(), localRollResult, true)}
                       {activeQuestion && (
-                        <div className="mt-1 flex items-center justify-center gap-1.5 font-sans">
+                        <div className="mt-1 flex items-center gap-1.5 font-sans">
                           <span className="text-[8px] text-amber-200/70 font-bold uppercase tracking-wider">⏱</span>
                           <span className={`text-[10px] font-bold font-mono ${getTimerColorClass(timerRemaining, true)}`}>{timerRemaining}s</span>
                         </div>
@@ -2735,14 +2724,14 @@ export default function StudentGame({
                     </div>
 
                     {/* D6 Cube Die */}
-                    <div className="relative w-20 h-20 flex items-center justify-center">
+                    <div className={`relative flex items-center justify-center shrink-0 ${windowWidth < 500 ? 'w-14 h-14' : 'w-20 h-20'}`}>
                       <button
                         onClick={handleRollClick}
                         disabled={!isMyTurnNow || diceRolling || activeQuestion !== null || isMovingOnline}
-                        className={`relative w-16 h-16 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_20px_rgba(255,215,0,0.85)] border-2 border-[#FFD700]' : 'bg-[var(--primary-deep-dark)] border-2 border-[#D4AF37]/40'}`}
+                        className={`relative rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_20px_rgba(255,215,0,0.85)] border-2 border-[#FFD700]' : 'bg-[var(--primary-deep-dark)] border-2 border-[#D4AF37]/40'} ${windowWidth < 500 ? 'w-12 h-12' : 'w-16 h-16'}`}
                         title={isMyTurnNow ? 'Your Turn — Roll Dice!' : 'Not your turn'}
                       >
-                        <svg viewBox="0 0 100 100" className={`w-14 h-14 ${diceRolling ? 'dice-spin-shake' : ''}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 8px rgba(255,215,0,0.8))' : 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
+                        <svg viewBox="0 0 100 100" className={`dice-spin-shake ${windowWidth < 500 ? 'w-10 h-10' : 'w-14 h-14'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 8px rgba(255,215,0,0.8))' : 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
                           {/* Top face */}
                           <polygon points="50,8 90,30 50,52 10,30" fill="var(--primary-deep)" stroke="#D4AF37" strokeWidth="2.5"/>
                           {/* Left face */}
@@ -2769,7 +2758,7 @@ export default function StudentGame({
                 })()}
             </div>
 
-            <div className="flex flex-col gap-6 font-sans">
+            <div className={`flex flex-col gap-6 font-sans lg:col-span-1 ${windowWidth < 500 ? 'hidden lg:flex' : ''}`}>
               {/* DESKTOP TURN PANEL - dynamic phase-aware status */}
               {(() => {
                 const phase = getOnlineTurnPhase();
