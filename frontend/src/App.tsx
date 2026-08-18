@@ -468,6 +468,7 @@ export default function App() {
   const [localCurrentRoll, setLocalCurrentRoll] = useState<number | null>(null);
   const [localIsMoving, setLocalIsMoving] = useState<boolean>(false);
   const [localLandingTile, setLocalLandingTile] = useState<Tile | null>(null);
+  const [localCollisionTileIndex, setLocalCollisionTileIndex] = useState<number | null>(null);
   
   const [localTrapEffect, setLocalTrapEffect] = useState<'moveBack' | 'skipTurn' | null>(null);
   const [localTreasureChoice, setLocalTreasureChoice] = useState<'decision' | 'safe' | 'challenge'>('decision');
@@ -1205,30 +1206,38 @@ export default function App() {
         }
       }
 
-      // Apply Tile Knockback System (Arriving player is knocked back 4 spaces if tile is occupied)
+      // Apply Tile Collision Rule (Arriving player B stays, existing player A is pushed back 4 tiles)
       let clashedPlayerName = '';
       let clashedNewPos = 0;
       let clashingOccurred = false;
       const activePFinal = updatedPlayers[localTurnIdx];
 
-      const occupiedByPlayer = updatedPlayers.find((p, idx) => 
+      const clashedPlayerIdx = updatedPlayers.findIndex((p, idx) => 
         idx !== localTurnIdx && !activePFinal.finished && p.position === activePFinal.position && activePFinal.position !== 0 && !p.finished
       );
 
-      if (occupiedByPlayer) {
-        clashedPlayerName = occupiedByPlayer.name;
-        clashedNewPos = Math.max(0, activePFinal.position - 4);
+      if (clashedPlayerIdx !== -1) {
+        const clashedPlayer = updatedPlayers[clashedPlayerIdx];
+        clashedPlayerName = clashedPlayer.name;
+        clashedNewPos = Math.max(0, clashedPlayer.position - 4);
         clashingOccurred = true;
+        
+        // Push existing player back, active player remains on tile
         updatedPlayers = updatedPlayers.map((p, idx) => 
-          idx === localTurnIdx ? { ...p, position: clashedNewPos } : p
+          idx === clashedPlayerIdx ? { ...p, position: clashedNewPos } : p
         );
+
+        setLocalCollisionTileIndex(activePFinal.position);
+        setTimeout(() => {
+          setLocalCollisionTileIndex(null);
+        }, 1500);
       }
 
       let delay = 2500;
       if (clashingOccurred) {
         delay = 4500;
         sounds.playWrong();
-        setLocalScorePopup({ text: `💥 Tile occupied — knocked back 4 tiles!`, success: false });
+        setLocalScorePopup({ text: `💥 Collision! ${clashedPlayerName} moved back 4 tiles.`, success: false });
       }
 
       setTimeout(() => {
@@ -2438,7 +2447,7 @@ export default function App() {
                         return (
                           <div 
                             key={tIdx} 
-                            className={`stone-plinth ${hexClass} ${isDestination ? 'stone-plinth-destination' : ''} ${isCompleted ? 'stone-plinth-completed' : ''}`} 
+                            className={`stone-plinth ${hexClass} ${isDestination ? 'stone-plinth-destination' : ''} ${isCompleted ? 'stone-plinth-completed' : ''} ${localCollisionTileIndex === tIdx ? 'collision-flash' : ''}`} 
                             style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                             title={tile.label}
                           >

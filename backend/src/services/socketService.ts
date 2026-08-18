@@ -511,15 +511,14 @@ export class SocketService {
         }
       }
       
-      // Apply Tile Knockback System (Arriving player is knocked back 4 spaces if tile is occupied)
-      const occupiedByTeam = room.teams.find(t => 
+      // Apply Tile Collision Rule (Arriving player B stays, existing player A is pushed back 4 tiles)
+      const clashedTeam = room.teams.find(t => 
         t.id !== activeTeam.id && t.position === activeTeam.position && !t.finished && activeTeam.position !== 0
       );
-      if (occupiedByTeam) {
-        const finalPos = Math.max(0, activeTeam.position - 4);
-        activeTeam.position = finalPos;
-        newPosition = finalPos;
-        tileText += ` | 💥 Tile occupied! Knocked back 4 tiles to Tile ${finalPos + 1}!`;
+      if (clashedTeam) {
+        const finalPos = Math.max(0, clashedTeam.position - 4);
+        clashedTeam.position = finalPos;
+        tileText += ` | 💥 Collision! ${clashedTeam.name} moved back 4 tiles.`;
       }
     } else {
       // FIXED: Wrong answer = NO movement at all. Player stays in place.

@@ -137,6 +137,7 @@ export default function StudentGame({
   const [rosterClass, setRosterClass] = useState<any>(null);
   const [myTeam, setMyTeam] = useState<any>(null);
   const [syncState, setSyncState] = useState<any>(null);
+  const [collisionTileIndex, setCollisionTileIndex] = useState<number | null>(null);
   const [lobbyTimeoutError, setLobbyTimeoutError] = useState<boolean>(false);
   const [lastLobbyAction, setLastLobbyAction] = useState<{ type: 'create' | 'join'; code?: string } | null>(null);
 
@@ -534,6 +535,13 @@ export default function StudentGame({
         if (data.captureText) {
           setLogMessages(prev => [data.captureText, ...prev.slice(0, 8)]);
           playBeep(180, 'square', 0.5, 0.12);
+          
+          if (data.captureText.includes('Collision') || data.captureText.includes('occupied') || data.captureText.includes('occupied!')) {
+            setCollisionTileIndex(data.newPosition);
+            setTimeout(() => {
+              setCollisionTileIndex(null);
+            }, 1500);
+          }
         }
 
         setTimeout(() => {
@@ -2595,7 +2603,7 @@ export default function StudentGame({
                     return (
                       <div 
                         key={tIdx} 
-                        className={`stone-plinth ${hexClass} ${isDestination ? 'stone-plinth-destination' : ''} ${isCompleted ? 'stone-plinth-completed' : ''}`} 
+                        className={`stone-plinth ${hexClass} ${isDestination ? 'stone-plinth-destination' : ''} ${isCompleted ? 'stone-plinth-completed' : ''} ${collisionTileIndex === tIdx ? 'collision-flash' : ''}`} 
                         style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                         title={tile.label}
                       >
