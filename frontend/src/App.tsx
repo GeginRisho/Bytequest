@@ -1636,11 +1636,11 @@ export default function App() {
       {viewMode !== 'selection' && (() => {
         const isGameBoardActive = (viewMode === 'local' && localScreen === 'board') || viewMode === 'student';
         return (
-          <header className={`border-b-3 ${isGameBoardActive ? 'border-[#D4AF37] bg-[var(--primary-deep-dark)] text-white' : 'border-[var(--primary-color)] bg-white/98 text-stone-900'} backdrop-blur px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-md`}>
+          <header className={`border-b-3 ${isGameBoardActive ? 'border-[var(--accent-color)] bg-[var(--primary-deep-dark)] text-white' : 'border-[var(--primary-color)] bg-white/98 text-stone-900'} backdrop-blur px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-md`}>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleGlobalBack}
-                className={`mr-2 px-4 py-2 rounded-xl border-2 active:scale-95 transition-all text-xs font-bold font-adventure flex items-center gap-1.5 shadow-sm uppercase tracking-wider ${isGameBoardActive ? 'bg-[var(--primary-deep-medium)] border-[#D4AF37] text-[#FFD700] hover:bg-[var(--primary-deep)]/50' : 'bg-[var(--primary-subtle-bg)] border-[var(--primary-color)] text-[var(--primary-color)] hover:bg-[var(--primary-subtle-hover)]/50'}`}
+                className={`mr-2 px-4 py-2 rounded-xl border-2 active:scale-95 transition-all text-xs font-bold font-adventure flex items-center gap-1.5 shadow-sm uppercase tracking-wider ${isGameBoardActive ? 'bg-[var(--primary-deep-medium)] border-[var(--accent-color)] text-[var(--accent-light)] hover:bg-[var(--primary-deep)]/50' : 'bg-[var(--primary-subtle-bg)] border-[var(--primary-color)] text-[var(--primary-color)] hover:bg-[var(--primary-subtle-hover)]/50'}`}
               >
                 ← Back
               </button>
@@ -1652,15 +1652,15 @@ export default function App() {
                   navigateTo({ viewMode: 'selection' });
                 }
               }}>
-                <Compass className={`w-8 h-8 animate-pulse-slow shrink-0 ${isGameBoardActive ? 'text-[#FFD700]' : 'text-[var(--primary-color)]'}`} />
-                <h1 className={`font-adventure text-xl sm:text-2xl font-extrabold tracking-wider truncate uppercase ${isGameBoardActive ? 'text-[#FFD700]' : 'text-[var(--primary-color)]'}`}>ByteQuest</h1>
+                <Compass className={`w-8 h-8 animate-pulse-slow shrink-0 ${isGameBoardActive ? 'text-[var(--accent-light)]' : 'text-[var(--primary-color)]'}`} />
+                <h1 className={`font-adventure text-xl sm:text-2xl font-extrabold tracking-wider truncate uppercase ${isGameBoardActive ? 'text-[var(--accent-light)]' : 'text-[var(--primary-color)]'}`}>ByteQuest</h1>
               </div>
             </div>
             
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => setAudioOn(!audioOn)}
-                className={`p-2.5 rounded-xl border transition-colors shadow-sm ${isGameBoardActive ? 'border-[#D4AF37]/45 text-[#FFD700] hover:bg-[var(--primary-deep-medium)]' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                className={`p-2.5 rounded-xl border transition-colors shadow-sm ${isGameBoardActive ? 'border-[var(--accent-color)]/45 text-[var(--accent-light)]' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
               >
                 {audioOn 
                   ? <Volume2 className="w-4 h-4" /> 
@@ -2293,18 +2293,18 @@ export default function App() {
               {/* S2: LOCAL HANDOFF OVERLAY */}
               {localScreen === 'handoff' && (
                 <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <div className="bg-[var(--primary-deep-medium)] border-4 border-[#D4AF37] rounded-[2rem] p-8 text-center text-white shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-sm w-full relative animate-scale-in">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(255,215,0,0.1),transparent_70%)] pointer-events-none"></div>
+                  <div className="bg-[var(--primary-deep-medium)] border-4 border-[var(--accent-color)] rounded-[2rem] p-8 text-center text-white shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-sm w-full relative animate-scale-in">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(var(--accent-light-rgb),0.1),transparent_70%)] pointer-events-none"></div>
                     <span className="text-3xl block mb-2 animate-bounce">📱</span>
-                    <h3 className="font-adventure text-2xl font-extrabold text-[#FFD700] mb-2 uppercase tracking-wider">Pass the Device</h3>
+                    <h3 className="font-adventure text-2xl font-extrabold text-[var(--accent-light)] mb-2 uppercase tracking-wider">Pass the Device</h3>
                     <p className="text-xs text-amber-200/70 font-semibold mb-6">Pass the screen to the next explorer:</p>
-                    <div className="bg-[var(--primary-deep-dark)] text-[#FFD700] border-2 border-[#D4AF37]/50 p-4 rounded-2xl mb-8 flex items-center justify-center gap-3">
+                    <div className="bg-[var(--primary-deep-dark)] text-[var(--accent-light)] border-2 border-[var(--accent-color)]/50 p-4 rounded-2xl mb-8 flex items-center justify-center gap-3">
                       <span className="text-3xl">{localPlayers[localTurnIdx]?.avatar}</span>
                       <span className="font-adventure text-xl font-extrabold uppercase tracking-wide">{localPlayers[localTurnIdx]?.name}</span>
                     </div>
                     <button
                       onClick={() => navigateTo({ localScreen: 'board' })}
-                      className="w-full py-3.5 bg-gradient-to-r from-[#D4AF37] to-[#F6E27A] hover:from-[#F6E27A] hover:to-[#D4AF37] text-[var(--primary-deep-dark)] rounded-xl font-adventure font-extrabold border-b-4 border-[#B8860B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                      className="w-full py-3.5 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-light)] hover:from-[var(--accent-light)] hover:to-[var(--accent-color)] text-[var(--primary-deep-dark)] rounded-xl font-adventure font-extrabold border-b-4 border-[var(--accent-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
                     >
                       Ready!
                     </button>
@@ -2313,11 +2313,11 @@ export default function App() {
               )}
               {/* STICKY LOCAL PLAY HUD */}
               {localPlayers[localTurnIdx] && (
-                <div className={`sticky top-14 md:top-[60px] z-30 pcb-card-panel border-3 border-[#D4AF37] px-4 flex items-center justify-between gap-4 text-white select-none animate-fade-in ${windowWidth < 500 ? 'mb-2 h-[48px] py-1 text-[11px]' : 'mb-4 py-3'}`}>
+                <div className={`sticky top-14 md:top-[60px] z-30 pcb-card-panel border-3 border-[var(--accent-color)] px-4 flex items-center justify-between gap-4 text-white select-none animate-fade-in ${windowWidth < 500 ? 'mb-2 h-[48px] py-1 text-[11px]' : 'mb-4 py-3'}`}>
                   <div className="flex items-center gap-2">
                     <span className={windowWidth < 500 ? "text-lg" : "text-2xl"}>{localPlayers[localTurnIdx].avatar}</span>
                     <div>
-                      <span className={`text-[#FFD700] font-adventure font-extrabold block leading-none ${windowWidth < 500 ? 'text-xs' : 'text-sm'}`}>{localPlayers[localTurnIdx].name}</span>
+                      <span className={`text-[var(--accent-light)] font-adventure font-extrabold block leading-none ${windowWidth < 500 ? 'text-xs' : 'text-sm'}`}>{localPlayers[localTurnIdx].name}</span>
                       <span className={`text-amber-200/70 font-bold uppercase tracking-wider ${windowWidth < 500 ? 'text-[7px]' : 'text-[9px]'}`}>Grade {localPlayers[localTurnIdx].grade}</span>
                     </div>
                   </div>
@@ -2325,9 +2325,9 @@ export default function App() {
                   {/* Progress XP Bar */}
                   <div className="flex items-center gap-1.5">
                     <span className={`font-bold text-amber-200 uppercase tracking-widest ${windowWidth < 500 ? 'text-[8px]' : 'text-[10px]'}`}>XP</span>
-                    <div className={`bg-stone-950 border border-[#D4AF37]/30 rounded-full p-0.5 overflow-hidden flex items-center relative shadow-inner ${windowWidth < 500 ? 'h-2.5 w-16' : 'h-3.5 w-24 md:w-40'}`}>
+                    <div className={`bg-stone-950 border border-[var(--accent-color)]/30 rounded-full p-0.5 overflow-hidden flex items-center relative shadow-inner ${windowWidth < 500 ? 'h-2.5 w-16' : 'h-3.5 w-24 md:w-40'}`}>
                       <div 
-                        className="bg-gradient-to-r from-[#D4AF37] to-[#FFD700] h-full rounded-full transition-all duration-1000 shadow-[0_0_8px_#FFD700]"
+                        className="bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-light)] h-full rounded-full transition-all duration-1000 shadow-[0_0_8px_var(--accent-light)]"
                         style={{ width: `${Math.max(15, Math.min(100, (localPlayers[localTurnIdx].xp % 100)))}%` }}
                       ></div>
                       <span className={`absolute inset-0 flex items-center justify-center font-bold font-mono text-white ${windowWidth < 500 ? 'text-[7px]' : 'text-[8px]'}`}>
@@ -2337,9 +2337,9 @@ export default function App() {
                   </div>
 
                   {/* Coins Display */}
-                  <div className={`flex items-center gap-1.5 bg-[#523B0B] border-2 border-[#D4AF37] rounded-full shadow-md ${windowWidth < 500 ? 'px-2 py-0.5' : 'px-3 py-1.5'}`}>
+                  <div className={`flex items-center gap-1.5 bg-[var(--primary-deep-dark)] border-2 border-[var(--accent-color)] rounded-full shadow-md ${windowWidth < 500 ? 'px-2 py-0.5' : 'px-3 py-1.5'}`}>
                     <span className={windowWidth < 500 ? 'text-xs' : 'text-base'}>🪙</span>
-                    <span className={`font-adventure font-extrabold text-[#FFD700] tracking-wider font-mono ${windowWidth < 500 ? 'text-xs' : 'text-sm'}`}>
+                    <span className={`font-adventure font-extrabold text-[var(--accent-light)] tracking-wider font-mono ${windowWidth < 500 ? 'text-xs' : 'text-sm'}`}>
                       {localPlayers[localTurnIdx].coins}
                     </span>
                   </div>
@@ -2550,7 +2550,7 @@ export default function App() {
                     const isMyTurnNow = phase === 'READY_TO_ROLL';
                     const activePName = localPlayers[localTurnIdx]?.name || '';
                     return (
-                      <div className={`flex md:hidden pcb-card-panel items-center select-none transition-all ${isMyTurnNow ? 'border-3 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'border-3 border-[#D4AF37]'} ${windowWidth < 500 ? 'h-[16%] min-h-[82px] max-h-[100px] w-full flex-row justify-between p-2 gap-4' : 'flex-col justify-center p-3 gap-1.5 max-w-[280px] mx-auto'}`}>
+                      <div className={`flex md:hidden pcb-card-panel items-center select-none transition-all ${isMyTurnNow ? 'border-3 border-[var(--accent-light)] shadow-[0_0_20px_var(--accent-glow)]' : 'border-3 border-[var(--accent-color)]'} ${windowWidth < 500 ? 'h-[16%] min-h-[82px] max-h-[100px] w-full flex-row justify-between p-2 gap-4' : 'flex-col justify-center p-3 gap-1.5 max-w-[280px] mx-auto'}`}>
                         <div className={windowWidth < 500 ? 'text-left flex-1 min-w-0' : 'w-full'}>
                           {renderLocalDiceStatusArea(phase, activePName, localCurrentRoll, true)}
                         </div>
@@ -2560,26 +2560,26 @@ export default function App() {
                           <button
                             onClick={localTriggerDiceRoll}
                             disabled={!isMyTurnNow || localIsRolling || localIsMoving || localActiveQuestion !== null || localLandingTile !== null}
-                            className={`relative rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_20px_rgba(255,215,0,0.85)] border-2 border-[#FFD700]' : 'bg-[var(--primary-deep-dark)] border-2 border-[#D4AF37]/40'} ${windowWidth < 500 ? 'w-12 h-12' : 'w-16 h-16'}`}
+                            className={`relative rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_20px_var(--accent-glow)] border-2 border-[var(--accent-light)]' : 'bg-[var(--primary-deep-dark)] border-2 border-[var(--accent-color)]/40'} ${windowWidth < 500 ? 'w-12 h-12' : 'w-16 h-16'}`}
                             title={isMyTurnNow ? 'Your Turn — Roll Dice!' : 'Not your turn'}
                           >
-                            <svg viewBox="0 0 100 100" className={`dice-spin-shake ${windowWidth < 500 ? 'w-10 h-10' : 'w-14 h-14'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 8px rgba(255,215,0,0.8))' : 'drop-shadow(0 2px 4px rgba(255,215,0,0.25))' }}>
+                            <svg viewBox="0 0 100 100" className={`dice-spin-shake ${windowWidth < 500 ? 'w-10 h-10' : 'w-14 h-14'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 8px var(--accent-glow))' : 'drop-shadow(0 2px 4px rgba(var(--accent-light-rgb), 0.25))' }}>
                               {/* Top face */}
-                              <polygon points="50,8 90,30 50,52 10,30" fill="var(--primary-deep)" stroke="#D4AF37" strokeWidth="2.5"/>
+                              <polygon points="50,8 90,30 50,52 10,30" fill="var(--primary-deep)" stroke="var(--accent-color)" strokeWidth="2.5"/>
                               {/* Left face */}
-                              <polygon points="10,30 50,52 50,92 10,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2.5"/>
+                              <polygon points="10,30 50,52 50,92 10,70" fill="var(--primary-deep-dark)" stroke="var(--accent-color)" strokeWidth="2.5"/>
                               {/* Right face */}
-                              <polygon points="90,30 50,52 50,92 90,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2.5"/>
+                              <polygon points="90,30 50,52 50,92 90,70" fill="var(--primary-deep-dark)" stroke="var(--accent-color)" strokeWidth="2.5"/>
                               {/* Top face pips */}
-                              <circle cx="38" cy="26" r="3.5" fill="#FFD700"/>
-                              <circle cx="50" cy="34" r="3.5" fill="#FFD700"/>
-                              <circle cx="62" cy="26" r="3.5" fill="#FFD700"/>
+                              <circle cx="38" cy="26" r="3.5" fill="var(--accent-light)"/>
+                              <circle cx="50" cy="34" r="3.5" fill="var(--accent-light)"/>
+                              <circle cx="62" cy="26" r="3.5" fill="var(--accent-light)"/>
                             </svg>
                           </button>
 
                           {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
-                            <div className="absolute inset-0 bg-[var(--primary-deep)]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[#D4AF37] shadow-lg">
-                              <span className="font-adventure text-3xl font-extrabold text-[#FFD700]">
+                            <div className="absolute inset-0 bg-[var(--primary-deep)]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[var(--accent-color)] shadow-lg">
+                              <span className="font-adventure text-3xl font-extrabold text-[var(--accent-light)]">
                                 {localCurrentRoll}
                               </span>
                             </div>
@@ -2597,16 +2597,16 @@ export default function App() {
                     const isMyTurnNow = phase === 'READY_TO_ROLL';
                     const activePName = localPlayers[localTurnIdx]?.name || '';
                     return (
-                      <div className={`hidden md:flex p-6 pcb-card-panel flex-col items-center justify-center text-center text-white select-none transition-all ${isMyTurnNow ? 'border-3 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]' : 'border-3 border-[#D4AF37]'}`}>
+                      <div className={`hidden md:flex p-6 pcb-card-panel flex-col items-center justify-center text-center text-white select-none transition-all ${isMyTurnNow ? 'border-3 border-[var(--accent-light)] shadow-[0_0_30px_var(--accent-glow)]' : 'border-3 border-[var(--accent-color)]'}`}>
                         <span className="text-[10px] block font-bold text-amber-300 uppercase tracking-wider mb-2 font-adventure">Current Turn</span>
                         <div className="mb-2">
-                          <span className="font-adventure text-lg font-extrabold text-[#FFD700] block uppercase tracking-wide truncate max-w-[140px]">
+                          <span className="font-adventure text-lg font-extrabold text-[var(--accent-light)] block uppercase tracking-wide truncate max-w-[140px]">
                             {activePName}
                           </span>
                         </div>
 
                         {/* Dynamic status area */}
-                        <div className="mb-3 border-t border-b border-[#D4AF37]/20 py-2 w-full">
+                        <div className="mb-3 border-t border-b border-[var(--accent-color)]/20 py-2 w-full">
                           {renderLocalDiceStatusArea(phase, activePName, localCurrentRoll, false)}
                         </div>
 
@@ -2615,33 +2615,33 @@ export default function App() {
                           <button
                             onClick={localTriggerDiceRoll}
                             disabled={!isMyTurnNow || localIsRolling || localIsMoving || localActiveQuestion !== null || localLandingTile !== null}
-                            className={`relative w-24 h-24 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_30px_rgba(255,215,0,0.95)] border-3 border-[#FFD700]' : 'bg-[var(--primary-deep-dark)] border-2 border-[#D4AF37]/45'}`}
+                            className={`relative w-24 h-24 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_30px_var(--accent-glow)] border-3 border-[var(--accent-light)]' : 'bg-[var(--primary-deep-dark)] border-2 border-[var(--accent-color)]/45'}`}
                             title={isMyTurnNow ? 'Your Turn — Click to Roll!' : 'Not your turn'}
                           >
-                            <svg viewBox="0 0 100 100" className={`w-20 h-20 ${localIsRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 12px rgba(255,215,0,0.9))' : 'drop-shadow(0 3px 6px rgba(255,215,0,0.25))' }}>
+                            <svg viewBox="0 0 100 100" className={`w-20 h-20 ${localIsRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 12px var(--accent-glow))' : 'drop-shadow(0 3px 6px rgba(var(--accent-light-rgb), 0.25))' }}>
                               {/* Top face */}
-                              <polygon points="50,8 90,30 50,52 10,30" fill="var(--primary-deep)" stroke="#D4AF37" strokeWidth="2"/>
+                              <polygon points="50,8 90,30 50,52 10,30" fill="var(--primary-deep)" stroke="var(--accent-color)" strokeWidth="2"/>
                               {/* Left face */}
-                              <polygon points="10,30 50,52 50,92 10,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2"/>
+                              <polygon points="10,30 50,52 50,92 10,70" fill="var(--primary-deep-dark)" stroke="var(--accent-color)" strokeWidth="2"/>
                               {/* Right face */}
-                              <polygon points="90,30 50,52 50,92 90,70" fill="var(--primary-deep-dark)" stroke="#D4AF37" strokeWidth="2"/>
+                              <polygon points="90,30 50,52 50,92 90,70" fill="var(--primary-deep-dark)" stroke="var(--accent-color)" strokeWidth="2"/>
                               {/* Top face pips */}
-                              <circle cx="38" cy="25" r="4" fill="#FFD700"/>
-                              <circle cx="50" cy="33" r="4" fill="#FFD700"/>
-                              <circle cx="62" cy="25" r="4" fill="#FFD700"/>
+                              <circle cx="38" cy="25" r="4" fill="var(--accent-light)"/>
+                              <circle cx="50" cy="33" r="4" fill="var(--accent-light)"/>
+                              <circle cx="62" cy="25" r="4" fill="var(--accent-light)"/>
                               {/* Left face pip */}
-                              <circle cx="28" cy="60" r="3.5" fill="#FFD700"/>
+                              <circle cx="28" cy="60" r="3.5" fill="var(--accent-light)"/>
                               {/* Right face pips */}
-                              <circle cx="72" cy="58" r="3.5" fill="#FFD700"/>
-                              <circle cx="72" cy="72" r="3.5" fill="#FFD700"/>
+                              <circle cx="72" cy="58" r="3.5" fill="var(--accent-light)"/>
+                              <circle cx="72" cy="72" r="3.5" fill="var(--accent-light)"/>
                             </svg>
                           </button>
 
                           {localCurrentRoll !== null && !localIsRolling && !localIsMoving && (
-                            <div className="absolute inset-0 bg-[var(--primary-deep)]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[#D4AF37] shadow-lg">
+                            <div className="absolute inset-0 bg-[var(--primary-deep)]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[var(--accent-color)] shadow-lg">
                               <div className="text-center">
-                                <span className="block text-[8px] text-[#FFD700] uppercase font-extrabold tracking-widest leading-none mb-0.5 font-adventure">ROLLED</span>
-                                <span className="font-adventure text-5xl font-extrabold text-[#FFD700]">
+                                <span className="block text-[8px] text-[var(--accent-light)] uppercase font-extrabold tracking-widest leading-none mb-0.5 font-adventure">ROLLED</span>
+                                <span className="font-adventure text-5xl font-extrabold text-[var(--accent-light)]">
                                   {localCurrentRoll}
                                 </span>
                               </div>
@@ -2705,10 +2705,10 @@ export default function App() {
                       )}
                     </div>
                   ) : (
-                    <div className="pcb-card-panel border-3 border-[#D4AF37] p-4 text-white">
+                    <div className="pcb-card-panel border-3 border-[var(--accent-color)] p-4 text-white">
                       <button 
                         onClick={() => setIsLeaderboardExpanded(!isLeaderboardExpanded)}
-                        className="w-full flex justify-between items-center font-adventure text-sm font-extrabold text-[#FFD700] border-b border-[#D4AF37]/35 pb-2 uppercase tracking-wider"
+                        className="w-full flex justify-between items-center font-adventure text-sm font-extrabold text-[var(--accent-light)] border-b border-[var(--accent-color)]/35 pb-2 uppercase tracking-wider"
                       >
                         <span>📊 Standings</span>
                         <span>{isLeaderboardExpanded ? '▲ Collapse' : '▼ Expand'}</span>
@@ -2722,10 +2722,10 @@ export default function App() {
                             if (rA !== rB) return rA - rB;
                             return b.position - a.position || b.xp - a.xp;
                           }).map((p, idx) => (
-                            <div key={p.id} className={`p-3 bg-[var(--primary-deep-dark)] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[#D4AF37]/30'}`}>
+                            <div key={p.id} className={`p-3 bg-[var(--primary-deep-dark)] border-2 rounded-2xl shadow-md text-white ${p.finished ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'border-[var(--accent-color)]/30'}`}>
                               <div className="flex justify-between items-center font-bold mb-2">
-                                <span className="text-[#FFD700] text-xs flex items-center gap-1.5">
-                                  <span className="font-adventure text-[#FFD700]">
+                                <span className="text-[var(--accent-light)] text-xs flex items-center gap-1.5">
+                                  <span className="font-adventure text-[var(--accent-light)]">
                                     {p.finished ? `🏆 #${p.finishedRank}` : `#${idx+1}`}
                                   </span>
                                   <span>{p.avatar}</span>
@@ -2733,10 +2733,10 @@ export default function App() {
                                 </span>
                                 {p.streak >= 3 && <span className="text-rose-400 animate-pulse text-[10px]">🔥 {p.streak}</span>}
                               </div>
-                              <div className="grid grid-cols-3 gap-1 bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-1 rounded-xl text-center">
-                                <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">XP</span><span className="font-bold text-xs text-white">{p.xp}</span></div>
-                                <div className="border-r border-[#D4AF37]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Gold</span><span className="font-bold text-xs text-white">{p.coins}</span></div>
-                                <div><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Tile</span><span className="font-bold text-xs text-[#FFD700]">{p.position + 1}</span></div>
+                              <div className="grid grid-cols-3 gap-1 bg-[var(--primary-deep-medium)] border border-[var(--accent-color)]/35 p-1 rounded-xl text-center">
+                                <div className="border-r border-[var(--accent-color)]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">XP</span><span className="font-bold text-xs text-white">{p.xp}</span></div>
+                                <div className="border-r border-[var(--accent-color)]/20"><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Gold</span><span className="font-bold text-xs text-white">{p.coins}</span></div>
+                                <div><span className="text-[7px] block text-amber-200/50 uppercase leading-none">Tile</span><span className="font-bold text-xs text-[var(--accent-light)]">{p.position + 1}</span></div>
                               </div>
                             </div>
                           ))}
@@ -2751,23 +2751,23 @@ export default function App() {
           {/* LOCAL ACTIVE QUIZ (Only for human turns) */}
           {localScreen === 'board' && localActiveQuestion && !localPlayers[localTurnIdx]?.isBot && (
             <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto select-text animate-fade-in">
-              <div className="parchment-scroll max-w-xl w-full p-6 text-[#2D0B0B] relative shadow-2xl my-8">
-                <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#C49A45]/30 text-xs text-stone-500 font-sans font-bold">
+              <div className="parchment-scroll max-w-xl w-full p-6 text-slate-800 relative shadow-2xl my-8">
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-[var(--accent-color)]/30 text-xs text-stone-500 font-sans font-bold">
                   <span>Topic: {localActiveQuestion.topic}</span>
-                  {localQuizPhase === 'answering' && <span className="font-bold text-amber-800">⏰ {localTimerRemaining}s</span>}
+                  {localQuizPhase === 'answering' && <span className="font-bold text-[var(--accent-dark)]">⏰ {localTimerRemaining}s</span>}
                 </div>
 
-                <p className="text-lg font-bold mb-6 leading-relaxed text-[#2D0B0B] font-sans">{localActiveQuestion.question}</p>
+                <p className="text-lg font-bold mb-6 leading-relaxed text-slate-800 font-sans">{localActiveQuestion.question}</p>
 
                 <div className="space-y-3 mb-6">
                   {localActiveQuestion.options.map((opt: string, oIdx: number) => {
                     const isSelected = localSelectedOptIdx === oIdx;
-                    let style = 'bg-[#FFFDF6] border-[#C49A45]/45 hover:bg-[#F2EBD9] hover:border-[#C49A45] text-[#2D0B0B]';
+                    let style = 'bg-[var(--primary-subtle-bg)]/30 border-[var(--accent-color)]/45 hover:bg-[var(--primary-subtle-hover)] hover:border-[var(--accent-color)] text-slate-800';
                     if (localQuizPhase === 'result') {
                       if (oIdx === localActiveQuestion.correctIndex) style = 'bg-emerald-100 border-emerald-600 text-emerald-950 font-bold';
                       else if (isSelected) style = 'bg-rose-100 border-rose-600 text-rose-950 font-bold';
                     } else if (isSelected) {
-                      style = 'border-amber-700 bg-[#F2EBD9] text-[#2D0B0B] ring-2 ring-amber-700/35';
+                      style = 'border-[var(--accent-dark)] bg-[var(--primary-subtle-hover)] text-slate-900 ring-2 ring-[var(--accent-color)]/35';
                     }
                     return (
                       <button
@@ -2783,8 +2783,8 @@ export default function App() {
                 </div>
 
                 {localQuizPhase === 'result' && localActiveQuestion.explanation && (
-                  <div className="bg-[#FFFDF6] border border-[#C49A45]/40 p-4 rounded-xl text-xs text-stone-700">
-                    <p className="font-adventure text-amber-800 font-bold mb-1 uppercase tracking-wider">Explanation:</p>
+                  <div className="bg-[var(--primary-subtle-bg)] border border-[var(--accent-color)]/40 p-4 rounded-xl text-xs text-stone-700">
+                    <p className="font-adventure text-[var(--accent-dark)] font-bold mb-1 uppercase tracking-wider">Explanation:</p>
                     {localActiveQuestion.explanation}
                   </div>
                 )}
@@ -2795,16 +2795,16 @@ export default function App() {
           {/* LOCAL VICTORY SUMMARY */}
           {localScreen === 'victory' && (
             <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 select-text animate-fade-in font-serif">
-              <div className="bg-[var(--primary-deep-medium)] border-4 border-[#D4AF37] max-w-xl w-full p-8 text-center rounded-[2rem] relative shadow-[0_0_60px_rgba(255,215,0,0.4)] animate-scale-in flex flex-col items-center text-white">
+              <div className="bg-[var(--primary-deep-medium)] border-4 border-[var(--accent-color)] max-w-xl w-full p-8 text-center rounded-[2rem] relative shadow-[0_0_60px_var(--accent-glow)] animate-scale-in flex flex-col items-center text-white">
                 {/* Shiny confetti glow overlay */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(255,215,0,0.15),transparent_70%)] pointer-events-none"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,var(--accent-glow),transparent_70%)] pointer-events-none"></div>
                 
                 <span className="text-7xl block mb-4 animate-bounce">🏆</span>
-                <h2 className="font-adventure text-4xl font-extrabold text-[#FFD700] mb-2 drop-shadow-[0_2px_5px_rgba(0,0,0,0.6)] uppercase tracking-widest">Victory!</h2>
+                <h2 className="font-adventure text-4xl font-extrabold text-[var(--accent-light)] mb-2 drop-shadow-[0_2px_5px_rgba(0,0,0,0.6)] uppercase tracking-widest">Victory!</h2>
                 <p className="text-amber-200/70 font-sans text-xs uppercase tracking-widest font-bold mb-6">Adventure Completed</p>
                 
                 {localLevelUpTo !== null && (
-                  <div className="bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 border border-yellow-300 px-6 py-2 rounded-2xl font-adventure text-sm font-bold mb-6 animate-pulse shadow-md">
+                  <div className="bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-light)] text-stone-950 border border-[var(--accent-light)] px-6 py-2 rounded-2xl font-adventure text-sm font-bold mb-6 animate-pulse shadow-md">
                     🎉 LEVEL UP! You reached Level {localLevelUpTo}! 🎉
                   </div>
                 )}
@@ -2819,14 +2819,14 @@ export default function App() {
                   });
                   const winner = sorted[0];
                   return (
-                    <div className="bg-[var(--primary-deep-dark)] border border-[#D4AF37]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
-                      <h4 className="text-xs font-extrabold text-[#FFD700] uppercase tracking-wider mb-3 text-center">Champion: {winner.avatar} {winner.name}</h4>
+                    <div className="bg-[var(--primary-deep-dark)] border border-[var(--accent-color)]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
+                      <h4 className="text-xs font-extrabold text-[var(--accent-light)] uppercase tracking-wider mb-3 text-center">Champion: {winner.avatar} {winner.name}</h4>
                       <div className="grid grid-cols-2 gap-4 text-center">
-                        <div className="bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-3 rounded-2xl">
+                        <div className="bg-[var(--primary-deep-medium)] border border-[var(--accent-color)]/35 p-3 rounded-2xl">
                           <span className="text-[10px] block text-amber-200/50 uppercase font-bold">XP Gained</span>
                           <span className="text-lg font-bold text-white">+{winner.xp} XP</span>
                         </div>
-                        <div className="bg-[var(--primary-deep-medium)] border border-[#D4AF37]/35 p-3 rounded-2xl">
+                        <div className="bg-[var(--primary-deep-medium)] border border-[var(--accent-color)]/35 p-3 rounded-2xl">
                           <span className="text-[10px] block text-amber-200/50 uppercase font-bold">Coins Earned</span>
                           <span className="text-lg font-bold text-white">+{winner.coins} Gold</span>
                         </div>
@@ -2844,11 +2844,11 @@ export default function App() {
                     if (a.position !== b.position) return b.position - a.position;
                     return b.xp - a.xp;
                   }).map((p, idx) => (
-                    <div key={p.id} className="flex items-center justify-between p-3 bg-[var(--primary-deep-dark)] border border-[#D4AF37]/30 rounded-xl text-xs text-white">
+                    <div key={p.id} className="flex items-center justify-between p-3 bg-[var(--primary-deep-dark)] border border-[var(--accent-color)]/30 rounded-xl text-xs text-white">
                       <span className="font-bold">#{idx+1} {p.avatar} {p.name}</span>
                       <div className="flex gap-2">
                         {localCalculateBadges(p).map((b, bIdx) => (
-                          <span key={bIdx} className="bg-[var(--primary-deep)] border border-[#D4AF37]/45 text-[#FFD700] text-[7px] px-1.5 py-0.5 rounded font-bold">{b}</span>
+                          <span key={bIdx} className="bg-[var(--primary-deep)] border border-[var(--accent-color)]/45 text-[var(--accent-light)] text-[7px] px-1.5 py-0.5 rounded font-bold">{b}</span>
                         ))}
                       </div>
                       <span className="font-semibold text-amber-200/80">{p.xp} XP | {p.coins} Coins</span>
@@ -2859,13 +2859,13 @@ export default function App() {
                 <div className="flex flex-wrap gap-4 w-full justify-center">
                   <button
                     onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ localScreen: 'setup' }); }}
-                    className="px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800 text-white font-bold text-xs shadow-md active:translate-y-0.5 transition-all font-adventure uppercase tracking-wider border-b-4 border-amber-900"
+                    className="px-6 py-3 rounded-full bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-dark)] hover:from-[var(--accent-light)] hover:to-[var(--accent-color)] text-white font-bold text-xs shadow-md active:translate-y-0.5 transition-all font-adventure uppercase tracking-wider border-b-4 border-[var(--accent-dark)]"
                   >
                     Play Again
                   </button>
                   <button
                     onClick={() => { sounds.playBeep(440, 'sine', 0.1); navigateTo({ viewMode: 'selection' }); }}
-                    className="px-6 py-3 rounded-full bg-[var(--primary-deep)] hover:bg-[var(--primary-deep-medium)] text-[#FFD700] border-2 border-[#D4AF37]/80 font-bold text-xs shadow-md active:translate-y-0.5 transition-all font-adventure uppercase tracking-wider"
+                    className="px-6 py-3 rounded-full bg-[var(--primary-deep)] hover:bg-[var(--primary-deep-medium)] text-[var(--accent-light)] border-2 border-[var(--accent-color)]/80 font-bold text-xs shadow-md active:translate-y-0.5 transition-all font-adventure uppercase tracking-wider"
                   >
                     Exit Game
                   </button>

@@ -114,7 +114,7 @@ export const getTileSymbol = (tIdx: number): string => {
 };
 
 export const getArrowColor = (idx: number): string => {
-  return '#FFD700'; // Simple high-contrast gold for the few helper direction arrows
+  return 'var(--accent-color)'; // Theme-responsive accent color
 };
 
 export const getPCBPath = (coords: { x: number; y: number }[]): string => {

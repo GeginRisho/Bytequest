@@ -25,6 +25,38 @@
   --primary-deep: #1E3A8A;
   --primary-deep-medium: #1E293B;
   --primary-deep-dark: #0F172A;
+
+  --accent-color: #D4AF37;
+  --accent-dark: #C49A45;
+  --accent-light: #FFD700;
+  --accent-glow: rgba(255, 215, 0, 0.4);
+  --accent-rgb: 212, 175, 55;
+  --accent-dark-rgb: 196, 154, 69;
+  --accent-light-rgb: 255, 215, 0;
+
+  --tile-blue-border: #38BDF8;
+  --tile-blue-bg: linear-gradient(135deg, #07152B 0%, #0F2A56 100%);
+  --tile-blue-shadow: 0 0 10px rgba(56, 189, 248, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-green-border: #34D399;
+  --tile-green-bg: linear-gradient(135deg, #022011 0%, #063C21 100%);
+  --tile-green-shadow: 0 0 10px rgba(52, 211, 153, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-orange-border: #FB923C;
+  --tile-orange-bg: linear-gradient(135deg, #2E0B02 0%, #541707 100%);
+  --tile-orange-shadow: 0 0 10px rgba(249, 115, 22, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-red-border: #FCA5A5;
+  --tile-red-bg: linear-gradient(135deg, #300303 0%, #5A0808 100%);
+  --tile-red-shadow: 0 0 10px rgba(239, 68, 68, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-gold-border: #FDE047;
+  --tile-gold-bg: linear-gradient(135deg, #2E1502 0%, #542907 100%);
+  --tile-gold-shadow: 0 0 14px rgba(253, 224, 71, 0.25), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-purple-border: #C084FC;
+  --tile-purple-bg: linear-gradient(135deg, #250346 0%, #430B7C 100%);
+  --tile-purple-shadow: 0 0 10px rgba(168, 85, 247, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
 }
 
 [data-theme="blue-gold"] {
@@ -51,6 +83,38 @@
   --primary-deep: #1E3A8A;
   --primary-deep-medium: #1E293B;
   --primary-deep-dark: #0F172A;
+
+  --accent-color: #D4AF37;
+  --accent-dark: #C49A45;
+  --accent-light: #FFD700;
+  --accent-glow: rgba(255, 215, 0, 0.4);
+  --accent-rgb: 212, 175, 55;
+  --accent-dark-rgb: 196, 154, 69;
+  --accent-light-rgb: 255, 215, 0;
+
+  --tile-blue-border: #38BDF8;
+  --tile-blue-bg: linear-gradient(135deg, #07152B 0%, #0F2A56 100%);
+  --tile-blue-shadow: 0 0 10px rgba(56, 189, 248, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-green-border: #34D399;
+  --tile-green-bg: linear-gradient(135deg, #022011 0%, #063C21 100%);
+  --tile-green-shadow: 0 0 10px rgba(52, 211, 153, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-orange-border: #FB923C;
+  --tile-orange-bg: linear-gradient(135deg, #2E0B02 0%, #541707 100%);
+  --tile-orange-shadow: 0 0 10px rgba(249, 115, 22, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-red-border: #FCA5A5;
+  --tile-red-bg: linear-gradient(135deg, #300303 0%, #5A0808 100%);
+  --tile-red-shadow: 0 0 10px rgba(239, 68, 68, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-gold-border: #FDE047;
+  --tile-gold-bg: linear-gradient(135deg, #2E1502 0%, #542907 100%);
+  --tile-gold-shadow: 0 0 14px rgba(253, 224, 71, 0.25), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-purple-border: #C084FC;
+  --tile-purple-bg: linear-gradient(135deg, #250346 0%, #430B7C 100%);
+  --tile-purple-shadow: 0 0 10px rgba(168, 85, 247, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
 }
 
 [data-theme="red-gold"] {
@@ -77,6 +141,38 @@
   --primary-deep: #5A1A1A;
   --primary-deep-medium: #3B0F0F;
   --primary-deep-dark: #2A0F0F;
+
+  --accent-color: #D4AF37;
+  --accent-dark: #C49A45;
+  --accent-light: #FFD700;
+  --accent-glow: rgba(255, 215, 0, 0.4);
+  --accent-rgb: 212, 175, 55;
+  --accent-dark-rgb: 196, 154, 69;
+  --accent-light-rgb: 255, 215, 0;
+
+  --tile-blue-border: #FCA5A5;
+  --tile-blue-bg: linear-gradient(135deg, #300303 0%, #5A0808 100%);
+  --tile-blue-shadow: 0 0 10px rgba(239, 68, 68, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-green-border: #FDE047;
+  --tile-green-bg: linear-gradient(135deg, #2E1502 0%, #542907 100%);
+  --tile-green-shadow: 0 0 10px rgba(253, 224, 71, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-orange-border: #FB923C;
+  --tile-orange-bg: linear-gradient(135deg, #2E0B02 0%, #541707 100%);
+  --tile-orange-shadow: 0 0 10px rgba(249, 115, 22, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-red-border: #EF4444;
+  --tile-red-bg: linear-gradient(135deg, #450A0A 0%, #7F1D1D 100%);
+  --tile-red-shadow: 0 0 14px rgba(239, 68, 68, 0.35), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-gold-border: #FDE047;
+  --tile-gold-bg: linear-gradient(135deg, #2E1502 0%, #542907 100%);
+  --tile-gold-shadow: 0 0 14px rgba(253, 224, 71, 0.25), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-purple-border: #C084FC;
+  --tile-purple-bg: linear-gradient(135deg, #250346 0%, #430B7C 100%);
+  --tile-purple-shadow: 0 0 10px rgba(168, 85, 247, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
 }
 
 [data-theme="green-gold"] {
@@ -103,6 +199,38 @@
   --primary-deep: #064E3B;
   --primary-deep-medium: #064E3B;
   --primary-deep-dark: #022C22;
+
+  --accent-color: #D4AF37;
+  --accent-dark: #C49A45;
+  --accent-light: #FFD700;
+  --accent-glow: rgba(255, 215, 0, 0.4);
+  --accent-rgb: 212, 175, 55;
+  --accent-dark-rgb: 196, 154, 69;
+  --accent-light-rgb: 255, 215, 0;
+
+  --tile-blue-border: #34D399;
+  --tile-blue-bg: linear-gradient(135deg, #022011 0%, #063C21 100%);
+  --tile-blue-shadow: 0 0 10px rgba(52, 211, 153, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-green-border: #FDE047;
+  --tile-green-bg: linear-gradient(135deg, #2E1502 0%, #542907 100%);
+  --tile-green-shadow: 0 0 10px rgba(253, 224, 71, 0.25), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-orange-border: #FB923C;
+  --tile-orange-bg: linear-gradient(135deg, #2E0B02 0%, #541707 100%);
+  --tile-orange-shadow: 0 0 10px rgba(249, 115, 22, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-red-border: #FCA5A5;
+  --tile-red-bg: linear-gradient(135deg, #300303 0%, #5A0808 100%);
+  --tile-red-shadow: 0 0 10px rgba(239, 68, 68, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-gold-border: #FDE047;
+  --tile-gold-bg: linear-gradient(135deg, #2E1502 0%, #542907 100%);
+  --tile-gold-shadow: 0 0 14px rgba(253, 224, 71, 0.25), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-purple-border: #C084FC;
+  --tile-purple-bg: linear-gradient(135deg, #250346 0%, #430B7C 100%);
+  --tile-purple-shadow: 0 0 10px rgba(168, 85, 247, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
 }
 
 [data-theme="purple-gold"] {
@@ -129,6 +257,38 @@
   --primary-deep: #4C1D95;
   --primary-deep-medium: #4C1D95;
   --primary-deep-dark: #2E1065;
+
+  --accent-color: #D4AF37;
+  --accent-dark: #C49A45;
+  --accent-light: #FFD700;
+  --accent-glow: rgba(255, 215, 0, 0.4);
+  --accent-rgb: 212, 175, 55;
+  --accent-dark-rgb: 196, 154, 69;
+  --accent-light-rgb: 255, 215, 0;
+
+  --tile-blue-border: #C084FC;
+  --tile-blue-bg: linear-gradient(135deg, #250346 0%, #430B7C 100%);
+  --tile-blue-shadow: 0 0 10px rgba(168, 85, 247, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-green-border: #FDE047;
+  --tile-green-bg: linear-gradient(135deg, #2E1502 0%, #542907 100%);
+  --tile-green-shadow: 0 0 10px rgba(253, 224, 71, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-orange-border: #FB923C;
+  --tile-orange-bg: linear-gradient(135deg, #2E0B02 0%, #541707 100%);
+  --tile-orange-shadow: 0 0 10px rgba(249, 115, 22, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-red-border: #FCA5A5;
+  --tile-red-bg: linear-gradient(135deg, #300303 0%, #5A0808 100%);
+  --tile-red-shadow: 0 0 10px rgba(239, 68, 68, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-gold-border: #FDE047;
+  --tile-gold-bg: linear-gradient(135deg, #2E1502 0%, #542907 100%);
+  --tile-gold-shadow: 0 0 14px rgba(253, 224, 71, 0.25), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
+
+  --tile-purple-border: #8B5CF6;
+  --tile-purple-bg: linear-gradient(135deg, #2E1065 0%, #4C1D95 100%);
+  --tile-purple-shadow: 0 0 14px rgba(139, 92, 246, 0.35), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15);
 }
 
 @tailwind base;
@@ -529,19 +689,19 @@
 .parchment-scroll {
   background-color: #F5EFEB;
   background-image: 
-    radial-gradient(rgba(139, 92, 26, 0.05) 1px, transparent 0),
+    radial-gradient(rgba(var(--accent-dark-rgb), 0.05) 1px, transparent 0),
     linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px);
   background-size: 16px 16px;
-  border: 4px solid #C49A45;
+  border: 4px solid var(--accent-dark);
   box-shadow: 
-    inset 0 0 20px rgba(139, 92, 26, 0.15),
+    inset 0 0 20px rgba(var(--accent-dark-rgb), 0.15),
     4px 4px 20px rgba(0,0,0,0.35);
   border-radius: 1.5rem;
 }
 
 /* Stat Box Gold Outline */
 .gold-stat-border {
-  border: 1.5px solid #C49A45;
+  border: 1.5px solid var(--accent-dark);
   background: #FFFDF9;
 }
 
@@ -584,7 +744,7 @@
 }
 
 .board-bg {
-  background: radial-gradient(circle at 50% 50%, #0a1f24 0%, #030a0d 100%) !important;
+  background: radial-gradient(circle at 50% 50%, var(--board-bg-mid) 0%, var(--board-bg-start) 100%) !important;
   position: relative;
   overflow: visible !important;
 }
@@ -594,8 +754,8 @@
   position: absolute;
   inset: 0;
   background-image: 
-    linear-gradient(rgba(34, 211, 238, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 211, 238, 0.025) 1px, transparent 1px);
+    linear-gradient(rgba(var(--primary-light-rgb), 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--primary-light-rgb), 0.025) 1px, transparent 1px);
   background-size: 20px 20px;
   pointer-events: none;
   z-index: 0;
@@ -631,34 +791,34 @@
 
 /* 3D Motherboard Microchip Categories */
 .hex-blue {
-  --border-color: #38BDF8 !important;
-  background: linear-gradient(135deg, #07152B 0%, #0F2A56 100%) !important;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+  --border-color: var(--tile-blue-border) !important;
+  background: var(--tile-blue-bg) !important;
+  box-shadow: var(--tile-blue-shadow) !important;
 }
 .hex-green {
-  --border-color: #34D399 !important;
-  background: linear-gradient(135deg, #022011 0%, #063C21 100%) !important;
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+  --border-color: var(--tile-green-border) !important;
+  background: var(--tile-green-bg) !important;
+  box-shadow: var(--tile-green-shadow) !important;
 }
 .hex-orange {
-  --border-color: #FB923C !important;
-  background: linear-gradient(135deg, #2E0B02 0%, #541707 100%) !important;
-  box-shadow: 0 0 10px rgba(249, 115, 22, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+  --border-color: var(--tile-orange-border) !important;
+  background: var(--tile-orange-bg) !important;
+  box-shadow: var(--tile-orange-shadow) !important;
 }
 .hex-red {
-  --border-color: #FCA5A5 !important;
-  background: linear-gradient(135deg, #300303 0%, #5A0808 100%) !important;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+  --border-color: var(--tile-red-border) !important;
+  background: var(--tile-red-bg) !important;
+  box-shadow: var(--tile-red-shadow) !important;
 }
 .hex-gold {
-  --border-color: #FDE047 !important;
-  background: linear-gradient(135deg, #2E1502 0%, #542907 100%) !important;
-  box-shadow: 0 0 14px rgba(253, 224, 71, 0.25), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+  --border-color: var(--tile-gold-border) !important;
+  background: var(--tile-gold-bg) !important;
+  box-shadow: var(--tile-gold-shadow) !important;
 }
 .hex-purple {
-  --border-color: #C084FC !important;
-  background: linear-gradient(135deg, #250346 0%, #430B7C 100%) !important;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.2), inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.15) !important;
+  --border-color: var(--tile-purple-border) !important;
+  background: var(--tile-purple-bg) !important;
+  box-shadow: var(--tile-purple-shadow) !important;
 }
 
 /* Glow Ring/Pulse for Destination Tile */
@@ -732,7 +892,7 @@
   width: 140%;
   height: 140%;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(255, 215, 0, 0.25) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.25) 0%, transparent 70%);
   animation: activeGlowRingPulse 1.5s infinite ease-in-out;
   pointer-events: none;
   z-index: 4;

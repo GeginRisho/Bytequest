@@ -70,9 +70,9 @@ export default function Launchpad({
       <div className="w-full max-w-4xl flex items-center justify-between z-10 gap-4">
         {activeStudent ? (
           <div onClick={() => setShowProfilePanel(true)}
-            className="flex items-center gap-3 bg-black/60 border border-[#7A0C0C]/40 hover:border-white/30 px-3 py-2 rounded-2xl cursor-pointer select-none transition-all active:scale-98 shadow-[0_5px_15px_rgba(0,0,0,0.6)] backdrop-blur-sm max-w-[280px]">
+            className="flex items-center gap-3 bg-black/60 border border-[var(--primary-color)]/40 hover:border-white/30 px-3 py-2 rounded-2xl cursor-pointer select-none transition-all active:scale-98 shadow-[0_5px_15px_rgba(0,0,0,0.6)] backdrop-blur-sm max-w-[280px]">
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#8B0000] to-[#3B0F0F] border border-white/20 flex items-center justify-center text-xl shadow-inner">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-deep-medium)] border border-white/20 flex items-center justify-center text-xl shadow-inner">
                 {localStorage.getItem(`bytequest_student_avatar_${activeStudent.id}`) || "👾"}
               </div>
               <div className="absolute -bottom-1 -right-1 bg-amber-500 text-stone-950 font-adventure text-[7px] font-extrabold px-1 py-0.5 rounded border border-stone-950 shadow">
@@ -92,7 +92,7 @@ export default function Launchpad({
           </div>
         ) : (
           <div className="flex items-center gap-2 text-white/40 bg-black/30 px-3 py-2 rounded-2xl border border-white/5 backdrop-blur-sm">
-            <Compass className="w-4 h-4 animate-spin-slow text-[#7A0C0C]" />
+            <Compass className="w-4 h-4 animate-spin-slow text-[var(--primary-color)]" />
             <span className="font-adventure text-[9px] tracking-widest uppercase font-bold text-white/50">BYTEQUEST 2.0</span>
           </div>
         )}
@@ -111,7 +111,7 @@ export default function Launchpad({
           {!activeStudent && (
             <div className="flex gap-1.5 ml-1">
               <button id="launchpad-signin-btn" onClick={onSignIn}
-                className="px-3 py-2 bg-gradient-to-b from-[#8B0000] to-[#5A0F0F] border border-white/20 text-white font-adventure text-[9px] uppercase font-extrabold tracking-widest rounded-xl transition-all hover:brightness-115 active:scale-95 shadow-md">
+                className="px-3 py-2 bg-gradient-to-b from-[var(--primary-color)] to-[var(--primary-deep-medium)] border border-white/20 text-white font-adventure text-[9px] uppercase font-extrabold tracking-widest rounded-xl transition-all hover:brightness-115 active:scale-95 shadow-md">
                 Sign In
               </button>
               <button id="launchpad-signup-btn" onClick={onSignUp}
@@ -130,7 +130,7 @@ export default function Launchpad({
           </h1>
           <p className="text-amber-200/50 font-adventure text-[9px] tracking-widest uppercase mb-2">Computer Science Arena</p>
           {launchpadError && (
-            <div className="mt-4 inline-block bg-[#7A0C0C]/90 border-2 border-[#D32F2F] text-[#FFD700] px-4 py-2 rounded-xl text-xs font-adventure font-extrabold uppercase tracking-wider animate-bounce shadow-lg max-w-[280px] text-center drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)]">
+            <div className="mt-4 inline-block bg-[var(--primary-deep-medium)]/90 border-2 border-[var(--primary-color)] text-[#FFD700] px-4 py-2 rounded-xl text-xs font-adventure font-extrabold uppercase tracking-wider animate-bounce shadow-lg max-w-[280px] text-center drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)]">
               ⚠️ {launchpadError}
             </div>
           )}
@@ -196,12 +196,12 @@ export default function Launchpad({
 
       {showProfilePanel && activeStudent && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 select-none animate-fade-in">
-          <div className="relative bg-gradient-to-b from-[#3B0F0F] to-[#1A0505] border-3 border-[#D32F2F] text-white p-6 sm:p-8 rounded-[2.5rem] w-full max-w-sm shadow-[0_0_50px_rgba(122,12,12,0.6)] animate-scale-in flex flex-col items-center font-sans overflow-y-auto max-h-[90vh]">
+          <div className="relative bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] text-white p-6 sm:p-8 rounded-[2.5rem] w-full max-w-sm shadow-[0_0_50px_rgba(var(--primary-rgb),0.6)] animate-scale-in flex flex-col items-center font-sans overflow-y-auto max-h-[90vh]">
             <button onClick={() => setShowProfilePanel(false)} className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
-            <h2 className="font-adventure text-lg font-extrabold text-[#D32F2F] uppercase tracking-widest mb-4">Player Profile</h2>
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#8B0000] to-[#5A0F0F] border-2 border-white/20 flex items-center justify-center text-4xl shadow-inner mb-3 relative shrink-0">
+            <h2 className="font-adventure text-lg font-extrabold text-[var(--primary-light)] uppercase tracking-widest mb-4">Player Profile</h2>
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-deep-medium)] border-2 border-white/20 flex items-center justify-center text-4xl shadow-inner mb-3 relative shrink-0">
               {localStorage.getItem(`bytequest_student_avatar_${activeStudent.id}`) || "👾"}
               <div className="absolute -bottom-2 -right-2 bg-amber-500 text-stone-950 font-adventure text-[9px] font-extrabold px-2 py-0.5 rounded-lg border border-stone-950 shadow">
                 LEVEL {activeStudent.level}
@@ -212,21 +212,21 @@ export default function Launchpad({
               {activeStudent.email && <span className="text-[9px] font-semibold text-white/50 block tracking-wide lowercase mt-0.5 truncate px-2">{activeStudent.email}</span>}
             </div>
             <div className="grid grid-cols-2 gap-3 w-full mb-5 text-center">
-              <div className="bg-[#2A0F0F] border border-white/10 p-3 rounded-2xl flex flex-col justify-between">
+              <div className="bg-[var(--primary-deep-dark)] border border-white/10 p-3 rounded-2xl flex flex-col justify-between">
                 <span className="text-[8px] block text-white/40 uppercase font-bold tracking-wider mb-1">XP Progress</span>
                 <span className="text-[11px] font-extrabold text-emerald-400 block">{activeStudent.xp} / 1000</span>
                 <div className="w-full h-1.5 bg-stone-950 rounded-full overflow-hidden mt-1.5">
                   <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, (activeStudent.xp / 1000) * 100)}%` }} />
                 </div>
               </div>
-              <div className="bg-[#2A0F0F] border border-white/10 p-3 rounded-2xl flex flex-col justify-center items-center">
+              <div className="bg-[var(--primary-deep-dark)] border border-white/10 p-3 rounded-2xl flex flex-col justify-center items-center">
                 <span className="text-[8px] block text-white/40 uppercase font-bold tracking-wider mb-1">Gold Reserves</span>
                 <span className="text-xs font-extrabold text-amber-400 flex items-center gap-1">🪙 {activeStudent.coins}</span>
               </div>
             </div>
-            <div className="w-full bg-[#2A0F0F] border border-white/10 rounded-2xl p-4 mb-5 text-xs space-y-2 font-sans">
+            <div className="w-full bg-[var(--primary-deep-dark)] border border-white/10 rounded-2xl p-4 mb-5 text-xs space-y-2 font-sans">
               <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-1">
-                <span className="font-adventure text-[9px] font-extrabold text-[#D32F2F] uppercase tracking-wider">Campaign Stats</span>
+                <span className="font-adventure text-[9px] font-extrabold text-[var(--primary-light)] uppercase tracking-wider">Campaign Stats</span>
               </div>
               <div className="flex justify-between font-semibold text-white/80">
                 <span className="text-white/40">Games Played</span><span>{activeStudent.gamesPlayed ?? activeStudent.matchesPlayed ?? 0}</span>
@@ -245,11 +245,11 @@ export default function Launchpad({
               </div>
             </div>
             <button onClick={() => { setShowProfilePanel(false); onSignOut(); }}
-              className="w-full py-3 mb-3 bg-[#3B0F0F] hover:bg-[#5A1A1A] text-rose-400 hover:text-rose-300 font-adventure font-extrabold rounded-xl border border-rose-900/40 uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md">
+              className="w-full py-3 mb-3 bg-[var(--primary-deep-medium)] hover:bg-[var(--primary-deep)] text-rose-400 hover:text-rose-300 font-adventure font-extrabold rounded-xl border border-rose-900/40 uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md">
               🚪 Sign Out
             </button>
             <button onClick={() => setShowProfilePanel(false)}
-              className="w-full py-3 bg-[#D32F2F] hover:bg-[#B91C1C] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[#991B1B] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md">
+              className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md">
               Close Panel
             </button>
           </div>
