@@ -1111,16 +1111,16 @@ export default function StudentGame({
     const pendingAssignments = activeStudent.assignments ? activeStudent.assignments.filter((a: any) => !a.isCompleted) : [];
 
     return (
-      <div className="flex-1 flex flex-col min-h-screen bg-gradient-to-b from-[var(--primary-deep-dark)] via-[var(--primary-deep-dark)] to-[#000000] text-white relative pb-20 select-none">
+      <div className="flex-1 flex flex-col min-h-screen bg-gradient-to-b from-[var(--board-bg-start)] via-[var(--board-bg-mid)] to-[var(--board-bg-end)] text-slate-800 relative pb-20 select-none">
         
         {/* PREMIUM GAME OVERLAY HUD (TOP BAR) */}
-        <header className="sticky top-0 z-40 bg-[var(--primary-deep-dark)]/95 backdrop-blur border-b-3 border-[var(--primary-color)] shadow-lg px-4 py-3 select-none text-white">
+        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b-3 border-[var(--primary-color)] shadow-md px-4 py-3 select-none text-slate-800">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
             
             <div className="flex items-center gap-2.5">
               <button
                 onClick={handleGoBack}
-                className="px-3.5 py-2 bg-gradient-to-b from-[var(--primary-dark)] to-[var(--primary-deep-medium)] hover:brightness-110 text-white font-adventure font-extrabold rounded-xl border border-white/20 text-[9px] uppercase tracking-widest transition-all active:scale-95 shadow-md mr-1.5"
+                className="px-3.5 py-2 bg-[var(--primary-subtle-bg)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-subtle-text)] font-adventure font-extrabold rounded-xl border border-[var(--primary-subtle-border)] text-[9px] uppercase tracking-widest transition-all active:scale-95 shadow-sm mr-1.5"
                 title="Return to Menu"
               >
                 ← Exit
@@ -1129,7 +1129,7 @@ export default function StudentGame({
               {/* Player Info (Avatar, Name, Grade) */}
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-xl border border-white/20 bg-gradient-to-br from-[var(--primary-dark)] to-[var(--primary-deep-medium)] flex items-center justify-center text-xl shadow-md">
+                  <div className="w-10 h-10 rounded-xl border border-[var(--primary-subtle-border)] bg-white flex items-center justify-center text-xl shadow-sm">
                     {editAvatar || '👾'}
                   </div>
                   <div className="absolute -bottom-1 -right-1 bg-amber-500 text-stone-950 font-adventure text-[7px] font-extrabold px-1 py-0.5 rounded border border-stone-950 shadow">
@@ -1137,19 +1137,19 @@ export default function StudentGame({
                   </div>
                 </div>
                 <div className="leading-tight">
-                  <span className="font-adventure text-xs font-extrabold text-white block truncate max-w-[120px] uppercase">{activeStudent.name}</span>
-                  <span className="text-[8px] bg-[var(--primary-deep-medium)]/55 border border-[var(--primary-color)]/40 text-amber-250 px-1.5 py-0.5 rounded-lg font-bold uppercase">Class {activeStudent.grade || 11}</span>
+                  <span className="font-adventure text-xs font-extrabold text-slate-800 block truncate max-w-[120px] uppercase">{activeStudent.name}</span>
+                  <span className="text-[8px] bg-[var(--primary-subtle-bg)] border border-[var(--primary-subtle-border)] text-[var(--primary-subtle-text)] px-1.5 py-0.5 rounded-lg font-bold uppercase">Class {activeStudent.grade || 11}</span>
                 </div>
               </div>
             </div>
 
             {/* XP progress bar */}
             <div className="flex-1 max-w-[180px] sm:max-w-xs space-y-1 hidden min-[380px]:block">
-              <div className="flex justify-between text-[8px] font-bold text-white/50 uppercase tracking-wider font-adventure leading-none">
+              <div className="flex justify-between text-[8px] font-bold text-slate-500 uppercase tracking-wider font-adventure leading-none">
                 <span>XP Level Progress</span>
                 <span>{activeStudent.xp} / 1000</span>
               </div>
-              <div className="w-full h-2 bg-stone-950 rounded-full overflow-hidden border border-white/5 shadow-inner">
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-inner">
                 <div 
                   className="h-full bg-emerald-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" 
                   style={{ width: `${Math.min(100, (activeStudent.xp / 1000) * 100)}%` }}
@@ -1159,22 +1159,22 @@ export default function StudentGame({
 
             {/* Coins Counter & Utility Buttons */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 bg-[var(--primary-deep-medium)] border border-[#FFD700]/30 px-2.5 py-1 rounded-xl text-amber-400 font-bold text-xs shadow-md">
+              <div className="flex items-center gap-1.5 bg-white border border-amber-300 px-2.5 py-1 rounded-xl text-amber-600 font-bold text-xs shadow-sm">
                 <span>🪙</span>
                 <span className="font-mono">{activeStudent.coins}</span>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setAudioOn(!audioOn)}
-                  className="p-2 rounded-xl border border-white/10 bg-black/40 hover:border-white/20 text-white/70 hover:text-white transition-all active:scale-95 shadow-md"
+                  className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-all active:scale-95 shadow-sm"
                   title="Toggle Sound"
                 >
                   {audioOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-[var(--primary-color)]" />}
                 </button>
                 <button 
                   onClick={handleLogout}
-                  className="p-2 rounded-xl border border-[var(--primary-dark)]/40 bg-[var(--primary-deep-medium)]/40 hover:bg-[var(--primary-deep-medium)]/60 text-white/80 transition-all active:scale-95 shadow-md"
+                  className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-all active:scale-95 shadow-sm"
                   title="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
@@ -1417,7 +1417,11 @@ export default function StudentGame({
                           className="w-full bg-parchment-light border border-gold-dark/45 rounded px-2.5 py-1 text-xs text-center font-bold font-mono tracking-wider focus:outline-none h-8"
                           required
                         />
-                        {joinError && <p className="text-[8px] text-[var(--primary-subtle-text)] text-center font-bold truncate">{joinError}</p>}
+                        {joinError && (
+                          <div className="alert-error text-[9px] p-2 rounded-lg font-bold text-center truncate mb-1">
+                            {joinError}
+                          </div>
+                        )}
                         <button type="submit" className="w-full h-11 bg-gold text-white font-bold text-[10px] md:text-xs rounded-lg uppercase tracking-wide min-h-[44px] flex items-center justify-center">Verify</button>
                       </form>
                     ) : (
@@ -1896,12 +1900,12 @@ export default function StudentGame({
               </form>
 
               {joinClassroomStatus && (
-                <div className="bg-emerald-950/70 border border-emerald-500/30 text-emerald-400 p-4 rounded-xl text-xs font-semibold">
+                <div className="alert-success p-4 rounded-xl text-xs font-semibold">
                   {joinClassroomStatus}
                 </div>
               )}
               {joinClassroomError && (
-                <div className="bg-rose-950/70 border border-rose-500/30 text-rose-400 p-4 rounded-xl text-xs font-semibold">
+                <div className="alert-error p-4 rounded-xl text-xs font-semibold">
                   {joinClassroomError}
                 </div>
               )}
@@ -2150,12 +2154,12 @@ export default function StudentGame({
                       </div>
                     </div>
                     {profileSaveError && (
-                      <div className="bg-rose-950/50 text-rose-300 text-xs p-2.5 rounded-lg border border-rose-500/40 font-semibold">
+                      <div className="alert-error text-xs p-2.5 rounded-lg font-semibold">
                         {profileSaveError}
                       </div>
                     )}
                     {profileSaveStatus && (
-                      <div className="bg-emerald-950/50 text-emerald-300 text-xs p-2.5 rounded-lg border border-emerald-500/40 font-semibold">
+                      <div className="alert-success text-xs p-2.5 rounded-lg font-semibold">
                         {profileSaveStatus}
                       </div>
                     )}

@@ -70,6 +70,7 @@ interface TeacherDashboardProps {
   setShowTeacherModal: (modal: 'create' | 'edit' | 'reset-password' | null) => void;
   theme: string;
   setTheme: (theme: string) => void;
+  onLoginStateChange?: (authenticated: boolean) => void;
 }
 
 export default function TeacherDashboard({ 
@@ -80,10 +81,12 @@ export default function TeacherDashboard({
   showTeacherModal,
   setShowTeacherModal,
   theme,
-  setTheme
+  setTheme,
+  onLoginStateChange
 }: TeacherDashboardProps) {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [authError, setAuthError] = useState<string>('');
@@ -94,8 +97,20 @@ export default function TeacherDashboard({
     if (cachedTeacher) {
       setTeacherInfo(JSON.parse(cachedTeacher));
       setIsAuthenticated(true);
+      onLoginStateChange?.(true);
     }
   }, []);
+
+  useEffect(() => {
+    const handleToggle = () => {
+      setSidebarOpen(prev => !prev);
+    };
+    window.addEventListener('toggle-teacher-sidebar', handleToggle);
+    return () => {
+      window.removeEventListener('toggle-teacher-sidebar', handleToggle);
+    };
+  }, []);
+
   // Teacher Signup State (Public self-registration disabled; accounts created via Teacher Management only)
 
   // Teacher Management State
@@ -425,6 +440,7 @@ export default function TeacherDashboard({
       localStorage.setItem('bytequest_role', 'teacher');
       setTeacherInfo(data.teacher);
       setIsAuthenticated(true);
+      onLoginStateChange?.(true);
     } catch (err: any) {
       setAuthError('Connection failed. Backend is offline.');
     }
@@ -968,8 +984,8 @@ export default function TeacherDashboard({
             </div>
 
             {authError && (
-              <div className="bg-[var(--primary-subtle-bg)] text-[var(--primary-subtle-text)] text-xs p-2.5 rounded-xl border border-[var(--primary-subtle-border)] font-bold flex gap-1.5 items-center justify-center">
-                <AlertCircle className="w-4 h-4 shrink-0 text-[var(--primary-color)]" />
+              <div className="alert-error text-xs p-2.5 rounded-xl font-bold flex gap-1.5 items-center justify-center">
+                <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626]" />
                 <span>{authError}</span>
               </div>
             )}
@@ -1000,12 +1016,33 @@ export default function TeacherDashboard({
   // -------------------------------------------------------------
   return (
     <div className="flex flex-col md:flex-row max-w-7xl mx-auto w-full px-4 py-8 gap-8">
+      {/* Mobile Sidebar backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden animate-fade-in"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Redesigned exact 9 tab items sidebar */}
-      <aside className="w-full md:w-64 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-xl shrink-0 select-none">
+      <aside className={`bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-xl shrink-0 select-none transition-transform duration-300 z-50
+        fixed top-0 bottom-0 left-0 w-72 max-w-[80vw] h-full rounded-r-2xl rounded-l-none border-y-0 border-l-0
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:relative md:translate-x-0 md:w-64 md:h-auto md:rounded-2xl md:border
+      `}>
         <div className="space-y-6">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-            <Compass className="text-[var(--primary-color)] w-6 h-6" />
-            <span className="font-adventure text-lg font-bold text-slate-900">Teacher Console</span>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-2">
+              <Compass className="text-[var(--primary-color)] w-6 h-6" />
+              <span className="font-adventure text-lg font-bold text-slate-900">Teacher Console</span>
+            </div>
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="p-1 text-slate-400 hover:text-slate-700 md:hidden transition-colors"
+              title="Close Menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           <nav className="flex flex-col gap-1.5">
@@ -1023,7 +1060,10 @@ export default function TeacherDashboard({
             ].map(t => (
               <button 
                 key={t.id}
-                onClick={() => setActiveTab(t.id as any)}
+                onClick={() => {
+                  setActiveTab(t.id as any);
+                  setSidebarOpen(false);
+                }}
                 className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                   activeTab === t.id 
                     ? 'bg-[var(--primary-color)] text-white shadow-md shadow-[var(--primary-color)]/10' 
@@ -1047,6 +1087,7 @@ export default function TeacherDashboard({
               localStorage.removeItem('bytequest_teacher_info'); 
               localStorage.removeItem('bytequest_role'); 
               setIsAuthenticated(false); 
+              onLoginStateChange?.(false);
               onBack(); 
             }}
             className="w-full flex items-center justify-between text-left px-4 py-2.5 rounded-xl text-xs font-bold text-[var(--primary-subtle-text)] hover:bg-[var(--primary-subtle-bg)] transition-colors"

@@ -16,7 +16,8 @@ import {
   Award,
   Clock,
   BookOpen,
-  X
+  X,
+  Menu
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { io } from 'socket.io-client';
@@ -134,6 +135,9 @@ export default function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [theme, setTheme] = useState<string>(() => {
     return localStorage.getItem('bytequest-theme') || 'blue-gold';
+  });
+  const [isTeacherLoggedIn, setIsTeacherLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem('bytequest_role') === 'teacher' && !!localStorage.getItem('bytequest_teacher_info');
   });
 
   useEffect(() => {
@@ -1604,8 +1608,8 @@ export default function App() {
   useEffect(() => {
     const isDark = (viewMode === 'local' && localScreen === 'board') || viewMode === 'student' || viewMode === 'selection';
     if (isDark) {
-      document.body.style.backgroundColor = 'var(--primary-deep-dark)';
-      document.body.style.color = '#FFFFFF';
+      document.body.style.backgroundColor = 'var(--board-bg-start)';
+      document.body.style.color = '#1E293B';
     } else {
       document.body.style.backgroundColor = '#FDFBF7';
       document.body.style.color = '#1E293B';
@@ -1621,12 +1625,12 @@ export default function App() {
   return (
     <div className={`min-h-screen flex flex-col font-sans relative select-none ${
       isDarkThemeActive 
-        ? 'bg-gradient-to-b from-[var(--primary-deep-dark)] via-[var(--primary-deep-dark)] to-[#000000] text-white' 
+        ? 'bg-gradient-to-b from-[var(--board-bg-start)] via-[var(--board-bg-mid)] to-[var(--board-bg-end)] text-slate-800' 
         : 'bg-jungle-deep text-[#0F172A]'
     }`}>
       {toastMessage && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-bounce pointer-events-none">
-          <div className="bg-[var(--primary-deep-medium)] border-2 border-[var(--primary-color)] text-white px-6 py-3 rounded-2xl font-adventure font-extrabold text-sm uppercase tracking-widest shadow-[0_5px_20px_rgba(0,0,0,0.8)] flex items-center gap-2">
+          <div className="alert-warning px-6 py-3 rounded-2xl font-adventure font-extrabold text-sm uppercase tracking-widest shadow-md flex items-center gap-2">
             <span>⚠️</span> {toastMessage}
           </div>
         </div>
@@ -1636,11 +1640,11 @@ export default function App() {
       {viewMode !== 'selection' && (() => {
         const isGameBoardActive = (viewMode === 'local' && localScreen === 'board') || viewMode === 'student';
         return (
-          <header className={`border-b-3 ${isGameBoardActive ? 'border-[var(--accent-color)] bg-[var(--primary-deep-dark)] text-white' : 'border-[var(--primary-color)] bg-white/98 text-stone-900'} backdrop-blur px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-md`}>
+          <header className={`border-b-3 ${isGameBoardActive ? 'border-[var(--accent-color)] bg-white/95 text-slate-800' : 'border-[var(--primary-color)] bg-white/98 text-stone-900'} backdrop-blur px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-md`}>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleGlobalBack}
-                className={`mr-2 px-4 py-2 rounded-xl border-2 active:scale-95 transition-all text-xs font-bold font-adventure flex items-center gap-1.5 shadow-sm uppercase tracking-wider ${isGameBoardActive ? 'bg-[var(--primary-deep-medium)] border-[var(--accent-color)] text-[var(--accent-light)] hover:bg-[var(--primary-deep)]/50' : 'bg-[var(--primary-subtle-bg)] border-[var(--primary-color)] text-[var(--primary-color)] hover:bg-[var(--primary-subtle-hover)]/50'}`}
+                className={`mr-2 px-4 py-2 rounded-xl border-2 active:scale-95 transition-all text-xs font-bold font-adventure flex items-center gap-1.5 shadow-sm uppercase tracking-wider ${isGameBoardActive ? 'bg-white border-[var(--accent-color)] text-[var(--accent-dark)] hover:bg-[var(--primary-subtle-bg)]/80' : 'bg-[var(--primary-subtle-bg)] border-[var(--primary-color)] text-[var(--primary-color)] hover:bg-[var(--primary-subtle-hover)]/50'}`}
               >
                 ← Back
               </button>
@@ -1652,21 +1656,33 @@ export default function App() {
                   navigateTo({ viewMode: 'selection' });
                 }
               }}>
-                <Compass className={`w-8 h-8 animate-pulse-slow shrink-0 ${isGameBoardActive ? 'text-[var(--accent-light)]' : 'text-[var(--primary-color)]'}`} />
-                <h1 className={`font-adventure text-xl sm:text-2xl font-extrabold tracking-wider truncate uppercase ${isGameBoardActive ? 'text-[var(--accent-light)]' : 'text-[var(--primary-color)]'}`}>ByteQuest</h1>
+                <Compass className="w-8 h-8 animate-pulse-slow shrink-0 text-[var(--primary-color)]" />
+                <h1 className="font-adventure text-xl sm:text-2xl font-extrabold tracking-wider truncate uppercase text-[var(--primary-color)]">ByteQuest</h1>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2.5">
               <button 
                 onClick={() => setAudioOn(!audioOn)}
-                className={`p-2.5 rounded-xl border transition-colors shadow-sm ${isGameBoardActive ? 'border-[var(--accent-color)]/45 text-[var(--accent-light)]' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                className="p-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
               >
                 {audioOn 
                   ? <Volume2 className="w-4 h-4" /> 
-                  : <VolumeX className={`w-4 h-4 ${isGameBoardActive ? 'text-[var(--primary-light)]' : 'text-[var(--primary-color)]'}`} />
+                  : <VolumeX className="w-4 h-4 text-[var(--primary-color)]" />
                 }
               </button>
+              {viewMode === 'teacher' && isTeacherLoggedIn && (
+                <button
+                  id="teacher-hamburger-btn"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('toggle-teacher-sidebar'));
+                  }}
+                  className="p-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 md:hidden shadow-sm transition-colors"
+                  title="Open Menu"
+                >
+                  <Menu className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </header>
         );
@@ -1972,7 +1988,7 @@ export default function App() {
                       </div>
                       
                       {authError && (
-                        <p className="text-[var(--primary-light)] text-[10px] font-bold bg-[var(--primary-deep-dark)]/30 p-2.5 rounded-xl text-center border border-[var(--primary-dark)]/50 font-sans">
+                        <p className="alert-error text-[10px] font-bold p-2.5 rounded-xl text-center font-sans">
                           {authError}
                         </p>
                       )}
@@ -2061,7 +2077,7 @@ export default function App() {
                       </div>
                       
                       {authError && (
-                        <p className="text-[var(--primary-light)] text-[10px] font-bold bg-[var(--primary-deep-dark)]/30 p-2 rounded-lg text-center border border-[var(--primary-dark)]/50 font-sans">
+                        <p className="alert-error text-[10px] font-bold p-2 rounded-lg text-center font-sans">
                           {authError}
                         </p>
                       )}
@@ -2103,6 +2119,7 @@ export default function App() {
           setShowTeacherModal={handleTeacherShowModal}
           theme={theme}
           setTheme={setTheme}
+          onLoginStateChange={setIsTeacherLoggedIn}
         />
       )}
 

@@ -70,9 +70,9 @@ export default function Launchpad({
       <div className="w-full max-w-4xl flex items-center justify-between z-10 gap-4">
         {activeStudent ? (
           <div onClick={() => setShowProfilePanel(true)}
-            className="flex items-center gap-3 bg-black/60 border border-[var(--primary-color)]/40 hover:border-white/30 px-3 py-2 rounded-2xl cursor-pointer select-none transition-all active:scale-98 shadow-[0_5px_15px_rgba(0,0,0,0.6)] backdrop-blur-sm max-w-[280px]">
+            className="flex items-center gap-3 bg-white border-2 border-[var(--primary-color)] hover:border-[var(--primary-light)] px-3 py-2 rounded-2xl cursor-pointer select-none transition-all active:scale-98 shadow-sm max-w-[280px]">
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-deep-medium)] border border-white/20 flex items-center justify-center text-xl shadow-inner">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--primary-light)] to-[var(--primary-color)] flex items-center justify-center text-xl shadow-inner">
                 {localStorage.getItem(`bytequest_student_avatar_${activeStudent.id}`) || "👾"}
               </div>
               <div className="absolute -bottom-1 -right-1 bg-amber-500 text-stone-950 font-adventure text-[7px] font-extrabold px-1 py-0.5 rounded border border-stone-950 shadow">
@@ -81,41 +81,41 @@ export default function Launchpad({
             </div>
             <div className="leading-tight flex-1 min-w-0 space-y-1">
               <div className="flex items-center justify-between gap-3">
-                <span className="font-adventure text-[9px] font-extrabold text-white block truncate uppercase tracking-wide">{activeStudent.name}</span>
-                <span className="text-amber-400 text-[9px] font-extrabold flex items-center shrink-0">🪙 {activeStudent.coins}</span>
+                <span className="font-adventure text-[9px] font-extrabold text-slate-800 block truncate uppercase tracking-wide">{activeStudent.name}</span>
+                <span className="text-amber-600 text-[9px] font-extrabold flex items-center shrink-0">🪙 {activeStudent.coins}</span>
               </div>
-              <div className="w-24 sm:w-28 h-1.5 bg-stone-950 rounded-full overflow-hidden border border-white/5">
+              <div className="w-24 sm:w-28 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                 <div className="h-full bg-emerald-500 rounded-full transition-all duration-300"
                   style={{ width: `${Math.min(100, (activeStudent.xp / 1000) * 100)}%` }} />
               </div>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-white/40 bg-black/30 px-3 py-2 rounded-2xl border border-white/5 backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-slate-500 bg-white/85 px-3 py-2 rounded-2xl border border-slate-200 shadow-sm">
             <Compass className="w-4 h-4 animate-spin-slow text-[var(--primary-color)]" />
-            <span className="font-adventure text-[9px] tracking-widest uppercase font-bold text-white/50">BYTEQUEST 2.0</span>
+            <span className="font-adventure text-[9px] tracking-widest uppercase font-bold text-slate-650">BYTEQUEST 2.0</span>
           </div>
         )}
 
         <div className="flex items-center gap-2">
           <button onClick={() => setAudioOn(!audioOn)}
-            className="p-2.5 rounded-xl bg-black/40 border border-white/10 hover:border-white/30 text-white/70 hover:text-white transition-all active:scale-95 shadow-lg backdrop-blur-sm h-[38px] w-[38px] flex items-center justify-center"
+            className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all active:scale-95 shadow-sm h-[38px] w-[38px] flex items-center justify-center"
             title="Toggle Mute">
-            {audioOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-red-400" />}
+            {audioOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-[var(--primary-color)]" />}
           </button>
           <button onClick={onOpenSettings}
-            className="p-2.5 rounded-xl bg-black/40 border border-white/10 hover:border-white/30 text-white/70 hover:text-white transition-all active:scale-95 shadow-lg backdrop-blur-sm h-[38px] w-[38px] flex items-center justify-center"
+            className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all active:scale-95 shadow-sm h-[38px] w-[38px] flex items-center justify-center"
             title="System Settings">
             <Settings className="w-4 h-4" />
           </button>
           {!activeStudent && (
             <div className="flex gap-1.5 ml-1">
               <button id="launchpad-signin-btn" onClick={onSignIn}
-                className="px-3 py-2 bg-gradient-to-b from-[var(--primary-color)] to-[var(--primary-deep-medium)] border border-white/20 text-white font-adventure text-[9px] uppercase font-extrabold tracking-widest rounded-xl transition-all hover:brightness-115 active:scale-95 shadow-md">
+                className="px-3 py-2 bg-gradient-to-b from-[var(--primary-light)] to-[var(--primary-color)] border border-[var(--primary-dark)] text-white font-adventure text-[9px] uppercase font-extrabold tracking-widest rounded-xl transition-all hover:brightness-110 active:scale-95 shadow-md">
                 Sign In
               </button>
               <button id="launchpad-signup-btn" onClick={onSignUp}
-                className="px-3 py-2 bg-stone-900 border border-white/10 text-white/80 hover:text-white font-adventure text-[9px] uppercase font-extrabold tracking-widest rounded-xl transition-all hover:brightness-110 active:scale-95 shadow-md">
+                className="px-3 py-2 bg-white border border-slate-200 text-slate-600 hover:text-slate-900 font-adventure text-[9px] uppercase font-extrabold tracking-widest rounded-xl transition-all hover:bg-slate-50 active:scale-95 shadow-md">
                 Sign Up
               </button>
             </div>
@@ -245,7 +245,7 @@ export default function Launchpad({
               </div>
             </div>
             <button onClick={() => { setShowProfilePanel(false); onSignOut(); }}
-              className="w-full py-3 mb-3 bg-[var(--primary-deep-medium)] hover:bg-[var(--primary-deep)] text-rose-400 hover:text-rose-300 font-adventure font-extrabold rounded-xl border border-rose-900/40 uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md">
+              className="w-full py-3 mb-3 bg-[#FEE2E2] hover:bg-[#FCA5A5] text-[#DC2626] font-adventure font-extrabold rounded-xl border border-[#FCA5A5] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-sm">
               🚪 Sign Out
             </button>
             <button onClick={() => setShowProfilePanel(false)}
