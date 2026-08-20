@@ -2977,15 +2977,15 @@ export default function StudentGame({
 
       {gameState === 'victory' && syncState && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 select-text animate-fade-in font-serif">
-          <div className="bg-[var(--primary-deep-medium)] border-4 border-[var(--accent-color)] max-w-xl w-full p-8 text-center rounded-[2rem] relative shadow-[0_0_60px_var(--accent-glow)] animate-scale-in flex flex-col items-center text-white">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,var(--accent-glow),transparent_70%)] pointer-events-none"></div>
+          <div className="bg-[var(--primary-deep-medium)] border-4 border-[#F59E0B] max-w-xl w-full p-8 text-center rounded-[2rem] relative shadow-[0_0_30px_rgba(245,158,11,0.2)] animate-scale-in flex flex-col items-center text-[#0F172A]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(245,158,11,0.15),transparent_70%)] pointer-events-none"></div>
             
             <span className="text-7xl block mb-4 animate-bounce">🏆</span>
-            <h2 className="font-adventure text-4xl font-extrabold text-[var(--accent-light)] mb-2 drop-shadow-[0_2px_5px_rgba(0,0,0,0.6)] uppercase tracking-widest">Victory!</h2>
-            <p className="text-amber-200/70 font-sans text-xs uppercase tracking-widest font-bold mb-6">Adventure Completed</p>
+            <h2 className="font-adventure text-4xl font-extrabold text-[#F59E0B] mb-2 drop-shadow-[0_1.5px_2px_rgba(15,23,42,0.15)] uppercase tracking-widest">Victory!</h2>
+            <p className="text-[#475569] font-sans text-xs uppercase tracking-widest font-extrabold mb-6">Adventure Completed</p>
             
             {multiplayerLevelUp && (
-              <div className="bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-light)] text-stone-950 border border-[var(--accent-light)] px-6 py-2 rounded-2xl font-adventure text-sm font-bold mb-6 animate-pulse shadow-md">
+              <div className="bg-gradient-to-r from-[#F59E0B] to-[#FCD34D] text-[#0F172A] border border-[#F59E0B] px-6 py-2 rounded-2xl font-adventure text-sm font-extrabold mb-6 animate-pulse shadow-md">
                 🎉 LEVEL UP! You reached a new Explorer level! 🎉
               </div>
             )}
@@ -2999,16 +2999,16 @@ export default function StudentGame({
               });
               const winner = sorted[0];
               return (
-                <div className="bg-[var(--primary-deep-dark)] border border-[var(--accent-color)]/50 rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
-                  <h4 className="text-xs font-extrabold text-[var(--accent-light)] uppercase tracking-wider mb-3 text-center">Champion: 👤 {winner.name}</h4>
+                <div className="bg-slate-50 border-2 border-[#F59E0B] rounded-3xl p-6 w-full max-w-sm mb-6 shadow-md text-left font-sans">
+                  <h4 className="text-sm font-extrabold text-[#0F172A] uppercase tracking-wider mb-3 text-center">Champion: 👑 <span className="font-extrabold text-[#0F172A]">{winner.name}</span></h4>
                   <div className="grid grid-cols-2 gap-4 text-center">
-                    <div className="bg-[var(--primary-deep-medium)] border border-[var(--accent-color)]/35 p-3 rounded-2xl">
-                      <span className="text-[10px] block text-amber-200/50 uppercase font-bold">XP Gained</span>
-                      <span className="text-lg font-bold text-white">+{winner.xp} XP</span>
+                    <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-sm">
+                      <span className="text-[10px] block text-[#475569] uppercase font-extrabold tracking-wider mb-1">XP Gained</span>
+                      <span className="text-lg font-black text-[#0F172A]">+{winner.xp} XP</span>
                     </div>
-                    <div className="bg-[var(--primary-deep-medium)] border border-[var(--accent-color)]/35 p-3 rounded-2xl">
-                      <span className="text-[10px] block text-amber-200/50 uppercase font-bold">Coins Earned</span>
-                      <span className="text-lg font-bold text-white">+{winner.coins} Gold</span>
+                    <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-sm">
+                      <span className="text-[10px] block text-[#475569] uppercase font-extrabold tracking-wider mb-1">Coins Earned</span>
+                      <span className="text-lg font-black text-[#0F172A]">+{winner.coins} Gold</span>
                     </div>
                   </div>
                 </div>
@@ -3022,9 +3022,13 @@ export default function StudentGame({
                 if (rA !== rB) return rA - rB;
                 return b.position - a.position || b.xp - a.xp;
               }).map((p: any, idx: number) => (
-                <div key={p.id} className="flex items-center justify-between p-3 bg-[var(--primary-deep-dark)] border border-[var(--accent-color)]/30 rounded-xl text-xs text-white">
-                  <span className="font-bold">#{idx+1} 👤 {p.name} {p.finished && '🏁'}</span>
-                  <span className="font-semibold text-amber-200/80">{p.xp} XP | {p.coins} Coins</span>
+                <div key={p.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl text-xs text-[#0F172A] shadow-sm hover:border-[#F59E0B]/50 transition-colors">
+                  <span className="font-extrabold">
+                    {idx === 0 ? '👑 ' : `#${idx+1} `} 👤 {p.name} {p.finished && '🏁'}
+                  </span>
+                  <span className="font-extrabold text-[#475569]">
+                    <span className="text-[#0F172A]">{p.xp}</span> XP <span className="text-slate-300">|</span> <span className="text-[#0F172A]">{p.coins}</span> Coins
+                  </span>
                 </div>
               ))}
             </div>
@@ -3037,13 +3041,13 @@ export default function StudentGame({
                   setLobbyConfigPrivate(false);
                   setShowLobbyConfigModal(true);
                 }}
-                className="w-full py-3 bg-gradient-to-r from-[var(--accent-color)] to-[var(--accent-light)] hover:from-[var(--accent-light)] hover:to-[var(--accent-color)] text-stone-950 border border-[var(--accent-light)] font-adventure font-extrabold rounded-xl text-xs uppercase shadow-md active:scale-95 transition-all"
+                className="w-full py-3 bg-[#F59E0B] hover:bg-[#D97706] text-[#0F172A] hover:text-white font-adventure font-extrabold rounded-xl text-xs uppercase shadow-md active:scale-95 transition-all border-b-4 border-[#B45309]"
               >
                 Play Again
               </button>
               <button 
                 onClick={() => { onBack(); }}
-                className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl text-xs uppercase shadow-md active:scale-95 transition-all border-b-4 border-[var(--primary-dark)]"
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-[#475569] hover:text-[#0F172A] font-adventure font-extrabold rounded-xl text-xs uppercase shadow-md active:scale-95 transition-all border border-slate-200"
               >
                 Main Menu
               </button>
