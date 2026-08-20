@@ -518,7 +518,7 @@ export class SocketService {
       if (clashedTeam) {
         const finalPos = Math.max(0, clashedTeam.position - 4);
         clashedTeam.position = finalPos;
-        tileText += ` | 💥 Collision! ${clashedTeam.name} moved back 4 tiles.`;
+        tileText += ` | ⚔️ Collision!\n${clashedTeam.name} was moved back 4 tiles.`;
       }
     } else {
       // FIXED: Wrong answer = NO movement at all. Player stays in place.
@@ -673,26 +673,48 @@ export class SocketService {
       return;
     }
 
-    const nextTeam = room.teams[nextTeamIdx];
-    if (nextTeam.skipNextTurn) {
-      nextTeam.skipNextTurn = false;
-      this.io.to(roomCode).emit('game:log', { message: `🚫 ${nextTeam.name}'s turn is skipped!` });
+    this.advanceTurnFrom(roomCode, nextTeamIdx);
+  }
+
+  private advanceTurnFrom(roomCode: string, targetTeamIdx: number) {
+    const room = this.activeRooms.get(roomCode);
+    if (!room || room.status !== 'PLAYING') return;
+
+    const targetTeam = room.teams[targetTeamIdx];
+    if (targetTeam.skipNextTurn) {
+      room.activeTeamIdx = targetTeamIdx;
+      room.currentRoll = null;
+      targetTeam.skipNextTurn = false;
+
+      const skipMessage = `⏳ ${targetTeam.name} skipped this turn! 🚫`;
+      this.io.to(roomCode).emit('game:log', { message: skipMessage });
+      this.io.to(roomCode).emit('game:skip_turn', { teamName: targetTeam.name, message: skipMessage });
       
-      let doubleNextIdx = nextTeamIdx;
-      for (let i = 1; i <= room.teams.length; i++) {
-        const idx = (nextTeamIdx + i) % room.teams.length;
-        if (!room.teams[idx].finished) {
-          doubleNextIdx = idx;
-          break;
+      this.sendRoomUpdate(roomCode);
+
+      setTimeout(() => {
+        let nextTeamIdx = targetTeamIdx;
+        let found = false;
+        for (let i = 1; i <= room.teams.length; i++) {
+          const idx = (targetTeamIdx + i) % room.teams.length;
+          if (!room.teams[idx].finished) {
+            nextTeamIdx = idx;
+            found = true;
+            break;
+          }
         }
-      }
-      nextTeamIdx = doubleNextIdx;
+        if (found) {
+          this.advanceTurnFrom(roomCode, nextTeamIdx);
+        }
+      }, 2200);
+
+      return;
     }
 
-    room.activeTeamIdx = nextTeamIdx;
+    room.activeTeamIdx = targetTeamIdx;
     room.currentRoll = null;
 
-    logger.info(`🔄 Turn rotated to team: ${room.teams[nextTeamIdx].name}`);
+    logger.info(`🔄 Turn rotated to team: ${room.teams[targetTeamIdx].name}`);
     this.sendRoomUpdate(roomCode);
   }
 

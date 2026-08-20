@@ -555,6 +555,14 @@ export default function StudentGame({
         setLogMessages(prev => [data.message, ...prev.slice(0, 8)]);
       });
 
+      socket.on('game:skip_turn', (data: any) => {
+        setScorePopup(data.message);
+        playBeep(220, 'sawtooth', 0.4, 0.1);
+        setTimeout(() => {
+          setScorePopup(null);
+        }, 2000);
+      });
+
       socket.on('game:victory', (data: any) => {
         setMultiplayerLevelUp(false);
         if (activeStudent && data.leveledUpMembers && data.leveledUpMembers.includes(activeStudent.id)) {
@@ -607,6 +615,7 @@ export default function StudentGame({
         socket.off('game:question_pushed');
         socket.off('game:answer_result');
         socket.off('game:log');
+        socket.off('game:skip_turn');
         socket.off('game:victory');
         socket.off('room:error');
         socket.off('error');
@@ -2611,6 +2620,12 @@ export default function StudentGame({
                         style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                         title={tile.label}
                       >
+                        {/* Visited Checkmark Badge */}
+                        {isCompleted && tIdx > 0 && tIdx < 17 && (
+                          <span className="absolute -top-1 -right-1 text-[8px] bg-emerald-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center border border-white font-extrabold shadow-sm select-none z-10 animate-scale-in">
+                            ✓
+                          </span>
+                        )}
                         {/* Metallic Solder Pins on Left */}
                         <div className="absolute -left-1.5 top-1.5 bottom-1.5 w-1.5 flex flex-col justify-around pointer-events-none">
                           <div className="h-0.5 w-full bg-slate-400/80 rounded-l shadow-sm"></div>

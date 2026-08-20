@@ -498,6 +498,7 @@ export default function App() {
   const localIsRollPendingRef = useRef<boolean>(false);
   const localIsSubmittingRef = useRef<boolean>(false);
   const localMovementIntervalRef = useRef<any>(null);
+  const lastScheduledTurnIdxRef = useRef<number | null>(null);
 
   // Spaced Repetition Bot to Player & No Repeats pools
   const [localPendingBotQuestions, setLocalPendingBotQuestions] = useState<any[]>([]);
@@ -628,21 +629,30 @@ export default function App() {
 
   // Automated bot rolls
   useEffect(() => {
-    if (viewMode === 'local' && localScreen === 'board') {
+    if (viewMode === 'local' && localScreen === 'board' && localPlayers.length > 0) {
       const activeP = localPlayers[localTurnIdx];
-      if (activeP && activeP.isBot && !localIsRolling && !localIsMoving && !localLandingTile && !localActiveQuestion) {
-        console.log(`[BOT DEBUG] BOT TURN START: ${activeP.name}`);
-        localBotRollTimeoutRef.current = setTimeout(() => {
-          console.log(`[BOT DEBUG] BOT ROLL: ${activeP.name} triggers roll`);
-          localTriggerDiceRoll();
-        }, 1800);
+      if (activeP && activeP.isBot) {
+        if (lastScheduledTurnIdxRef.current !== localTurnIdx && 
+            !localIsRolling && !localIsMoving && !localLandingTile && !localActiveQuestion) {
+          
+          lastScheduledTurnIdxRef.current = localTurnIdx;
+          console.log(`[BOT DEBUG] BOT TURN START: ${activeP.name}`);
+          
+          localBotRollTimeoutRef.current = setTimeout(() => {
+            console.log(`[BOT DEBUG] BOT ROLL: ${activeP.name} triggers roll`);
+            localBotRollTimeoutRef.current = null;
+            localTriggerDiceRoll();
+          }, 1800);
+        }
+      } else {
+        lastScheduledTurnIdxRef.current = null;
       }
+    } else {
+      lastScheduledTurnIdxRef.current = null;
     }
+
     return () => {
-      if (localBotRollTimeoutRef.current) {
-        clearTimeout(localBotRollTimeoutRef.current);
-        localBotRollTimeoutRef.current = null;
-      }
+      // General cleanup handles this on turn changes
     };
   }, [localTurnIdx, localPlayers, localScreen, viewMode, localIsRolling, localIsMoving, localLandingTile, localActiveQuestion]);
 
@@ -882,6 +892,8 @@ export default function App() {
         console.log(`[BOT DEBUG] QUESTION RECEIVED (RETRY): "${q.question}"`);
         console.log(`[BOT DEBUG] BOT THINKING: ${activeP.name} will think for ${botThinkTime}ms (Difficulty: ${activeP.botDifficulty})`);
         localBotThinkTimeoutRef.current = setTimeout(() => {
+          localBotThinkTimeoutRef.current = null;
+          if (viewMode !== 'local' || localScreen !== 'board') return;
           let correctRate = 0.70;
           if (activeP.botDifficulty === 'easy') correctRate = 0.85;
           else if (activeP.botDifficulty === 'medium') correctRate = 0.70;
@@ -978,6 +990,8 @@ export default function App() {
       console.log(`[BOT DEBUG] QUESTION RECEIVED: "${q.question}"`);
       console.log(`[BOT DEBUG] BOT THINKING: ${activeP.name} will think for ${botThinkTime}ms (Difficulty: ${activeP.botDifficulty})`);
       localBotThinkTimeoutRef.current = setTimeout(() => {
+        localBotThinkTimeoutRef.current = null;
+        if (viewMode !== 'local' || localScreen !== 'board') return;
         let correctRate = 0.70;
         if (activeP.botDifficulty === 'easy') correctRate = 0.85;
         else if (activeP.botDifficulty === 'medium') correctRate = 0.70;
@@ -1241,7 +1255,7 @@ export default function App() {
       if (clashingOccurred) {
         delay = 4500;
         sounds.playWrong();
-        setLocalScorePopup({ text: `💥 Collision! ${clashedPlayerName} moved back 4 tiles.`, success: false });
+        setLocalScorePopup({ text: `⚔️ Collision!\n${clashedPlayerName} was moved back 4 tiles.`, success: false });
       }
 
       setTimeout(() => {
@@ -1313,51 +1327,67 @@ export default function App() {
   const localPassTurn = () => {
     localIsRollPendingRef.current = false;
     localIsSubmittingRef.current = false;
-    // Find next unfinished player index
-    let nextIdx = localTurnIdx;
-    let found = false;
-    for (let i = 1; i <= localPlayers.length; i++) {
-      const idx = (localTurnIdx + i) % localPlayers.length;
-      if (!localPlayers[idx].finished) {
-        nextIdx = idx;
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) {
-      console.log(`[LOCAL GAME] All players finished turn rotation skipped.`);
-      return;
-    }
-
-    const nextP = localPlayers[nextIdx];
-
-    console.log(`[BOT DEBUG] TURN COMPLETE. Passing turn from index ${localTurnIdx} to index ${nextIdx} (${nextP.name})`);
-
-    if (nextP.skipNextTurn) {
-      setLocalPlayers(prev => prev.map((p, idx) => idx === nextIdx ? { ...p, skipNextTurn: false } : p));
-      sounds.playTrap();
-      setLocalScorePopup({ text: `${nextP.name}'s turn skipped! 🚫`, success: false });
-      setTimeout(() => {
-        setLocalScorePopup(null);
-        setLocalTurnIdx(nextIdx);
-        localPassTurn();
-      }, 2000);
-      return;
-    }
-
-    setLocalTurnIdx(nextIdx);
+    setLocalIsRolling(false);
+    setLocalIsMoving(false);
+    setLocalCurrentRoll(null);
+    setLocalActiveQuestion(null);
+    setLocalLandingTile(null);
     
-    if (nextP.isBot) {
-      setLocalScreen('board');
-    } else {
-      // Switch to pass device screen if human
-      if (localPlayers.filter(p => !p.isBot && !p.finished).length > 1) {
-        setLocalScreen('handoff');
-      } else {
-        setLocalScreen('board');
+    localAdvanceTurnFrom(localTurnIdx);
+  };
+
+  const localAdvanceTurnFrom = (fromIdx: number) => {
+    setLocalPlayers(currentPlayers => {
+      let nextIdx = fromIdx;
+      let found = false;
+      for (let i = 1; i <= currentPlayers.length; i++) {
+        const idx = (fromIdx + i) % currentPlayers.length;
+        if (!currentPlayers[idx].finished) {
+          nextIdx = idx;
+          found = true;
+          break;
+        }
       }
-    }
+
+      if (!found) {
+        console.log(`[TURN] All players finished.`);
+        return currentPlayers;
+      }
+
+      const nextP = currentPlayers[nextIdx];
+      console.log(`[TURN ADVANCE] Previous: ${currentPlayers[fromIdx].name}, Next: ${nextP.name}`);
+
+      if (nextP.skipNextTurn) {
+        const updatedPlayers = currentPlayers.map((p, idx) => 
+          idx === nextIdx ? { ...p, skipNextTurn: false } : p
+        );
+
+        sounds.playTrap();
+        setLocalScorePopup({ text: `⏳ ${nextP.name} skipped this turn! 🚫`, success: false });
+
+        setTimeout(() => {
+          setLocalScorePopup(null);
+          setLocalTurnIdx(nextIdx);
+          localAdvanceTurnFrom(nextIdx);
+        }, 2200);
+
+        return updatedPlayers;
+      }
+
+      setLocalTurnIdx(nextIdx);
+      if (nextP.isBot) {
+        setLocalScreen('board');
+      } else {
+        const activeHumans = currentPlayers.filter(p => !p.isBot && !p.finished);
+        if (activeHumans.length > 1) {
+          setLocalScreen('handoff');
+        } else {
+          setLocalScreen('board');
+        }
+      }
+
+      return currentPlayers;
+    });
   };
 
   const localTriggerVictory = () => {
@@ -2467,6 +2497,12 @@ export default function App() {
                             style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
                             title={tile.label}
                           >
+                            {/* Visited Checkmark Badge */}
+                            {isCompleted && tIdx > 0 && tIdx < 17 && (
+                              <span className="absolute -top-1 -right-1 text-[8px] bg-emerald-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center border border-white font-extrabold shadow-sm select-none z-10 animate-scale-in">
+                                ✓
+                              </span>
+                            )}
                             {/* Metallic Solder Pins on Left */}
                             <div className="absolute -left-1.5 top-1.5 bottom-1.5 w-1.5 flex flex-col justify-around pointer-events-none">
                               <div className="h-0.5 w-full bg-slate-400/80 rounded-l shadow-sm"></div>
