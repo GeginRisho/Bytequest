@@ -500,7 +500,7 @@ export default function StudentGame({
 
       socket.on('game:dice_rolled', (data: any) => {
         setDiceRolling(true);
-        setLocalRollResult(data.roll);
+        setLocalRollResult(null);
         playBeep(250 + Math.random() * 200, 'triangle', 0.8, 0.1);
         
         setTimeout(() => {
@@ -518,13 +518,16 @@ export default function StudentGame({
 
       socket.on('game:answer_result', (data: any) => {
         setQuizResult(data);
+        if (data.roll) {
+          setLocalRollResult(data.roll);
+        }
         if (data.isCorrect) {
           playBeep(523, 'sine', 0.2, 0.1);
           setTimeout(() => playBeep(659, 'sine', 0.3, 0.1), 120);
-          setScorePopup(`✅ CORRECT! Moving to tile ${data.newPosition}.`);
+          setScorePopup(`✅ CORRECT! 🎲 Dice Result: ${data.roll || ''}. Moving to tile ${data.newPosition}.`);
         } else {
           playBeep(220, 'sawtooth', 0.4, 0.1);
-          setScorePopup(`❌ INCORRECT! No movement. 📖 Retry queued!`);
+          setScorePopup(`❌ INCORRECT! 🎲 Dice Result: ${data.roll || ''}. No movement. 📖 Retry queued!`);
           // Show spaced repetition toast
           if (data.hasRetryQuestion) {
             setShowRetryToast(true);
@@ -791,13 +794,14 @@ export default function StudentGame({
 
   const getOnlineTurnPhase = (): 'WAITING' | 'READY_TO_ROLL' | 'ROLLING' | 'MOVING' | 'QUESTION' | 'PROCESSING_ANSWER' | 'TURN_COMPLETE' => {
     if (!syncState || syncState.status !== 'PLAYING') return 'WAITING';
-    if (diceRolling) return 'ROLLING';
-    if (isMovingOnline) return 'MOVING';
-    if (activeQuestion) {
-      if (quizResult) return 'PROCESSING_ANSWER';
+    if (syncState.gamePhase === 'ROLLING' || diceRolling) return 'ROLLING';
+    if (syncState.gamePhase === 'MOVING' || isMovingOnline) return 'MOVING';
+    if (syncState.gamePhase === 'DICE_REVEAL') return 'PROCESSING_ANSWER';
+    if (syncState.gamePhase === 'RESOLVING_QUESTION' || activeQuestion) {
+      if (quizResult || syncState.gamePhase === 'RESOLVING_REWARD_OR_TRAP') return 'PROCESSING_ANSWER';
       return 'QUESTION';
     }
-    if (checkIsMyTurn()) {
+    if (syncState.gamePhase === 'TURN_START' && checkIsMyTurn()) {
       return 'READY_TO_ROLL';
     }
     return 'WAITING';
@@ -2248,10 +2252,10 @@ export default function StudentGame({
                 <span className="text-xs font-bold text-slate-500 block">Interface Theme</span>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: 'red-gold', name: 'Red + Gold', emoji: '❤️' },
-                    { id: 'blue-gold', name: 'Blue + Gold', emoji: '💙' },
-                    { id: 'green-gold', name: 'Green + Gold', emoji: '💚' },
-                    { id: 'purple-gold', name: 'Purple + Gold', emoji: '💜' }
+                    { id: 'cyber-blue', name: 'Cyber Blue', emoji: '💙' },
+                    { id: 'aurora', name: 'Aurora', emoji: '💜' },
+                    { id: 'sunset', name: 'Sunset', emoji: '🧡' },
+                    { id: 'emerald-tech', name: 'Emerald Tech', emoji: '💚' }
                   ].map((t) => (
                     <button
                       key={t.id}
@@ -2280,7 +2284,7 @@ export default function StudentGame({
   }
 
   return (
-    <div className="min-h-[85vh] flex flex-col relative select-none">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[var(--board-bg-start)] via-[var(--board-bg-mid)] to-[var(--board-bg-end)] text-[var(--text-primary)] relative select-none">
             {/* Connection Status Indicator */}
       {!isConnected && (
         <div className="fixed top-2 right-2 z-[9999] flex items-center gap-1.5 bg-rose-900/90 border border-rose-500 text-rose-200 text-[10px] px-3 py-1.5 rounded-full shadow-lg font-bold">
@@ -2571,7 +2575,7 @@ export default function StudentGame({
                       d={getPCBPath(TILE_COORDS)} 
                       fill="none" 
                       className="pcb-neon-glow" 
-                      stroke="var(--primary-light)" 
+                      stroke="var(--board-path)" 
                       strokeWidth="1.5" 
                       strokeLinecap="round" 
                       strokeLinejoin="round"
@@ -2581,11 +2585,11 @@ export default function StudentGame({
                       d={getPCBPath(TILE_COORDS)} 
                       fill="none" 
                       className="pcb-trace-signal" 
-                      stroke="var(--primary-light)" 
+                      stroke="var(--board-path)" 
                       strokeWidth="1.5" 
                       strokeLinecap="round" 
                       strokeLinejoin="round"
-                      style={{ filter: 'drop-shadow(0 0 3px var(--primary-light))' }}
+                      style={{ filter: 'drop-shadow(0 0 3px var(--board-path-glow))' }}
                     />
 
                     {/* 5. Glowing Via-Dots at Chamfer Bend Points */}
@@ -2595,10 +2599,10 @@ export default function StudentGame({
                         cx={via.x} 
                         cy={via.y} 
                         r="0.8" 
-                        fill="var(--primary-deep-dark)" 
-                        stroke="var(--primary-light)" 
+                        fill="var(--page-bg)" 
+                        stroke="var(--board-path)" 
                         strokeWidth="0.4" 
-                        style={{ filter: 'drop-shadow(0 0 2px var(--primary-light))' }}
+                        style={{ filter: 'drop-shadow(0 0 2px var(--board-path-glow))' }}
                       />
                     ))}
                   </svg>
@@ -2747,7 +2751,7 @@ export default function StudentGame({
                       <button
                         onClick={handleRollClick}
                         disabled={!isMyTurnNow || diceRolling || activeQuestion !== null || isMovingOnline}
-                        className={`relative rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_20px_var(--accent-glow)] border-2 border-[var(--accent-light)]' : 'bg-[var(--primary-deep-dark)] border-2 border-[var(--accent-color)]/40'} ${windowWidth < 500 ? 'w-12 h-12' : 'w-16 h-16'}`}
+                        className={`relative rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'glowing-gold-dice' : 'dice-subdued bg-[var(--primary-deep-dark)] border-2 border-[var(--accent-color)]/40'} ${windowWidth < 500 ? 'w-12 h-12' : 'w-16 h-16'}`}
                         title={isMyTurnNow ? 'Your Turn — Roll Dice!' : 'Not your turn'}
                       >
                         <svg viewBox="0 0 100 100" className={`dice-spin-shake ${windowWidth < 500 ? 'w-10 h-10' : 'w-14 h-14'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 8px var(--accent-glow))' : 'drop-shadow(0 2px 4px rgba(var(--accent-light-rgb), 0.25))' }}>
@@ -2764,7 +2768,7 @@ export default function StudentGame({
                         </svg>
                       </button>
 
-                      {localRollResult !== null && !diceRolling && (
+                      {localRollResult !== null && !diceRolling && (!syncState || syncState.gamePhase !== 'RESOLVING_QUESTION') && (
                         <div className="absolute inset-0 bg-[var(--primary-deep)]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-xl border-2 border-[var(--accent-color)] shadow-lg">
                           <span className="font-adventure text-3xl font-extrabold text-[var(--accent-light)]">
                             {localRollResult}
@@ -2807,7 +2811,7 @@ export default function StudentGame({
                       <button
                         onClick={handleRollClick}
                         disabled={!isMyTurnNow || diceRolling || activeQuestion !== null || isMovingOnline}
-                        className={`relative w-24 h-24 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'animate-pulse bg-[var(--primary-deep)] shadow-[0_0_30px_var(--accent-glow)] border-3 border-[var(--accent-light)]' : 'bg-[var(--primary-deep-dark)] border-2 border-[var(--accent-color)]/45'}`}
+                        className={`relative w-24 h-24 rounded-full hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center ${isMyTurnNow ? 'glowing-gold-dice' : 'dice-subdued bg-[var(--primary-deep-dark)] border-2 border-[var(--accent-color)]/45'}`}
                         title={isMyTurnNow ? 'Your Turn — Click to Roll!' : 'Not your turn'}
                       >
                         <svg viewBox="0 0 100 100" className={`w-20 h-20 ${diceRolling ? 'dice-spin-shake' : 'hover:drop-shadow-md'}`} style={{ filter: isMyTurnNow ? 'drop-shadow(0 0 12px var(--accent-glow))' : 'drop-shadow(0 3px 6px rgba(var(--accent-light-rgb), 0.25))' }}>
@@ -2829,7 +2833,7 @@ export default function StudentGame({
                         </svg>
                       </button>
 
-                      {localRollResult !== null && !diceRolling && (
+                      {localRollResult !== null && !diceRolling && (!syncState || syncState.gamePhase !== 'RESOLVING_QUESTION') && (
                         <div className="absolute inset-0 bg-[var(--primary-deep)]/95 flex items-center justify-center animate-scale-in pointer-events-none rounded-2xl border-3 border-[var(--accent-color)] shadow-lg">
                           <div className="text-center">
                             <span className="block text-[8px] text-[var(--accent-light)] uppercase font-extrabold tracking-widest leading-none mb-0.5 font-adventure">ROLLED</span>
@@ -2892,8 +2896,8 @@ export default function StudentGame({
                     )}
 
                     {quizResult && activeQuestion.explanation && (
-                      <div className="bg-[var(--primary-deep-dark)] text-white/80 p-3 rounded-xl text-[10px] border border-white/5 leading-relaxed font-semibold">
-                        <p className="font-bold text-[var(--accent-light)] mb-1 font-sans uppercase tracking-wider">Explanation:</p>
+                      <div className="bg-slate-900 border border-amber-500/35 p-3 rounded-xl text-xs text-slate-100 mt-2 leading-relaxed font-semibold">
+                        <p className="font-adventure text-amber-400 font-extrabold mb-1.5 uppercase tracking-wider text-[10px]">Explanation:</p>
                         {activeQuestion.explanation}
                       </div>
                     )}
@@ -2981,8 +2985,8 @@ export default function StudentGame({
             </div>
 
             {quizResult && activeQuestion.explanation && (
-              <div className="bg-[var(--primary-subtle-bg)] border border-[var(--accent-color)]/40 p-4 rounded-xl text-xs text-stone-700">
-                <p className="font-adventure text-[var(--accent-dark)] font-bold mb-1 uppercase tracking-wider">Explanation:</p>
+              <div className="bg-slate-900 border border-amber-500/35 p-4 rounded-xl text-xs text-slate-100 mt-4 leading-relaxed">
+                <p className="font-adventure text-amber-400 font-extrabold mb-1.5 uppercase tracking-wider text-[11px]">Explanation:</p>
                 {activeQuestion.explanation}
               </div>
             )}

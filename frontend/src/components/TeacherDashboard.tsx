@@ -2584,10 +2584,10 @@ export default function TeacherDashboard({
               <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">ByteQuest Theme</span>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: 'red-gold', name: 'Red + Gold', emoji: '❤️' },
-                  { id: 'blue-gold', name: 'Blue + Gold', emoji: '💙' },
-                  { id: 'green-gold', name: 'Green + Gold', emoji: '💚' },
-                  { id: 'purple-gold', name: 'Purple + Gold', emoji: '💜' }
+                  { id: 'cyber-blue', name: 'Cyber Blue', emoji: '💙' },
+                  { id: 'aurora', name: 'Aurora', emoji: '💜' },
+                  { id: 'sunset', name: 'Sunset', emoji: '🧡' },
+                  { id: 'emerald-tech', name: 'Emerald Tech', emoji: '💚' }
                 ].map((t) => (
                   <button
                     key={t.id}

@@ -47,7 +47,16 @@ interface LiveRoom {
   }>;
   isFirstQuestion?: boolean;
   pendingRetryQuestion?: any | null;
+  isRollQuestion?: boolean;
+  gamePhase?: 'WAITING' | 'TURN_START' | 'ROLLING' | 'MOVING' | 'RESOLVING_TILE' | 'RESOLVING_QUESTION' | 'RESOLVING_REWARD_OR_TRAP' | 'RESOLVING_COLLISION' | 'CHECKING_FINISH' | 'TURN_COMPLETE' | 'GAME_OVER' | 'DICE_REVEAL';
+  turnCount?: number;
+  turnId?: string;
+  turnTransitionLock?: boolean;
+  dispatchedRollIds?: string[];
 }
+
+const KNOCKBACK_TILES = 2;
+const COLLISION_PUSHBACK_TILES = 4;
 
 export class SocketService {
   private io: Server;
@@ -198,7 +207,13 @@ export class SocketService {
           wasInLastPlace: {},
           studentStats: {},
           isFirstQuestion: true,
-          pendingRetryQuestion: null
+          pendingRetryQuestion: null,
+          isRollQuestion: false,
+          gamePhase: 'TURN_START',
+          turnCount: 1,
+          turnId: 'TURN_1',
+          turnTransitionLock: false,
+          dispatchedRollIds: []
         });
       }
 
@@ -269,121 +284,161 @@ export class SocketService {
 
   private async handleDiceRoll(roomCode: string, studentId: string) {
     const room = this.activeRooms.get(roomCode);
-    if (!room || room.status !== 'PLAYING' || room.activeQuestion) return;
+    if (!room || room.status !== 'PLAYING') return;
 
-    const activeTeam = room.teams[room.activeTeamIdx];
-    const activeTeammate = activeTeam.members[activeTeam.activeMemberIdx];
-
-    if (activeTeammate.id !== studentId) {
-      logger.warn(`Rejected roll request. Current turn belongs to ${activeTeammate.name}`);
+    // Phase check
+    if (room.gamePhase !== 'TURN_START') {
+      logger.warn(`[ROLL REJECTED] Room ${roomCode} phase is ${room.gamePhase}, expected TURN_START`);
       return;
     }
+
+    const activeTeam = room.teams[room.activeTeamIdx];
+    if (activeTeam.finished) {
+      logger.warn(`[ROLL REJECTED] Active team ${activeTeam.name} is already finished`);
+      return;
+    }
+
+    const activeTeammate = activeTeam.members[activeTeam.activeMemberIdx];
+    if (activeTeammate.id !== studentId) {
+      logger.warn(`[ROLL REJECTED] Current turn belongs to teammate ${activeTeammate.name}, not ${studentId}`);
+      return;
+    }
+
+    // Lock phase
+    room.gamePhase = 'ROLLING';
+    room.isRollQuestion = true;
+    room.turnId = `TURN_${room.turnCount}`;
+    const currentTurnId = room.turnId;
 
     const roll = Math.floor(Math.random() * 6) + 1;
     room.currentRoll = roll;
 
-    if (activeTeam.position + roll > 17) {
-      this.io.to(roomCode).emit('game:dice_rolled', { 
-        roll, 
-        teamId: activeTeam.id
-      });
-      this.io.to(roomCode).emit('game:log', { message: `🎲 ${activeTeam.name} rolled ${roll}! Too high to finish (Stay on tile ${activeTeam.position}).` });
-      setTimeout(() => {
-        this.rotateTurn(roomCode);
-      }, 2200);
-      return;
-    }
+    logger.info(`[ROLL] ${currentTurnId} | ${activeTeam.name} rolled ${roll} (hidden)`);
 
-    // FIXED: Do NOT move the team yet — position only updates after correct answer
-    // Broadcast roll event WITHOUT position change
+    // Emit rolling event without roll value!
     this.io.to(roomCode).emit('game:dice_rolled', { 
-      roll, 
       teamId: activeTeam.id
     });
+    this.sendRoomUpdate(roomCode);
 
-    // Dispatch question immediately (no movement animation needed before question)
     setTimeout(async () => {
-      await this.dispatchQuestion(roomCode);
+      const currentRoom = this.activeRooms.get(roomCode);
+      if (!currentRoom || currentRoom.turnId !== currentTurnId || currentRoom.gamePhase !== 'ROLLING') return;
+      await this.dispatchQuestion(roomCode, currentTurnId);
     }, 800);
   }
 
-  private async dispatchQuestion(roomCode: string) {
+  private async dispatchQuestion(roomCode: string, expectedTurnId: string) {
     const room = this.activeRooms.get(roomCode);
-    if (!room) return;
+    if (!room || room.turnId !== expectedTurnId || room.gamePhase !== 'ROLLING') return;
+
+    // Idempotency: Protect dispatch per turn/rollId
+    const rollId = `${roomCode}_${expectedTurnId}_ROLL`;
+    if (!room.dispatchedRollIds) room.dispatchedRollIds = [];
+    if (room.dispatchedRollIds.includes(rollId)) {
+      logger.warn(`[DUPLICATE PREVENTED] Server already dispatched question for ${rollId}`);
+      return;
+    }
+    room.dispatchedRollIds.push(rollId);
+
+    room.gamePhase = 'RESOLVING_QUESTION';
 
     try {
-      // Retrying logic first!
       if (room.pendingRetryQuestion) {
         const q = room.pendingRetryQuestion;
         room.pendingRetryQuestion = null; // Clear it immediately
         room.activeQuestion = q;
         room.timerRemaining = 15;
 
+        // Add to match-level asked list immediately BEFORE pushing
+        if (!room.askedQuestionIds.includes(q.id)) {
+          room.askedQuestionIds.push(q.id);
+        }
+
         // Emit question to the room
         this.io.to(roomCode).emit('game:question_pushed', {
           question: q,
           timerRemaining: 15
         });
+        this.sendRoomUpdate(roomCode);
 
         // Start countdown
         if (room.questionTimer) clearInterval(room.questionTimer);
         room.questionTimer = setInterval(() => {
-          room.timerRemaining--;
-          if (room.timerRemaining <= 0) {
+          const currentRoom = this.activeRooms.get(roomCode);
+          if (!currentRoom || currentRoom.turnId !== expectedTurnId || currentRoom.gamePhase !== 'RESOLVING_QUESTION') {
+            if (room.questionTimer) {
+              clearInterval(room.questionTimer);
+              room.questionTimer = null;
+            }
+            return;
+          }
+          currentRoom.timerRemaining--;
+          if (currentRoom.timerRemaining <= 0) {
             clearInterval(room.questionTimer);
-            room.questionTimer = null;
-            this.handleAnswerSubmit(roomCode, '', -1, 15); // Time out
+            currentRoom.questionTimer = null;
+            this.handleAnswerSubmitForTurn(roomCode, '', -1, 15, expectedTurnId);
           }
         }, 1000);
         return;
       }
 
-      let teacherQs;
+      let teacherQs: any[] = [];
       if (room.classId) {
         const cls = await prisma.class.findUnique({
           where: { id: room.classId }
         });
         const teacherId = cls ? cls.teacherId : '';
         teacherQs = await db.getQuestionsByTeacher(teacherId);
+      }
+
+      // Filter available teacher questions against match-wide room.askedQuestionIds
+      const unusedTeacherQs = teacherQs.filter(q => !room.askedQuestionIds.includes(q.id));
+
+      let pool: any[] = [];
+      if (room.classId && unusedTeacherQs.length > 0) {
+        pool = unusedTeacherQs;
       } else {
+        if (room.classId && teacherQs.length > 0) {
+          logger.info(`Teacher questions exhausted for room ${roomCode}. Falling back to general database questions.`);
+        }
         const list = await prisma.question.findMany({
           where: { deletedAt: null }
         });
-        teacherQs = list.map(q => ({
+        const generalQs = list.map(q => ({
           id: q.id,
           teacherId: q.creatorId || 'admin',
           grade: q.classLevel,
           topic: q.topic,
           difficulty: q.difficulty.toLowerCase() as any,
-          question: q.questionText,
+          question: room.classId ? `[General] ${q.questionText}` : q.questionText,
           options: q.options,
           correctIndex: q.options.indexOf(q.correctAnswer) !== -1 ? q.options.indexOf(q.correctAnswer) : 0,
           explanation: q.explanation
         }));
+        pool = generalQs.filter(q => !room.askedQuestionIds.includes(q.id));
       }
 
       const activeTeam = room.teams[room.activeTeamIdx];
-      // Boss tile: positions 8 and 16 (after roll will land near those)
+      // Boss tile: positions 8 and 16
       const targetPosition = Math.min(17, activeTeam.position + (room.currentRoll || 1));
       const isOnBossTile = targetPosition === 8 || targetPosition === 16;
 
-      let pool = teacherQs;
+      let filteredPool = pool;
       if (room.grade !== 'mixed') {
-        pool = teacherQs.filter(q => q.grade === room.grade);
-        if (pool.length === 0) pool = teacherQs; // fallback if no grade match
+        filteredPool = pool.filter(q => q.grade === room.grade);
+        if (filteredPool.length === 0) filteredPool = pool; // fallback
       }
 
-      // Streak-based difficulty progression
+      let diffPool = filteredPool;
       if (room.isFirstQuestion) {
         room.isFirstQuestion = false;
-        const easyPool = pool.filter(q => q.difficulty === 'easy');
-        if (easyPool.length > 0) pool = easyPool;
+        const easyPool = filteredPool.filter(q => q.difficulty === 'easy');
+        if (easyPool.length > 0) diffPool = easyPool;
       } else if (isOnBossTile) {
-        // Boss tile always forces hard
-        const hardPool = pool.filter(q => q.difficulty === 'hard');
-        if (hardPool.length > 0) pool = hardPool;
+        const hardPool = filteredPool.filter(q => q.difficulty === 'hard');
+        if (hardPool.length > 0) diffPool = hardPool;
       } else {
-        // Scale difficulty based on current team's answer streak
         const streak = activeTeam.streak;
         let targetDiff: string;
         if (streak >= 6) {
@@ -393,28 +448,36 @@ export class SocketService {
         } else {
           targetDiff = 'easy';
         }
-        const diffPool = pool.filter(q => q.difficulty === targetDiff);
-        if (diffPool.length > 0) pool = diffPool;
-        // else fall through to full pool
+        const matchedDiffPool = filteredPool.filter(q => q.difficulty === targetDiff);
+        if (matchedDiffPool.length > 0) diffPool = matchedDiffPool;
       }
 
-      if (pool.length === 0) pool = teacherQs;
-
-      // Avoid repeats
-      if (!activeTeam.askedQuestionIds) activeTeam.askedQuestionIds = [];
-      let unasked = pool.filter(q => !activeTeam.askedQuestionIds!.includes(q.id) && !room.askedQuestionIds.includes(q.id));
-      if (unasked.length === 0) {
-        unasked = pool.filter(q => !activeTeam.askedQuestionIds!.includes(q.id));
-      }
-      if (unasked.length === 0) {
-        unasked = pool;
-        activeTeam.askedQuestionIds = [];
-        room.askedQuestionIds = [];
+      let q: any;
+      if (diffPool.length === 0 && filteredPool.length > 0) {
+        diffPool = filteredPool;
       }
 
-      const q = unasked[Math.floor(Math.random() * unasked.length)] || pool[0];
-      activeTeam.askedQuestionIds.push(q.id);
+      if (diffPool.length === 0) {
+        q = {
+          id: 'no_more_questions',
+          teacherId: 'system',
+          grade: 'mixed',
+          topic: 'Mastery',
+          difficulty: 'easy',
+          question: 'Mastery Achieved! All questions in this game pool have been resolved. Press submit to continue!',
+          options: ['Continue', 'Continue', 'Continue', 'Continue'],
+          correctIndex: 0,
+          explanation: 'New questions coming soon!'
+        };
+      } else {
+        q = diffPool[Math.floor(Math.random() * diffPool.length)];
+      }
+
+      // Add to match asked list immediately BEFORE pushing
       room.askedQuestionIds.push(q.id);
+      if (!activeTeam.askedQuestionIds) activeTeam.askedQuestionIds = [];
+      activeTeam.askedQuestionIds.push(q.id);
+
       room.activeQuestion = q;
       room.timerRemaining = 15;
 
@@ -423,25 +486,42 @@ export class SocketService {
         question: q,
         timerRemaining: 15
       });
+      this.sendRoomUpdate(roomCode);
 
       // Start countdown
       if (room.questionTimer) clearInterval(room.questionTimer);
       room.questionTimer = setInterval(() => {
-        room.timerRemaining--;
-        if (room.timerRemaining <= 0) {
+        const currentRoom = this.activeRooms.get(roomCode);
+        if (!currentRoom || currentRoom.turnId !== expectedTurnId || currentRoom.gamePhase !== 'RESOLVING_QUESTION') {
+          if (room.questionTimer) {
+            clearInterval(room.questionTimer);
+            room.questionTimer = null;
+          }
+          return;
+        }
+        currentRoom.timerRemaining--;
+        if (currentRoom.timerRemaining <= 0) {
           clearInterval(room.questionTimer);
           room.questionTimer = null;
-          this.handleAnswerSubmit(roomCode, '', -1, 15); // Time out
+          this.handleAnswerSubmitForTurn(roomCode, '', -1, 15, expectedTurnId); // Time out
         }
       }, 1000);
     } catch (err: any) {
       logger.error('Error dispatching question in room: ' + roomCode, err);
+      room.gamePhase = 'TURN_COMPLETE';
+      this.rotateTurn(roomCode, expectedTurnId);
     }
   }
 
   private async handleAnswerSubmit(roomCode: string, studentId: string, answerIndex: number, timeSpent: number) {
     const room = this.activeRooms.get(roomCode);
-    if (!room || !room.activeQuestion) return;
+    if (!room) return;
+    await this.handleAnswerSubmitForTurn(roomCode, studentId, answerIndex, timeSpent, room.turnId || '');
+  }
+
+  private async handleAnswerSubmitForTurn(roomCode: string, studentId: string, answerIndex: number, timeSpent: number, expectedTurnId: string) {
+    const room = this.activeRooms.get(roomCode);
+    if (!room || room.turnId !== expectedTurnId || room.gamePhase !== 'RESOLVING_QUESTION' || !room.activeQuestion) return;
 
     if (room.questionTimer) {
       clearInterval(room.questionTimer);
@@ -454,6 +534,14 @@ export class SocketService {
     const isCorrect = answerIndex === q.correctIndex;
     const activeTeam = room.teams[room.activeTeamIdx];
     const activeTeammate = activeTeam.members[activeTeam.activeMemberIdx];
+    const isRollQ = room.isRollQuestion;
+
+    if (isRollQ) {
+      room.isRollQuestion = false;
+      room.gamePhase = 'DICE_REVEAL';
+    } else {
+      room.gamePhase = 'RESOLVING_REWARD_OR_TRAP';
+    }
 
     if (studentId) {
       if (!room.studentStats[studentId]) {
@@ -466,25 +554,23 @@ export class SocketService {
 
     const roll = room.currentRoll || 1;
     let tileText = '';
-    let captureText = '';
     let newPosition = activeTeam.position; // default: no movement
+    let asksSecondQuestion = false;
 
     if (isCorrect) {
-      room.pendingRetryQuestion = null; // Clear on correct answer!
+      room.pendingRetryQuestion = null; // Clear retry question
       activeTeam.streak++;
 
-      // FIXED: Only move forward on correct answer
-      newPosition = Math.min(17, activeTeam.position + roll);
-      activeTeam.position = newPosition;
-
+      let xp = 15;
+      let coins = 5;
       const isOnBossTile = activeTeam.position === 8 || activeTeam.position === 16;
       if (isOnBossTile) {
-        activeTeam.xp += 50;
-        activeTeam.coins += 15;
-      } else {
-        activeTeam.xp += 15;
-        activeTeam.coins += 5;
+        xp = 50;
+        coins = 15;
       }
+      
+      activeTeam.xp += xp;
+      activeTeam.coins += coins;
 
       if (activeTeam.streak === 3) {
         activeTeam.coins += 5;
@@ -493,44 +579,52 @@ export class SocketService {
         activeTeam.coins += 3; // bonus every 3-streak
       }
 
+      if (isRollQ) {
+        // Move forward since it's the roll question
+        newPosition = Math.min(17, activeTeam.position + roll);
+        activeTeam.position = newPosition;
 
+        const destTileType = [4, 10, 15].includes(activeTeam.position) ? 'treasure' :
+                             [2, 6, 11, 12].includes(activeTeam.position) ? 'trap' :
+                             [8, 16].includes(activeTeam.position) ? 'boss' : 'other';
 
-      if ([4, 10, 15].includes(activeTeam.position)) {
-        activeTeam.xp += 10;
-        activeTeam.coins += 15;
-        tileText = `🎁 Opened a Treasure! (+15 Coins, +10 XP)`;
-      } else if ([2, 6, 11, 12].includes(activeTeam.position)) {
-        const isSkipTurnTrap = [11, 12].includes(activeTeam.position);
-        if (isSkipTurnTrap) {
-          activeTeam.skipNextTurn = true;
-          tileText = `🚫 Sprung a Trap! Bug caught you! Skip next turn.`;
-        } else {
-          activeTeam.position = Math.max(0, activeTeam.position - 2);
-          newPosition = activeTeam.position;
-          tileText = `⏮️ Sprung a Trap! Bug knocked you back 2 tiles!`;
+        if (destTileType === 'treasure') {
+          activeTeam.xp += 10;
+          activeTeam.coins += 15;
+          tileText = `🎁 Opened a Treasure! (+15 Coins, +10 XP)`;
+        } else if (destTileType === 'trap') {
+          const isSkipTurnTrap = [11, 12].includes(activeTeam.position);
+          if (isSkipTurnTrap) {
+            activeTeam.skipNextTurn = true;
+            tileText = `🚫 Sprung a Trap! Bug caught you! Skip next turn.`;
+          } else {
+            activeTeam.position = Math.max(0, activeTeam.position - KNOCKBACK_TILES);
+            newPosition = activeTeam.position;
+            tileText = `⏮️ Sprung a Trap! Bug knocked you back ${KNOCKBACK_TILES} tiles!`;
+          }
+        } else if (destTileType === 'boss') {
+          activeTeam.xp += 30;
+          activeTeam.coins += 10;
+          tileText = `👾 Reached a Boss Gate! (+10 Coins, +30 XP)`;
         }
-      }
-      
-      // Apply Tile Collision Rule (Arriving player B stays, existing player A is pushed back 4 tiles)
-      const clashedTeam = room.teams.find(t => 
-        t.id !== activeTeam.id && t.position === activeTeam.position && !t.finished && activeTeam.position !== 0
-      );
-      if (clashedTeam) {
-        const finalPos = Math.max(0, clashedTeam.position - 4);
-        clashedTeam.position = finalPos;
-        tileText += ` | ⚔️ Collision!\n${clashedTeam.name} was moved back 4 tiles.`;
+
+        // Apply Tile Collision Rule (Arriving player B stays, existing player A is pushed back 4 tiles)
+        const clashedTeam = room.teams.find(t => 
+          t.id !== activeTeam.id && t.position === activeTeam.position && !t.finished && activeTeam.position !== 0
+        );
+        if (clashedTeam) {
+          const finalPos = Math.max(0, clashedTeam.position - COLLISION_PUSHBACK_TILES);
+          clashedTeam.position = finalPos;
+          tileText += ` | ⚔️ Collision! ${clashedTeam.name} was moved back ${COLLISION_PUSHBACK_TILES} tiles.`;
+        }
+      } else {
+        tileText = `✅ Correctly resolved tile question!`;
       }
     } else {
-      // FIXED: Wrong answer = NO movement at all. Player stays in place.
       activeTeam.streak = 0;
       newPosition = activeTeam.position; // stays
-      room.pendingRetryQuestion = q; // Save for spaced repetition retry!
+      room.pendingRetryQuestion = q; // Save retry question
     }
-
-    let combinedLogs = [];
-    if (captureText) combinedLogs.push(captureText);
-    if (tileText) combinedLogs.push(tileText);
-    const resultLog = combinedLogs.join(' | ');
 
     if (activeTeam.position >= 17 && !activeTeam.finished) {
       activeTeam.finished = true;
@@ -547,7 +641,6 @@ export class SocketService {
       : (currentFinishedCount === room.teams.length - 1);
 
     if (isFinishedCondition) {
-      // Auto-finish the last remaining team
       const remainingTeam = room.teams.find(t => !t.finished);
       if (remainingTeam) {
         remainingTeam.finished = true;
@@ -557,6 +650,7 @@ export class SocketService {
         });
       }
       room.status = 'FINISHED';
+      room.gamePhase = 'GAME_OVER';
 
       // Increment matchesPlayed and update level for all players in room
       const leveledUpMembers: string[] = [];
@@ -636,21 +730,30 @@ export class SocketService {
       isCorrect,
       correctIndex: q.correctIndex,
       explanation: q.explanation,
-      newPosition,           // new position after correct move (or same position if wrong)
-      captureText: resultLog,
+      newPosition,
+      captureText: tileText,
       playerName: activeTeammate.name,
       teamName: activeTeam.name,
-      hasRetryQuestion: !isCorrect // tell client to show retry toast
+      hasRetryQuestion: !isCorrect,
+      roll // Send the roll value to reveal it!
     });
 
+    room.gamePhase = 'TURN_COMPLETE';
+    this.sendRoomUpdate(roomCode);
+
     setTimeout(() => {
-      this.rotateTurn(roomCode);
+      const currentRoom = this.activeRooms.get(roomCode);
+      if (!currentRoom || currentRoom.turnId !== expectedTurnId || currentRoom.gamePhase !== 'TURN_COMPLETE') return;
+      this.rotateTurn(roomCode, expectedTurnId);
     }, 3800);
   }
 
-  private rotateTurn(roomCode: string) {
+  private rotateTurn(roomCode: string, expectedTurnId: string) {
     const room = this.activeRooms.get(roomCode);
-    if (!room || room.status !== 'PLAYING') return;
+    if (!room || room.turnId !== expectedTurnId || room.gamePhase !== 'TURN_COMPLETE' || room.status !== 'PLAYING') return;
+
+    if (room.turnTransitionLock) return;
+    room.turnTransitionLock = true;
 
     // Rotate within active team members
     const activeTeam = room.teams[room.activeTeamIdx];
@@ -670,15 +773,20 @@ export class SocketService {
 
     if (!found) {
       logger.info(`All teams finished in room ${roomCode}. Turn rotation skipped.`);
+      room.turnTransitionLock = false;
       return;
     }
 
-    this.advanceTurnFrom(roomCode, nextTeamIdx);
+    this.advanceTurnFrom(roomCode, nextTeamIdx, expectedTurnId);
   }
 
-  private advanceTurnFrom(roomCode: string, targetTeamIdx: number) {
+  private advanceTurnFrom(roomCode: string, targetTeamIdx: number, previousTurnId: string) {
     const room = this.activeRooms.get(roomCode);
     if (!room || room.status !== 'PLAYING') return;
+
+    room.turnCount = (room.turnCount || 1) + 1;
+    room.turnId = `TURN_${room.turnCount}`;
+    const nextTurnId = room.turnId;
 
     const targetTeam = room.teams[targetTeamIdx];
     if (targetTeam.skipNextTurn) {
@@ -690,22 +798,14 @@ export class SocketService {
       this.io.to(roomCode).emit('game:log', { message: skipMessage });
       this.io.to(roomCode).emit('game:skip_turn', { teamName: targetTeam.name, message: skipMessage });
       
+      room.gamePhase = 'TURN_COMPLETE';
+      room.turnTransitionLock = false;
       this.sendRoomUpdate(roomCode);
 
       setTimeout(() => {
-        let nextTeamIdx = targetTeamIdx;
-        let found = false;
-        for (let i = 1; i <= room.teams.length; i++) {
-          const idx = (targetTeamIdx + i) % room.teams.length;
-          if (!room.teams[idx].finished) {
-            nextTeamIdx = idx;
-            found = true;
-            break;
-          }
-        }
-        if (found) {
-          this.advanceTurnFrom(roomCode, nextTeamIdx);
-        }
+        const currentRoom = this.activeRooms.get(roomCode);
+        if (!currentRoom || currentRoom.turnId !== nextTurnId || currentRoom.gamePhase !== 'TURN_COMPLETE') return;
+        this.rotateTurn(roomCode, nextTurnId);
       }, 2200);
 
       return;
@@ -713,8 +813,10 @@ export class SocketService {
 
     room.activeTeamIdx = targetTeamIdx;
     room.currentRoll = null;
+    room.gamePhase = 'TURN_START';
+    room.turnTransitionLock = false;
 
-    logger.info(`🔄 Turn rotated to team: ${room.teams[targetTeamIdx].name}`);
+    logger.info(`🔄 Turn rotated to team: ${room.teams[targetTeamIdx].name} | ${room.turnId}`);
     this.sendRoomUpdate(roomCode);
   }
 
@@ -749,7 +851,13 @@ export class SocketService {
       wasInLastPlace: {},
       studentStats: {},
       isFirstQuestion: true,
-      pendingRetryQuestion: null
+      pendingRetryQuestion: null,
+      isRollQuestion: false,
+      gamePhase: 'TURN_START',
+      turnCount: 1,
+      turnId: 'TURN_1',
+      turnTransitionLock: false,
+      dispatchedRollIds: []
     };
 
     this.activeRooms.set(roomCode, room);

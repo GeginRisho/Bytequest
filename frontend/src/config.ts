@@ -12,7 +12,7 @@ export interface Tile {
 export const BOARD_TILES: Tile[] = [
   { index: 0, type: 'start', label: 'Start Camp', description: 'Begin the treasure hunt here!' },
   { index: 1, type: 'question', label: 'Scroll of Knowledge', description: 'Standard Question' },
-  { index: 2, type: 'trap', label: 'Bug Trap B (Knockback)', description: 'Bug knocked you back 2 spaces!' },
+  { index: 2, type: 'trap', label: 'Bug Trap B (Knockback)', description: 'Bug knocked you back 2 tiles!' },
   { index: 3, type: 'question', label: 'Scroll of Knowledge', description: 'Standard Question' },
   { index: 4, type: 'treasure', label: 'Treasure Glade', description: 'Double reward or safe bonus!' },
   { index: 5, type: 'question', label: 'Scroll of Knowledge', description: 'Standard Question' },
@@ -92,24 +92,24 @@ export const PRESET_AVATARS = [
 export const SAFE_TILES = [0, 3, 8];
 
 export const getTileHexClass = (tIdx: number): string => {
-  if (tIdx === 17) return 'hex-gold'; // Victory Crown
-  if ([3, 8].includes(tIdx)) return 'hex-green'; // XP Reward
-  if ([6, 12, 16].includes(tIdx)) return 'hex-orange'; // Challenge
-  if ([2, 11].includes(tIdx)) return 'hex-red'; // Bug Trap
-  if ([4, 9, 15].includes(tIdx)) return 'hex-gold'; // Treasure
-  if ([14].includes(tIdx)) return 'hex-purple'; // Boss Battle
+  if (tIdx === 17) return 'hex-gold'; // Finish
+  if ([3].includes(tIdx)) return 'hex-green'; // XP Reward
+  if ([6, 12].includes(tIdx)) return 'hex-orange'; // Challenge
+  if ([2, 11].includes(tIdx)) return 'hex-red'; // Trap (Knockback / Skip Turn)
+  if ([4, 10, 15].includes(tIdx)) return 'hex-gold'; // Treasure
+  if ([8, 16].includes(tIdx)) return 'hex-purple'; // Boss
   return 'hex-blue'; // Question / START
 };
 
 export const getTileSymbol = (tIdx: number): string => {
   if (tIdx === 0) return '🏁';
   if (tIdx === 17) return '👑';
-  if ([3, 8].includes(tIdx)) return 'XP';
-  if ([6, 12, 16].includes(tIdx)) return '🎯';
+  if ([3].includes(tIdx)) return 'XP';
+  if ([6, 12].includes(tIdx)) return '🎯';
   if (tIdx === 11) return '⏳';
   if (tIdx === 2) return '↩️';
-  if ([4, 9, 15].includes(tIdx)) return '💰';
-  if ([14].includes(tIdx)) return '👾';
+  if ([4, 10, 15].includes(tIdx)) return '💰';
+  if ([8, 16].includes(tIdx)) return '👾';
   return '❓';
 };
 
