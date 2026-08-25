@@ -364,6 +364,19 @@ export default function StudentGame({
   const [dailyLoading, setDailyLoading] = useState<boolean>(false);
   const [showDailyResults, setShowDailyResults] = useState<boolean>(false);
 
+  // Get date key for Daily Challenge to partition by student and date
+  const getDailyPlayedKey = () => {
+    const student = activeStudent || propActiveStudent;
+    if (!student) return '';
+    const todayStr = new Date().toDateString();
+    return `bytequest_daily_played_${student.id}_${todayStr}`;
+  };
+
+  const isDailyPlayedToday = () => {
+    const key = getDailyPlayedKey();
+    return key ? localStorage.getItem(key) === 'true' : false;
+  };
+
   // API Config
   const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
   const STUDENT_API_BASE = `${baseApi}/api/v1/student`;
@@ -388,6 +401,16 @@ export default function StudentGame({
       setActiveStudent(propActiveStudent);
     }
   }, [propActiveStudent]);
+
+  // Sync dailyPlayedToday status when activeStudent changes
+  useEffect(() => {
+    if (activeStudent) {
+      const key = `bytequest_daily_played_${activeStudent.id}_${new Date().toDateString()}`;
+      setDailyPlayedToday(localStorage.getItem(key) === 'true');
+    } else {
+      setDailyPlayedToday(false);
+    }
+  }, [activeStudent]);
 
   // Auto-start Daily Challenge when tab is opened
   useEffect(() => {
@@ -949,7 +972,7 @@ export default function StudentGame({
 
   // Daily Challenge Mechanics
   const handleStartDailyChallenge = () => {
-    if (dailyPlayedToday) {
+    if (isDailyPlayedToday()) {
       alert("You have already completed today's challenge! Come back tomorrow.");
       onBack();
       return;
@@ -963,8 +986,21 @@ export default function StudentGame({
           setDailyQs([]);
           setDailyActive(false);
         } else {
-          const shuffled = [...questionBank].sort(() => 0.5 - Math.random()).slice(0, 5);
-          setDailyQs(shuffled);
+          // Select up to 5 unique questions based on unique question IDs
+          const available = [...questionBank];
+          const selected: Question[] = [];
+          const selectedIds = new Set<string>();
+
+          while (selected.length < Math.min(5, available.length)) {
+            const idx = Math.floor(Math.random() * available.length);
+            const q = available[idx];
+            if (!selectedIds.has(q.id)) {
+              selected.push(q);
+              selectedIds.add(q.id);
+            }
+          }
+
+          setDailyQs(selected);
           setDailyQIdx(0);
           setDailyScore(0);
           setDailySelectedOpt(null);
@@ -1004,6 +1040,11 @@ export default function StudentGame({
       setDailySelectedOpt(null);
       setDailyChecked(false);
     } else {
+      const key = getDailyPlayedKey();
+      if (key) {
+        localStorage.setItem(key, 'true');
+      }
+      setDailyPlayedToday(true);
       if (activeStudent) {
         fetch(`${STUDENT_API_BASE}/profile/${activeStudent.id}/rewards`, {
           method: 'POST',
@@ -1016,7 +1057,6 @@ export default function StudentGame({
           }
         });
       }
-      setDailyPlayedToday(true);
       setDailyActive(false);
       setShowDailyResults(true);
     }
@@ -1318,14 +1358,15 @@ export default function StudentGame({
               <div className="parchment-panel rounded-2xl p-8 text-offwhite text-center space-y-4 shadow-xl">
                 <span className="text-5xl block">🎲</span>
                 <h3 className="font-adventure text-2xl font-bold text-gold-dark font-adventure">Offline Saved Adventure</h3>
-                {localStorage.getItem('bytequest_local_adventure') ? (
+                {localStorage.getItem(activeStudent ? `bytequest_local_adventure_${activeStudent.id}` : 'bytequest_local_adventure') ? (
                   <>
                     <p className="text-xs font-semibold text-slate-500 leading-relaxed">
                       An unfinished local offline practice game was found! You can resume exactly where you left off.
                     </p>
                     <button 
                       onClick={() => {
-                        const saved = JSON.parse(localStorage.getItem('bytequest_local_adventure')!);
+                        const key = activeStudent ? `bytequest_local_adventure_${activeStudent.id}` : 'bytequest_local_adventure';
+                        const saved = JSON.parse(localStorage.getItem(key)!);
                         onResumeLocalPractice(saved);
                       }}
                       className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg border border-emerald-500 shadow-md text-xs uppercase"
@@ -1637,7 +1678,7 @@ export default function StudentGame({
 
                   <button 
                     onClick={handleStartPracticeQuiz}
-                    className="w-full py-4 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold border-b-4 border-[var(--primary-dark)] rounded-xl shadow-lg uppercase text-xs tracking-wider transition-colors"
+                    className="w-full py-4 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold border-b-4 border-[var(--primary-dark)] rounded-xl shadow-lg uppercase text-xs tracking-wider transition-colors no-override"
                   >
                     Start Training Quiz
                   </button>
@@ -1646,37 +1687,68 @@ export default function StudentGame({
                 <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] rounded-[2rem] p-8 text-white max-w-xl mx-auto space-y-6 relative shadow-2xl font-sans">
                   <div className="flex justify-between border-b border-white/10 pb-3 text-xs text-white/50 font-bold">
                     <span>📚 Practice Quiz</span>
-                    <span>Question {quizQIdx + 1} of 5</span>
+                    <span>Question {quizQIdx + 1} of {quizQs.length}</span>
                   </div>
 
                   <p className="text-lg font-bold leading-relaxed text-white font-sans">{quizQs[quizQIdx]?.question}</p>
 
                   <div className="space-y-3">
                     {quizQs[quizQIdx]?.options.map((opt, oIdx) => {
-                      let style = 'bg-[var(--primary-deep-dark)] border-2 border-white/10 text-white/90 hover:bg-[var(--primary-deep-medium)] hover:border-[var(--primary-color)]';
+                      let optClass = 'daily-quiz-option';
                       if (quizChecked) {
-                        if (oIdx === quizQs[quizQIdx].correctIndex) style = 'bg-emerald-950/80 border-2 border-emerald-500 text-emerald-355 font-bold';
-                        else if (quizSelectedOpt === oIdx) style = 'bg-[var(--primary-deep-dark)]/80 border-2 border-red-500 text-red-355 font-bold';
+                        if (oIdx === quizQs[quizQIdx].correctIndex) {
+                          optClass += ' daily-quiz-option-correct';
+                        } else if (quizSelectedOpt === oIdx) {
+                          optClass += ' daily-quiz-option-wrong';
+                        } else {
+                          optClass += ' daily-quiz-option-disabled';
+                        }
                       } else if (quizSelectedOpt === oIdx) {
-                        style = 'bg-[var(--primary-deep-medium)]/60 border-2 border-[var(--primary-color)] text-white font-bold';
+                        optClass += ' daily-quiz-option-selected';
                       }
+
+                      const isCorrectAnswer = oIdx === quizQs[quizQIdx].correctIndex;
+                      const isSelectedAnswer = oIdx === quizSelectedOpt;
 
                       return (
                         <button
                           key={oIdx}
+                          disabled={quizChecked}
                           onClick={() => handleQuizAnswerSelect(oIdx)}
-                          className={`w-full text-left p-4 border-2 rounded-xl text-xs font-bold transition-all ${style}`}
+                          className={`w-full text-left p-4 rounded-xl text-xs font-bold transition-all no-override flex justify-between items-center ${optClass}`}
                         >
-                          {String.fromCharCode(65 + oIdx)}. {opt}
+                          <span>
+                            {String.fromCharCode(65 + oIdx)}. {opt}
+                          </span>
+                          {quizChecked && (
+                            <span>
+                              {isCorrectAnswer && (
+                                <span className="text-emerald-600 font-bold ml-2">✓ Correct Answer</span>
+                              )}
+                              {!isCorrectAnswer && isSelectedAnswer && (
+                                <span className="text-red-600 font-bold ml-2">✕ Incorrect</span>
+                              )}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
                   </div>
 
                   {quizChecked && (
-                    <div className="bg-stone-900/60 border border-white/5 p-4 rounded-xl text-xs text-white/70 leading-relaxed font-semibold">
-                      <strong className="text-[#FFD700] block mb-1">Explanation:</strong>
-                      {quizQs[quizQIdx]?.explanation}
+                    <div className="text-center font-bold font-adventure text-sm py-2">
+                      {quizSelectedOpt === quizQs[quizQIdx].correctIndex ? (
+                        <span className="text-emerald-500 uppercase tracking-widest animate-pulse">✓ Correct Answer!</span>
+                      ) : (
+                        <span className="text-red-500 uppercase tracking-widest animate-pulse">✕ Incorrect Answer</span>
+                      )}
+                    </div>
+                  )}
+
+                  {quizChecked && (
+                    <div className="daily-quiz-explanation p-5 rounded-2xl text-xs font-semibold leading-relaxed no-override">
+                      <strong className="text-[var(--primary-color)] block mb-1 font-adventure text-sm uppercase tracking-wide">Explanation:</strong>
+                      <p className="text-[var(--quiz-explanation-text)] font-sans">{quizQs[quizQIdx]?.explanation}</p>
                     </div>
                   )}
 
@@ -1685,16 +1757,16 @@ export default function StudentGame({
                       <button 
                         onClick={handleQuizCheck}
                         disabled={quizSelectedOpt === null}
-                        className="flex-1 py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase text-xs disabled:opacity-50 transition-colors"
+                        className="flex-1 py-3.5 daily-quiz-action text-white font-adventure font-extrabold rounded-xl border-b-4 uppercase text-xs transition-colors no-override"
                       >
                         Check Answer
                       </button>
                     ) : (
                       <button 
                         onClick={handleQuizNext}
-                        className="flex-1 py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase text-xs transition-colors"
+                        className="flex-1 py-3.5 daily-quiz-action text-white font-adventure font-extrabold rounded-xl border-b-4 uppercase text-xs transition-colors no-override"
                       >
-                        {quizQIdx === 4 ? 'Complete Quiz' : 'Next Question'}
+                        {quizQIdx === quizQs.length - 1 ? 'Complete Quiz' : 'Next Question'}
                       </button>
                     )}
                   </div>
@@ -1731,13 +1803,13 @@ export default function StudentGame({
                   <div className="space-y-3">
                     <button
                       onClick={handleStartDailyChallenge}
-                      className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                      className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md no-override"
                     >
                       Retry
                     </button>
                     <button
                       onClick={() => onBack()}
-                      className="w-full py-3 bg-stone-900 hover:bg-stone-850 text-white/80 font-adventure font-extrabold rounded-xl border border-white/10 uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                      className="w-full py-3 bg-stone-900 hover:bg-stone-850 text-white/80 font-adventure font-extrabold rounded-xl border border-white/10 uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md no-override"
                     >
                       Back to Menu
                     </button>
@@ -1749,37 +1821,68 @@ export default function StudentGame({
                 <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] p-8 text-white max-w-xl mx-auto space-y-6 relative rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] font-sans animate-scale-in">
                   <div className="flex justify-between border-b border-white/10 pb-3 text-xs text-white/50 font-bold">
                     <span>⚡ Daily Challenge Quiz</span>
-                    <span>Question {dailyQIdx + 1} of 5</span>
+                    <span>Question {dailyQIdx + 1} of {dailyQs.length}</span>
                   </div>
 
                   <p className="text-lg font-bold leading-relaxed text-white font-sans">{dailyQs[dailyQIdx]?.question}</p>
 
                   <div className="space-y-3">
                     {dailyQs[dailyQIdx]?.options.map((opt, oIdx) => {
-                      let style = 'bg-[var(--primary-deep-dark)] border-2 border-white/10 text-white/90 hover:bg-[var(--primary-deep-medium)] hover:border-[var(--primary-color)]';
+                      let optClass = 'daily-quiz-option';
                       if (dailyChecked) {
-                        if (oIdx === dailyQs[dailyQIdx].correctIndex) style = 'bg-emerald-950/80 border-2 border-emerald-500 text-emerald-350 font-bold';
-                        else if (dailySelectedOpt === oIdx) style = 'bg-[var(--primary-deep-dark)]/80 border-2 border-red-500 text-red-350 font-bold';
+                        if (oIdx === dailyQs[dailyQIdx].correctIndex) {
+                          optClass += ' daily-quiz-option-correct';
+                        } else if (dailySelectedOpt === oIdx) {
+                          optClass += ' daily-quiz-option-wrong';
+                        } else {
+                          optClass += ' daily-quiz-option-disabled';
+                        }
                       } else if (dailySelectedOpt === oIdx) {
-                        style = 'bg-[var(--primary-deep-medium)]/60 border-2 border-[var(--primary-color)] text-white font-bold';
+                        optClass += ' daily-quiz-option-selected';
                       }
+
+                      const isCorrectAnswer = oIdx === dailyQs[dailyQIdx].correctIndex;
+                      const isSelectedAnswer = oIdx === dailySelectedOpt;
 
                       return (
                         <button
                           key={oIdx}
+                          disabled={dailyChecked}
                           onClick={() => handleDailyAnswerSelect(oIdx)}
-                          className={`w-full text-left p-4 border-2 rounded-xl text-xs font-bold transition-all ${style}`}
+                          className={`w-full text-left p-4 rounded-xl text-xs font-bold transition-all no-override flex justify-between items-center ${optClass}`}
                         >
-                          {String.fromCharCode(65 + oIdx)}. {opt}
+                          <span>
+                            {String.fromCharCode(65 + oIdx)}. {opt}
+                          </span>
+                          {dailyChecked && (
+                            <span>
+                              {isCorrectAnswer && (
+                                <span className="text-emerald-600 font-bold ml-2">✓ Correct Answer</span>
+                              )}
+                              {!isCorrectAnswer && isSelectedAnswer && (
+                                <span className="text-red-600 font-bold ml-2">✕ Incorrect</span>
+                              )}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
                   </div>
 
                   {dailyChecked && (
-                    <div className="bg-stone-900/60 border border-white/5 p-4 rounded-xl text-xs text-white/70 leading-relaxed font-semibold">
-                      <strong className="text-[#FFD700] block mb-1">Explanation:</strong>
-                      {dailyQs[dailyQIdx]?.explanation}
+                    <div className="text-center font-bold font-adventure text-sm py-2">
+                      {dailySelectedOpt === dailyQs[dailyQIdx].correctIndex ? (
+                        <span className="text-emerald-500 uppercase tracking-widest animate-pulse">✓ Correct Answer!</span>
+                      ) : (
+                        <span className="text-red-500 uppercase tracking-widest animate-pulse">✕ Incorrect Answer</span>
+                      )}
+                    </div>
+                  )}
+
+                  {dailyChecked && (
+                    <div className="daily-quiz-explanation p-5 rounded-2xl text-xs font-semibold leading-relaxed no-override">
+                      <strong className="text-[var(--primary-color)] block mb-1 font-adventure text-sm uppercase tracking-wide">Explanation:</strong>
+                      <p className="text-[var(--quiz-explanation-text)] font-sans">{dailyQs[dailyQIdx]?.explanation}</p>
                     </div>
                   )}
 
@@ -1788,16 +1891,16 @@ export default function StudentGame({
                       <button 
                         onClick={handleDailyCheck}
                         disabled={dailySelectedOpt === null}
-                        className="flex-1 py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase text-xs disabled:opacity-50 transition-colors"
+                        className="flex-1 py-3.5 daily-quiz-action text-white font-adventure font-extrabold rounded-xl border-b-4 uppercase text-xs transition-colors no-override"
                       >
                         Check Answer
                       </button>
                     ) : (
                       <button 
                         onClick={handleDailyNext}
-                        className="flex-1 py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase text-xs transition-colors"
+                        className="flex-1 py-3.5 daily-quiz-action text-white font-adventure font-extrabold rounded-xl border-b-4 uppercase text-xs transition-colors no-override"
                       >
-                        {dailyQIdx === 4 ? 'Finish challenge' : 'Next Question'}
+                        {dailyQIdx === dailyQs.length - 1 ? 'Finish challenge' : 'Next Question'}
                       </button>
                     )}
                   </div>
@@ -1813,8 +1916,24 @@ export default function StudentGame({
                   
                   <div className="bg-[var(--primary-deep-dark)] border border-white/10 p-5 rounded-2xl max-w-xs mx-auto space-y-2">
                     <div className="flex justify-between font-bold text-xs text-white/60">
+                      <span>Total Questions:</span>
+                      <span>{dailyQs.length}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-xs text-white/60">
+                      <span>Questions Answered:</span>
+                      <span>{dailyQs.length}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-xs text-white/60">
                       <span>Correct Answers:</span>
-                      <span className="text-emerald-400">{dailyScore} / 5</span>
+                      <span className="text-emerald-400">{dailyScore}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-xs text-white/60">
+                      <span>Incorrect Answers:</span>
+                      <span className="text-red-400">{dailyQs.length - dailyScore}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-xs text-white/60">
+                      <span>Score:</span>
+                      <span className="text-blue-400">{Math.round((dailyScore / Math.max(1, dailyQs.length)) * 100)}%</span>
                     </div>
                     <div className="flex justify-between font-bold text-xs text-white/60">
                       <span>Experience Gained:</span>
@@ -1828,7 +1947,7 @@ export default function StudentGame({
 
                   <button
                     onClick={() => onBack()}
-                    className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md"
+                    className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md no-override"
                   >
                     Return to Menu
                   </button>

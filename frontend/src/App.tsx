@@ -495,6 +495,40 @@ export default function App() {
   const [localScorePopup, setLocalScorePopup] = useState<{ text: string; success: boolean } | null>(null);
   const [localShowTutorial, setLocalShowTutorial] = useState<boolean>(false);
 
+  // Synchronize Player 1 config with activeStudent when it loads/changes,
+  // and clear transient offline game states to prevent stale/leaked data between logins
+  useEffect(() => {
+    // Reset local gameplay states
+    setLocalPlayers([]);
+    setLocalTurnIdx(0);
+    setLocalTurnCount(1);
+    setLocalGamePhase('TURN_START');
+    setLocalCurrentRoll(null);
+    setLocalActiveQuestion(null);
+    setLocalSelectedOptIdx(null);
+    setLocalQuizPhase('answering');
+    
+    if (activeStudent) {
+      setLocalSetupPlayers(prev => {
+        const list = [...prev];
+        list[0] = {
+          name: activeStudent.name || 'Player 1',
+          grade: (activeStudent.grade === 10 || activeStudent.grade === 11 || activeStudent.grade === 12) ? activeStudent.grade : 11,
+          color: list[0]?.color ?? 0,
+          avatar: list[0]?.avatar ?? 0
+        };
+        return list;
+      });
+    } else {
+      setLocalSetupPlayers([
+        { name: 'Player 1', grade: 11, color: 0, avatar: 0 },
+        { name: 'Player 2', grade: 10, color: 1, avatar: 1 },
+        { name: 'Player 3', grade: 12, color: 2, avatar: 2 },
+        { name: 'Player 4', grade: 11, color: 3, avatar: 3 }
+      ]);
+    }
+  }, [activeStudent]);
+
   const localBotRollTimeoutRef = useRef<any>(null);
   const localBotThinkTimeoutRef = useRef<any>(null);
   const localTimerIntervalRef = useRef<any>(null);
@@ -523,6 +557,10 @@ export default function App() {
 
 
 
+  const getLocalSaveKey = () => {
+    return activeStudent ? `bytequest_local_adventure_${activeStudent.id}` : 'bytequest_local_adventure';
+  };
+
   const saveLocalAdventureState = (players: LocalPlayer[], turnIdx: number, mapName: string, screen: string, askedQs: Record<string, string[]>, pendingBotQs: any[], playerSolved: string[], botSolved: string[]) => {
     const saved = {
       players,
@@ -534,7 +572,7 @@ export default function App() {
       playerSolved,
       botSolved
     };
-    localStorage.setItem('bytequest_local_adventure', JSON.stringify(saved));
+    localStorage.setItem(getLocalSaveKey(), JSON.stringify(saved));
   };
 
   const resumeLocalPracticeGame = (savedState: any) => {
