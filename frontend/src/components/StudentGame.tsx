@@ -760,6 +760,10 @@ export default function StudentGame({
       setShowLobbyConfigModal(false);
       return;
     }
+    if (activeTab === 'daily_challenge' && dailyActive) {
+      handleDailyFinishEarly();
+      return;
+    }
     // From lobby or playing — always go back to the main game menu (Launchpad)
     if (gameState === 'lobby' || gameState === 'playing') {
       if (socket && syncState) socket.emit('room:leave', { roomCode: syncState?.roomCode });
@@ -972,11 +976,6 @@ export default function StudentGame({
 
   // Daily Challenge Mechanics
   const handleStartDailyChallenge = () => {
-    if (isDailyPlayedToday()) {
-      alert("You have already completed today's challenge! Come back tomorrow.");
-      onBack();
-      return;
-    }
     setDailyLoading(true);
     setDailyActive(false);
     setShowDailyResults(false);
@@ -1034,29 +1033,45 @@ export default function StudentGame({
     }
   };
 
+  const submitDailyChallengeRewards = (answered: number, correct: number) => {
+    const xpEarned = correct * 4;
+    const coinsEarned = correct * 2;
+    const minutesEarned = Math.max(1, Math.ceil(answered * 1));
+
+    if (activeStudent && answered > 0) {
+      fetch(`${STUDENT_API_BASE}/profile/${activeStudent.id}/rewards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ xpEarned, coinsEarned, minutesEarned })
+      }).then(() => {
+        loadStudentProfile(activeStudent.id);
+        if (onUpdateStudent) {
+          onUpdateStudent(activeStudent.id);
+        }
+      });
+    }
+
+    const key = getDailyPlayedKey();
+    if (key) {
+      localStorage.setItem(key, 'true');
+    }
+    setDailyPlayedToday(true);
+  };
+
+  const handleDailyFinishEarly = () => {
+    const answeredCount = dailyQIdx + (dailyChecked ? 1 : 0);
+    submitDailyChallengeRewards(answeredCount, dailyScore);
+    setDailyActive(false);
+    setShowDailyResults(true);
+  };
+
   const handleDailyNext = () => {
     if (dailyQIdx < dailyQs.length - 1) {
       setDailyQIdx(prev => prev + 1);
       setDailySelectedOpt(null);
       setDailyChecked(false);
     } else {
-      const key = getDailyPlayedKey();
-      if (key) {
-        localStorage.setItem(key, 'true');
-      }
-      setDailyPlayedToday(true);
-      if (activeStudent) {
-        fetch(`${STUDENT_API_BASE}/profile/${activeStudent.id}/rewards`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ xpEarned: 20, coinsEarned: 10, minutesEarned: 5 })
-        }).then(() => {
-          loadStudentProfile(activeStudent.id);
-          if (onUpdateStudent) {
-            onUpdateStudent(activeStudent.id);
-          }
-        });
-      }
+      submitDailyChallengeRewards(dailyQs.length, dailyScore);
       setDailyActive(false);
       setShowDailyResults(true);
     }
@@ -1903,56 +1918,71 @@ export default function StudentGame({
                         {dailyQIdx === dailyQs.length - 1 ? 'Finish challenge' : 'Next Question'}
                       </button>
                     )}
+                    {(dailyQIdx > 0 || dailyChecked) && (
+                      <button 
+                        onClick={handleDailyFinishEarly}
+                        className="px-4 py-3.5 bg-rose-800 hover:bg-rose-750 text-white font-adventure font-extrabold rounded-xl border-b-4 border-rose-900 uppercase text-xs transition-colors no-override animate-fade-in"
+                      >
+                        Finish Early
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
 
-              {!dailyLoading && showDailyResults && (
-                <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in space-y-6">
-                  <span className="text-5xl block mb-2">🏆</span>
-                  <h3 className="font-adventure text-2xl font-bold text-[#FFD700] uppercase tracking-widest">
-                    CHALLENGE COMPLETE
-                  </h3>
-                  
-                  <div className="bg-[var(--primary-deep-dark)] border border-white/10 p-5 rounded-2xl max-w-xs mx-auto space-y-2">
-                    <div className="flex justify-between font-bold text-xs text-white/60">
-                      <span>Total Questions:</span>
-                      <span>{dailyQs.length}</span>
+              {!dailyLoading && showDailyResults && (() => {
+                const finalAnswered = dailyQIdx + (dailyChecked ? 1 : 0);
+                const finalScorePercent = finalAnswered > 0 ? Math.round((dailyScore / finalAnswered) * 100) : 0;
+                const finalIncorrect = Math.max(0, finalAnswered - dailyScore);
+                const finalXp = dailyScore * 4;
+                const finalCoins = dailyScore * 2;
+                return (
+                  <div className="bg-gradient-to-b from-[var(--primary-deep-medium)] to-[var(--primary-deep-dark)] border-3 border-[var(--primary-color)] p-8 text-white max-w-xl mx-auto rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.6)] text-center font-sans animate-scale-in space-y-6">
+                    <span className="text-5xl block mb-2">🏆</span>
+                    <h3 className="font-adventure text-2xl font-bold text-[#FFD700] uppercase tracking-widest">
+                      CHALLENGE COMPLETE
+                    </h3>
+                    
+                    <div className="bg-[var(--primary-deep-dark)] border border-white/10 p-5 rounded-2xl max-w-xs mx-auto space-y-2">
+                      <div className="flex justify-between font-bold text-xs text-white/60">
+                        <span>Total Questions:</span>
+                        <span>{dailyQs.length}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-xs text-white/60">
+                        <span>Questions Answered:</span>
+                        <span>{finalAnswered}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-xs text-white/60">
+                        <span>Correct Answers:</span>
+                        <span className="text-emerald-400">{dailyScore}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-xs text-white/60">
+                        <span>Incorrect Answers:</span>
+                        <span className="text-red-400">{finalIncorrect}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-xs text-white/60">
+                        <span>Score:</span>
+                        <span className="text-blue-400">{finalScorePercent}%</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-xs text-white/60">
+                        <span>Experience Gained:</span>
+                        <span className="text-purple-400">+{finalXp} XP</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-xs text-white/60">
+                        <span>Gold Earned:</span>
+                        <span className="text-amber-400">🪙 +{finalCoins} Coins</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between font-bold text-xs text-white/60">
-                      <span>Questions Answered:</span>
-                      <span>{dailyQs.length}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-xs text-white/60">
-                      <span>Correct Answers:</span>
-                      <span className="text-emerald-400">{dailyScore}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-xs text-white/60">
-                      <span>Incorrect Answers:</span>
-                      <span className="text-red-400">{dailyQs.length - dailyScore}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-xs text-white/60">
-                      <span>Score:</span>
-                      <span className="text-blue-400">{Math.round((dailyScore / Math.max(1, dailyQs.length)) * 100)}%</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-xs text-white/60">
-                      <span>Experience Gained:</span>
-                      <span className="text-purple-400">+20 XP</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-xs text-white/60">
-                      <span>Gold Earned:</span>
-                      <span className="text-amber-400">🪙 +10 Coins</span>
-                    </div>
-                  </div>
 
-                  <button
-                    onClick={() => onBack()}
-                    className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md no-override"
-                  >
-                    Return to Menu
-                  </button>
-                </div>
-              )}
+                    <button
+                      onClick={() => onBack()}
+                      className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-adventure font-extrabold rounded-xl border-b-4 border-[var(--primary-dark)] uppercase tracking-wider text-xs transition-all active:scale-95 shadow-md no-override"
+                    >
+                      Return to Menu
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
