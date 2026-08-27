@@ -117,4 +117,41 @@ router.post('/auth/login', async (req, res) => {
   }
 });
 
+// Temporary endpoint for seeding the production admin account safely
+router.post('/diagnose/seed-admin', async (req, res) => {
+  try {
+    const existing = await prisma.user.findFirst({
+      where: { email: { equals: 'admin@bytequest.com', mode: 'insensitive' } }
+    });
+
+    if (existing) {
+      return res.json({
+        success: true,
+        message: 'Admin account already exists',
+        role: existing.role
+      });
+    }
+
+    const passwordHash = await bcrypt.hash('password123', 10);
+    const newAdmin = await prisma.user.create({
+      data: {
+        email: 'admin@bytequest.com',
+        passwordHash,
+        role: Role.ADMIN,
+        firstName: 'Admin',
+        lastName: 'System',
+        isVerified: true
+      }
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Admin account created successfully',
+      role: newAdmin.role
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
