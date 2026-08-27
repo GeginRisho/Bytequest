@@ -65,13 +65,38 @@ app.use('/api/v1/teacher', teacherRouter);
 app.use('/api/v1/student', studentRouter);
 
 
+import { prisma } from './services/db';
+
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'ByteQuest Backend',
-    environment: process.env.NODE_ENV
-  });
+app.get('/health', async (req, res) => {
+  try {
+    const adminUser = await prisma.user.findFirst({
+      where: { email: { equals: 'admin@bytequest.com', mode: 'insensitive' } }
+    });
+    const teacherUser = await prisma.user.findFirst({
+      where: { email: { equals: 'teacher@bytequest.com', mode: 'insensitive' } }
+    });
+    const questionsCount = await prisma.question.count({
+      where: { deletedAt: null }
+    });
+    res.json({
+      status: 'ok',
+      service: 'ByteQuest Backend',
+      environment: process.env.NODE_ENV,
+      dbCheck: {
+        adminExists: !!adminUser,
+        adminRole: adminUser?.role || null,
+        teacherExists: !!teacherUser,
+        teacherRole: teacherUser?.role || null,
+        questionsCount
+      }
+    });
+  } catch (err: any) {
+    res.json({
+      status: 'error',
+      message: err.message
+    });
+  }
 });
 
 // Root endpoint
