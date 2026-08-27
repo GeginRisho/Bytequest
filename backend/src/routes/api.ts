@@ -117,4 +117,27 @@ router.post('/auth/login', async (req, res) => {
   }
 });
 
+router.get('/diagnose/db-raw', async (req, res) => {
+  try {
+    const teachers = await prisma.teacherProfile.findMany({
+      include: { user: true }
+    });
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, role: true, isVerified: true }
+    });
+    return res.json({
+      teachers: teachers.map(t => ({
+        id: t.id,
+        userId: t.userId,
+        email: t.user?.email,
+        deletedAt: t.deletedAt,
+        isActive: t.isActive
+      })),
+      users
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
