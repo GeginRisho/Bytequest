@@ -4,7 +4,7 @@
   "description": "Backend microservices and multiplayer engine for ByteQuest - Treasure Hunt",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && prisma migrate deploy && tsc",
     "start": "node dist/server.js",
     "dev": "nodemon --watch src -e ts --exec ts-node src/server.ts",
     "prisma:generate": "prisma generate",
