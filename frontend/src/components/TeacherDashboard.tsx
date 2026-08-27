@@ -84,6 +84,16 @@ export default function TeacherDashboard({
   setTheme,
   onLoginStateChange
 }: TeacherDashboardProps) {
+  // Local wrapper to automatically inject Authorization token
+  const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const token = localStorage.getItem('bytequest_token');
+    const headers = {
+      ...(init?.headers || {}),
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+    return window.fetch(input, { ...init, headers });
+  };
+
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
@@ -161,6 +171,7 @@ export default function TeacherDashboard({
 
   // Question bank state
   const [questions, setQuestions] = useState<any[]>([]);
+  const [totalQuestionsCount, setTotalQuestionsCount] = useState<number>(0);
   const [questionSearch, setQuestionSearch] = useState<string>('');
   const [gradeFilter, setGradeFilter] = useState<string>('all');
   const [isEditingQuestion, setIsEditingQuestion] = useState<any | null>(null); 
@@ -455,7 +466,10 @@ export default function TeacherDashboard({
     try {
       const res = await fetch(`${API_BASE}/questions?teacherId=${teacherInfo.id}`);
       const data = await res.json();
-      if (res.ok) setQuestions(data.questions || []);
+      if (res.ok) {
+        setQuestions(data.questions || []);
+        setTotalQuestionsCount(data.totalCount || 0);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -1049,7 +1063,6 @@ export default function TeacherDashboard({
             {[
               { id: 'dashboard', label: 'Dashboard', emoji: '📊' },
               { id: 'classes', label: 'Classes', emoji: '🏫' },
-              { id: 'teachers', label: 'Teachers', emoji: '🧑‍🏫' },
               { id: 'students', label: 'Students', emoji: '👨‍🎓' },
               { id: 'questions', label: 'Questions', emoji: '📁' },
               { id: 'requests', label: `Join Requests ${joinRequests.length > 0 ? `(${joinRequests.length})` : ''}`, emoji: '🔔' },
@@ -1165,7 +1178,9 @@ export default function TeacherDashboard({
                   <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Question Bank</span>
                   <span className="text-xl">📁</span>
                 </div>
-                <span className="font-adventure text-3xl font-extrabold text-slate-900 leading-none">{questions.length}</span>
+                <span className="font-adventure text-3xl font-extrabold text-slate-900 leading-none">
+                  {totalQuestionsCount || questions.length}
+                </span>
               </div>
               <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-sm flex flex-col justify-between min-h-[110px]">
                 <div className="flex justify-between items-start">
@@ -2585,8 +2600,8 @@ export default function TeacherDashboard({
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { id: 'cyber-blue', name: 'Cyber Blue', emoji: '💙' },
-                  { id: 'aurora', name: 'Aurora', emoji: '💜' },
-                  { id: 'sunset', name: 'Sunset', emoji: '🧡' },
+                  { id: 'aurora', name: 'Aurora', emoji: '🩵' },
+                  { id: 'rose', name: 'Rose', emoji: '💖' },
                   { id: 'emerald-tech', name: 'Emerald Tech', emoji: '💚' }
                 ].map((t) => (
                   <button
@@ -2597,7 +2612,7 @@ export default function TeacherDashboard({
                     }}
                     className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border-2 text-[10px] font-extrabold font-adventure transition-all ${
                       theme === t.id
-                        ? 'bg-slate-900 border-slate-900 text-white shadow-inner scale-[1.02]'
+                        ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white shadow-inner scale-[1.02]'
                         : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
                     }`}
                   >

@@ -28,6 +28,7 @@ import { Tile, BOARD_TILES, TILE_COORDS_DESKTOP, TILE_COORDS_MOBILE, PRESET_COLO
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentGame from './components/StudentGame';
 import Launchpad from './components/Launchpad';
+import AdminDashboard from './components/AdminDashboard';
 const KNOCKBACK_TILES = 2;
 const COLLISION_PUSHBACK_TILES = 4;
 
@@ -141,6 +142,17 @@ export default function App() {
   const [isTeacherLoggedIn, setIsTeacherLoggedIn] = useState<boolean>(() => {
     return localStorage.getItem('bytequest_role') === 'teacher' && !!localStorage.getItem('bytequest_teacher_info');
   });
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem('bytequest_role') === 'admin' && !!localStorage.getItem('bytequest_admin_info');
+  });
+  const [activeAdmin, setActiveAdmin] = useState<any>(() => {
+    try {
+      const info = localStorage.getItem('bytequest_admin_info');
+      return info ? JSON.parse(info) : null;
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -160,8 +172,8 @@ export default function App() {
 
   const TILE_COORDS = getTilePositions(BOARD_TILES, isMobile);
 
-  // Navigation Router: selection, local, student, teacher
-  const [viewMode, setViewMode] = useState<'selection' | 'local' | 'student' | 'teacher'>('selection');
+  // Navigation Router: selection, local, student, teacher, admin
+  const [viewMode, setViewMode] = useState<'selection' | 'local' | 'student' | 'teacher' | 'admin'>('selection');
   const [localScreen, setLocalScreen] = useState<'setup' | 'board' | 'handoff' | 'victory'>('setup');
 
   // Lifted Student Navigation States
@@ -179,7 +191,7 @@ export default function App() {
   const [isLeaderboardExpanded, setIsLeaderboardExpanded] = useState<boolean>(false);
 
   interface ByteQuestState {
-    viewMode: 'selection' | 'local' | 'student' | 'teacher';
+    viewMode: 'selection' | 'local' | 'student' | 'teacher' | 'admin';
     localScreen: 'setup' | 'board' | 'handoff' | 'victory';
     studentGameState: 'dashboard' | 'lobby' | 'playing' | 'victory';
     studentActiveTab: 'dashboard' | 'continue' | 'new_adventure' | 'practice_quiz' | 'daily_challenge' | 'leaderboard' | 'profile' | 'settings' | 'join_classroom';
@@ -309,6 +321,7 @@ export default function App() {
   }, [viewMode, localScreen, studentGameState, studentActiveTab, studentShowLobbyConfigModal, teacherActiveTab, teacherShowModal]);
 
   const handleGlobalBack = () => {
+    syncOfflineAttempts();
     if (viewMode === 'local' && localScreen === 'board') {
       setPendingExitCallback(() => () => {
         navigateTo({ viewMode: 'selection', localScreen: 'setup' });
@@ -396,10 +409,117 @@ export default function App() {
     }, 3000);
   };
 
+  // Helper to save a single question attempt with offline capability (Requirements 3 & 4)
+  const saveQuestionAttempt = async (payload: {
+    studentId: string;
+    questionId: string;
+    selectedAnswer: string;
+    isCorrect: boolean;
+    activityType: 'ONLINE_GAME' | 'OFFLINE_GAME' | 'DAILY_CHALLENGE' | 'PRACTICE_QUIZ';
+    xpEarned: number;
+    coinsEarned: number;
+    sessionId?: string;
+  }) => {
+    const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
+    const token = localStorage.getItem('bytequest_token');
+
+    try {
+      const res = await fetch(`${baseApi}/api/v1/student/question-attempt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.student) {
+          setActiveStudent(data.student);
+        }
+        return true;
+      }
+    } catch (err) {
+      console.warn("Network offline, queuing attempt in localStorage:", err);
+    }
+
+    // Queue in localStorage for syncing later
+    try {
+      const queue = JSON.parse(localStorage.getItem('bytequest_offline_attempts') || '[]');
+      const exists = queue.some((a: any) => 
+        a.studentId === payload.studentId && 
+        a.questionId === payload.questionId && 
+        a.activityType === payload.activityType && 
+        a.selectedAnswer === payload.selectedAnswer
+      );
+      if (!exists) {
+        queue.push(payload);
+        localStorage.setItem('bytequest_offline_attempts', JSON.stringify(queue));
+      }
+    } catch (e) {
+      console.error("Failed to queue offline attempt:", e);
+    }
+    return false;
+  };
+
+  // Sync offline attempts to the backend (Requirement 3)
+  const syncOfflineAttempts = async () => {
+    const studentId = localStorage.getItem('bytequest_student_id');
+    if (!studentId) return;
+
+    try {
+      const queueStr = localStorage.getItem('bytequest_offline_attempts');
+      if (!queueStr) return;
+      const queue = JSON.parse(queueStr);
+      if (queue.length === 0) return;
+
+      console.log(`Syncing ${queue.length} offline attempts to backend...`);
+      const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
+      const token = localStorage.getItem('bytequest_token');
+
+      const remaining = [];
+      for (const attempt of queue) {
+        try {
+          const res = await fetch(`${baseApi}/api/v1/student/question-attempt`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify(attempt)
+          });
+          if (!res.ok) {
+            remaining.push(attempt);
+          }
+        } catch (e) {
+          remaining.push(attempt);
+        }
+      }
+
+      if (remaining.length === 0) {
+        localStorage.removeItem('bytequest_offline_attempts');
+        console.log("All offline attempts synced successfully!");
+      } else {
+        localStorage.setItem('bytequest_offline_attempts', JSON.stringify(remaining));
+      }
+
+      // Refresh profile
+      loadStudentProfile(studentId);
+
+    } catch (e) {
+      console.error("Offline sync failed:", e);
+    }
+  };
+
   const loadStudentProfile = async (studentId: string) => {
     const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
     try {
-      const res = await fetch(`${baseApi}/api/v1/student/profile/${studentId}`);
+      const token = localStorage.getItem('bytequest_token');
+      const res = await fetch(`${baseApi}/api/v1/student/profile/${studentId}`, {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
       const data = await res.json();
       if (res.ok) {
         setActiveStudent(data.student);
@@ -422,9 +542,12 @@ export default function App() {
     const studentId = localStorage.getItem('bytequest_student_id');
     if (role === 'student' && studentId) {
       loadStudentProfile(studentId);
+      syncOfflineAttempts();
       setViewMode('selection');
     } else if (role === 'teacher' && localStorage.getItem('bytequest_teacher_info')) {
       setViewMode('teacher');
+    } else if (role === 'admin' && localStorage.getItem('bytequest_admin_info')) {
+      setViewMode('admin');
     }
   }, []);
 
@@ -1343,6 +1466,25 @@ export default function App() {
       return p;
     }));
 
+    // Save attempt for active logged-in student (Requirement 3 & 4)
+    if (activeStudent && !activeP.isBot && localTurnIdx === 0) {
+      let xpEarned = 0;
+      let coinsEarned = 0;
+      if (isCorrect) {
+        xpEarned = localActiveQuestion.difficulty === 'easy' ? 10 : localActiveQuestion.difficulty === 'hard' ? 25 : 15;
+        coinsEarned = localActiveQuestion.difficulty === 'hard' ? 15 : 5;
+      }
+      saveQuestionAttempt({
+        studentId: activeStudent.id,
+        questionId: localActiveQuestion.id,
+        selectedAnswer: localActiveQuestion.options[oIdx] || '',
+        isCorrect,
+        activityType: 'OFFLINE_GAME',
+        xpEarned,
+        coinsEarned
+      });
+    }
+
     if (isCorrect) {
       setLocalPendingRetryQuestion(null);
       sounds.playCorrect();
@@ -1523,9 +1665,13 @@ export default function App() {
     const studentId = localStorage.getItem('bytequest_student_id');
     if (studentId) {
       const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
+      const token = localStorage.getItem('bytequest_token');
       fetch(`${baseApi}/api/v1/student/profile/${studentId}/match-completed`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       })
       .then(res => res.json())
       .then(data => {
@@ -1581,93 +1727,95 @@ export default function App() {
 
     const baseApi = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
 
-    // 1. Try Student login first
     try {
-      const studentRes = await fetch(`${baseApi}/api/v1/student/auth/login`, {
+      const res = await fetch(`${baseApi}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: authEmail, password: authPassword })
       });
       
-      if (studentRes.ok) {
-        const studentData = await studentRes.json();
-        localStorage.setItem('bytequest_student_id', studentData.student.id);
-        localStorage.setItem('bytequest_role', 'student');
-        
-        // Fetch and await student profile sync before proceeding
-        const profile = await loadStudentProfile(studentData.student.id);
-        setAuthLoading(false);
-        if (!profile) {
-          setAuthError('Unable to sync explorer profile. Please try again.');
+      const data = await res.json();
+      if (res.ok) {
+        // Store JWT token
+        localStorage.setItem('bytequest_token', data.token);
+        localStorage.setItem('bytequest_role', data.role);
+
+        if (data.role === 'student') {
+          localStorage.setItem('bytequest_student_id', data.student.id);
+          // Fetch and await student profile sync before proceeding
+          const profile = await loadStudentProfile(data.student.id);
+          syncOfflineAttempts();
+          setAuthLoading(false);
+          if (!profile) {
+            setAuthError('Unable to sync explorer profile. Please try again.');
+            return;
+          }
+
+          setShowAuthModal(null);
+          
+          // Execute pending action or return to Launchpad selection screen
+          if (pendingAction === 'play_online' || pendingAction === 'online_adventure' || pendingAction === 'student_new_adventure') {
+            setViewMode('student');
+            setStudentGameState('lobby');
+            setStudentActiveTab('dashboard');
+            setTimeout(() => {
+              if ((window as any).ByteQuestAutoCreatePractice) {
+                (window as any).ByteQuestAutoCreatePractice();
+              }
+            }, 300);
+          } else if (pendingAction === 'join_lobby') {
+            const lobbyCode = localStorage.getItem('bytequest_pending_lobby_code') || '';
+            setViewMode('student');
+            setStudentGameState('lobby');
+            setStudentActiveTab('dashboard');
+            setTimeout(() => {
+              if ((window as any).ByteQuestAutoJoinLobby && lobbyCode) {
+                (window as any).ByteQuestAutoJoinLobby(lobbyCode);
+              }
+            }, 300);
+          } else if (pendingAction === 'daily_challenge') {
+            setViewMode('student');
+            setStudentGameState('dashboard');
+            setStudentActiveTab('daily_challenge');
+          } else if (pendingAction === 'join_classroom') {
+            const classCode = localStorage.getItem('bytequest_pending_classroom_code') || '';
+            setViewMode('student');
+            setStudentGameState('dashboard');
+            setStudentActiveTab('join_classroom');
+            setTimeout(() => {
+              if ((window as any).ByteQuestAutoJoinClassroom) {
+                (window as any).ByteQuestAutoJoinClassroom(classCode);
+              }
+            }, 300);
+          } else {
+            setViewMode('selection');
+          }
+          setPendingAction(null);
           return;
         }
 
-        setShowAuthModal(null);
-        
-        // Execute pending action or return to Launchpad selection screen
-        if (pendingAction === 'play_online' || pendingAction === 'online_adventure' || pendingAction === 'student_new_adventure') {
-          setViewMode('student');
-          setStudentGameState('lobby');
-          setStudentActiveTab('dashboard');
-          setTimeout(() => {
-            if ((window as any).ByteQuestAutoCreatePractice) {
-              (window as any).ByteQuestAutoCreatePractice();
-            }
-          }, 300);
-        } else if (pendingAction === 'join_lobby') {
-          const lobbyCode = localStorage.getItem('bytequest_pending_lobby_code') || '';
-          setViewMode('student');
-          setStudentGameState('lobby');
-          setStudentActiveTab('dashboard');
-          setTimeout(() => {
-            if ((window as any).ByteQuestAutoJoinLobby && lobbyCode) {
-              (window as any).ByteQuestAutoJoinLobby(lobbyCode);
-            }
-          }, 300);
-        } else if (pendingAction === 'daily_challenge') {
-          setViewMode('student');
-          setStudentGameState('dashboard');
-          setStudentActiveTab('daily_challenge');
-        } else if (pendingAction === 'join_classroom') {
-          const classCode = localStorage.getItem('bytequest_pending_classroom_code') || '';
-          setViewMode('student');
-          setStudentGameState('dashboard');
-          setStudentActiveTab('join_classroom');
-          setTimeout(() => {
-            if ((window as any).ByteQuestAutoJoinClassroom) {
-              (window as any).ByteQuestAutoJoinClassroom(classCode);
-            }
-          }, 300);
-        } else {
-          setViewMode('selection');
+        if (data.role === 'teacher') {
+          localStorage.setItem('bytequest_teacher_info', JSON.stringify(data.teacher));
+          setIsTeacherLoggedIn(true);
+          setAuthLoading(false);
+          setShowAuthModal(null);
+          setViewMode('teacher');
+          setTeacherActiveTab('dashboard');
+          return;
         }
-        setPendingAction(null);
-        return;
-      }
-    } catch (err) {
-      console.warn("Student authentication check failed, trying teacher...");
-    }
 
-    // 2. Try Teacher login next
-    try {
-      const teacherRes = await fetch(`${baseApi}/api/v1/teacher/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: authEmail, password: authPassword })
-      });
-      
-      if (teacherRes.ok) {
-        const teacherData = await teacherRes.json();
-        localStorage.setItem('bytequest_teacher_info', JSON.stringify(teacherData.teacher));
-        localStorage.setItem('bytequest_role', 'teacher');
-        setAuthLoading(false);
-        setShowAuthModal(null);
-        setViewMode('teacher');
-        setTeacherActiveTab('dashboard');
-        return;
+        if (data.role === 'admin') {
+          localStorage.setItem('bytequest_admin_info', JSON.stringify(data.admin));
+          setIsAdminLoggedIn(true);
+          setAuthLoading(false);
+          setShowAuthModal(null);
+          setViewMode('admin');
+          return;
+        }
+
+        setAuthError('Unauthorized role access.');
       } else {
-        const teacherData = await teacherRes.json();
-        setAuthError(teacherData.error || 'Invalid clearance email or password.');
+        setAuthError(data.error || 'Invalid credentials.');
       }
     } catch (err) {
       setAuthError('Connection failed. Server is currently offline.');
@@ -1699,9 +1847,13 @@ export default function App() {
       if (res.ok) {
         localStorage.setItem('bytequest_student_id', data.student.id);
         localStorage.setItem('bytequest_role', 'student');
+        if (data.token) {
+          localStorage.setItem('bytequest_token', data.token);
+        }
         
         // Fetch and await student profile sync before proceeding
         const profile = await loadStudentProfile(data.student.id);
+        syncOfflineAttempts();
         setAuthLoading(false);
         if (!profile) {
           setAuthError('Unable to sync explorer profile. Please try again.');
@@ -1790,7 +1942,7 @@ export default function App() {
       )}
       
       {/* Header displayed ONLY when not on selection page */}
-      {viewMode !== 'selection' && (() => {
+      {viewMode !== 'selection' && viewMode !== 'admin' && viewMode !== 'teacher' && (() => {
         const isGameBoardActive = (viewMode === 'local' && localScreen === 'board') || viewMode === 'student';
         return (
           <header className={`border-b-3 ${isGameBoardActive ? 'border-[var(--accent-color)] bg-white/95 text-slate-800' : 'border-[var(--primary-color)] bg-white/98 text-stone-900'} backdrop-blur px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 shadow-md`}>
@@ -1824,18 +1976,6 @@ export default function App() {
                   : <VolumeX className="w-4 h-4 text-[var(--primary-color)]" />
                 }
               </button>
-              {viewMode === 'teacher' && isTeacherLoggedIn && (
-                <button
-                  id="teacher-hamburger-btn"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('toggle-teacher-sidebar'));
-                  }}
-                  className="p-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 md:hidden shadow-sm transition-colors"
-                  title="Open Menu"
-                >
-                  <Menu className="w-4 h-4" />
-                </button>
-              )}
             </div>
           </header>
         );
@@ -1958,8 +2098,8 @@ export default function App() {
           {/* MAIN MENU SETTINGS OVERLAY MODAL */}
           {showMainMenuSettings && (
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white text-stone-900 border-3 border-gold p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-[6px_6px_0px_var(--primary-dark)] relative select-text">
-                <h3 className="font-adventure text-2xl font-extrabold text-gold border-b-2 border-[var(--primary-subtle-border)] pb-3 mb-6 uppercase tracking-wider text-center">
+              <div className="bg-white text-stone-900 border-3 border-[var(--primary-color)] p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-[6px_6px_0px_var(--primary-dark)] relative select-text">
+                <h3 className="font-adventure text-2xl font-extrabold text-[var(--primary-color)] border-b-2 border-[var(--primary-subtle-border)] pb-3 mb-6 uppercase tracking-wider text-center">
                   System Settings
                 </h3>
 
@@ -1985,8 +2125,8 @@ export default function App() {
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { id: 'cyber-blue', name: 'Cyber Blue', emoji: '💙' },
-                        { id: 'aurora', name: 'Aurora', emoji: '💜' },
-                        { id: 'sunset', name: 'Sunset', emoji: '🧡' },
+                        { id: 'aurora', name: 'Aurora', emoji: '🩵' },
+                        { id: 'rose', name: 'Rose', emoji: '💖' },
                         { id: 'emerald-tech', name: 'Emerald Tech', emoji: '💚' }
                       ].map((t) => (
                         <button
@@ -1997,7 +2137,7 @@ export default function App() {
                           }}
                           className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border-2 text-[10px] font-extrabold transition-all ${
                             theme === t.id
-                              ? 'bg-slate-900 border-slate-900 text-white shadow-inner scale-[1.02]'
+                              ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white shadow-inner scale-[1.02]'
                               : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
                           }`}
                         >
@@ -2021,12 +2161,14 @@ export default function App() {
                           onClick={() => {
                             localStorage.removeItem('bytequest_student_id');
                             localStorage.removeItem('bytequest_teacher_info');
+                            localStorage.removeItem('bytequest_admin_info');
                             localStorage.removeItem('bytequest_role');
+                            localStorage.removeItem('bytequest_token');
                             sounds.playBeep(300, 'sine', 0.1);
                             setShowMainMenuSettings(false);
                             window.location.reload();
                           }}
-                          className="px-2.5 py-1.5 bg-gold text-white font-bold rounded-lg uppercase tracking-wider text-[9px] hover:bg-gold-light active:scale-95 transition-all border-b-2 border-gold-dark"
+                          className="px-2.5 py-1.5 bg-[var(--primary-color)] text-white font-bold rounded-lg uppercase tracking-wider text-[9px] hover:bg-[var(--primary-light)] active:scale-95 transition-all border-b-2 border-[var(--primary-dark)]"
                         >
                           Sign Out
                         </button>
@@ -2038,7 +2180,7 @@ export default function App() {
 
                   {/* Gameplay details */}
                   <div className="text-[10px] text-slate-500 font-semibold leading-relaxed border-t border-slate-100 pt-4">
-                    <p className="font-bold text-gold mb-1 font-adventure uppercase tracking-wider">Adventure Rules:</p>
+                    <p className="font-bold text-[var(--primary-color)] mb-1 font-adventure uppercase tracking-wider">Adventure Rules:</p>
                     <ul className="list-disc pl-4 space-y-1">
                       <li>Roll the dice to advance on the map track.</li>
                       <li>Land on Trap or Treasure tiles to prompt CS questions.</li>
@@ -2049,7 +2191,7 @@ export default function App() {
                   {/* Close button */}
                   <button
                     onClick={() => { sounds.playBeep(350, 'sine', 0.05); setShowMainMenuSettings(false); }}
-                    className="w-full py-3 bg-gold hover:bg-gold-light text-white border-b-4 border-gold-dark rounded-xl font-adventure font-extrabold text-sm uppercase tracking-wider transition-all shadow-md"
+                    className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white border-b-4 border-[var(--primary-dark)] rounded-xl font-adventure font-extrabold text-sm uppercase tracking-wider transition-all shadow-md"
                   >
                     Return to Menu
                   </button>
@@ -2273,6 +2415,17 @@ export default function App() {
           theme={theme}
           setTheme={setTheme}
           onLoginStateChange={setIsTeacherLoggedIn}
+        />
+      )}
+
+      {/* R2a: ADMIN WORKSPACE */}
+      {viewMode === 'admin' && isAdminLoggedIn && (
+        <AdminDashboard 
+          onBack={() => navigateTo({ viewMode: 'selection' })} 
+          socket={socket} 
+          theme={theme}
+          setTheme={setTheme}
+          onLoginStateChange={setIsAdminLoggedIn}
         />
       )}
 

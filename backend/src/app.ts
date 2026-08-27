@@ -8,6 +8,8 @@ import logger from './config/logger';
 
 import teacherRouter from './routes/teacher';
 import studentRouter from './routes/student';
+import adminRouter from './routes/admin';
+import { authenticate, requireRole } from './middleware/authMiddleware';
 
 const app = express();
 
@@ -58,6 +60,7 @@ const apiLimiter = rateLimit({
 });
 
 app.use('/api/v1', apiLimiter, apiRouter);
+app.use('/api/v1/admin', apiLimiter, authenticate, requireRole(['ADMIN']), adminRouter);
 app.use('/api/v1/teacher', teacherRouter);
 app.use('/api/v1/student', studentRouter);
 

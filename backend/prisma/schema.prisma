@@ -127,6 +127,7 @@ model StudentProfile {
   teamMembers       TeamMember[]
   sessionResults    SessionResult[]
   joinRequests      JoinRequest[]
+  questionAttempts  QuestionAttempt[]
 
   @@index([userId])
   @@index([schoolId])
@@ -182,6 +183,7 @@ model Class {
   teams        Team[]
   gameSessions GameSession[]
   joinRequests JoinRequest[]
+  questionAttempts QuestionAttempt[]
 }
 
 model Section {
@@ -216,6 +218,7 @@ model Question {
 
   moves            PlayerMove[]
   flaggedQuestions FlaggedQuestion[]
+  questionAttempts QuestionAttempt[]
 
   @@index([topic])
   @@index([difficulty])
@@ -391,4 +394,28 @@ model FlaggedQuestion {
   reason      String
   studentName String?
   createdAt   DateTime @default(now())
+}
+
+model QuestionAttempt {
+  id              String         @id @default(uuid())
+  studentId       String
+  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId         String?
+  class           Class?         @relation(fields: [classId], references: [id])
+  grade           Int
+  questionId      String
+  question        Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionText    String
+  selectedAnswer  String
+  correctAnswer   String
+  isCorrect       Boolean
+  attemptStatus   String         @default("ATTEMPTED")
+  xpEarned        Int            @default(0)
+  coinsEarned     Int            @default(0)
+  activityType    String         // "ONLINE_GAME", "OFFLINE_GAME", "DAILY_CHALLENGE", "PRACTICE_QUIZ"
+  createdAt       DateTime       @default(now())
+
+  @@index([studentId])
+  @@index([questionId])
+  @@index([createdAt])
 }

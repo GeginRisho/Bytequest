@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { db, prisma } from '../services/db';
+import { authenticate, requireRole } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -104,6 +105,10 @@ router.post('/auth/signup', async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 });
+
+// Protect all endpoints below this line
+router.use(authenticate as any);
+router.use(requireRole(['TEACHER', 'ADMIN']) as any);
 
 // GET all teachers
 router.get('/management/teachers', async (req, res) => {
@@ -320,7 +325,10 @@ router.get('/questions', async (req, res) => {
   const teacherId = req.query.teacherId as string || 'teacher_001';
   try {
     const questions = await db.getQuestionsByTeacher(teacherId);
-    return res.json({ questions });
+    const totalCount = await prisma.question.count({
+      where: { deletedAt: null }
+    });
+    return res.json({ questions, totalCount });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

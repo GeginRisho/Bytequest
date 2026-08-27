@@ -60,6 +60,18 @@ async function main() {
     }
   });
 
+  // 3b. Seed Admin
+  await prisma.user.create({
+    data: {
+      email: "admin@bytequest.com",
+      passwordHash,
+      role: Role.ADMIN,
+      firstName: "Admin",
+      lastName: "System",
+      isVerified: true
+    }
+  });
+
   // 4. Seed Worlds (Isle of Basics, Function Jungle, Data Fortress, Mixed Map)
   console.log('🗺️ Seeding Game Worlds...');
   const worlds = [

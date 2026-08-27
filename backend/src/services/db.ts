@@ -282,7 +282,7 @@ export class PostgresDatabase {
     // Fetch finished sessions
     const sessions = await prisma.gameSession.findMany({
       where: {
-        worldId: { in: classIds },
+        classId: { in: classIds },
         status: 'FINISHED'
       },
       orderBy: {
@@ -292,12 +292,12 @@ export class PostgresDatabase {
 
     const reports = [];
     for (const s of sessions) {
-      const clsObj = classes.find(c => c.id === s.worldId);
+      const clsObj = classes.find(c => c.id === s.classId);
       const results = await this.getSessionResults(s.id);
       reports.push({
         session: {
           id: s.id,
-          classId: s.worldId,
+          classId: s.classId,
           roomCode: s.roomCode,
           status: s.status,
           startedAt: s.createdAt.toISOString(),

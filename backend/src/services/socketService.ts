@@ -550,6 +550,66 @@ export class SocketService {
       room.studentStats[studentId].total++;
       room.studentStats[studentId].timeSpent += timeSpent;
       if (isCorrect) room.studentStats[studentId].correct++;
+
+      // Immediately save attempt and update student rewards in database (Requirement 3 & 4)
+      (async () => {
+        try {
+          const student = await prisma.studentProfile.findUnique({
+            where: { id: studentId }
+          });
+          if (student) {
+            // Deduplicate
+            const duplicate = await prisma.questionAttempt.findFirst({
+              where: {
+                studentId,
+                questionId: q.id,
+                activityType: 'ONLINE_GAME',
+                createdAt: {
+                  gte: new Date(Date.now() - 30 * 1000) // last 30 seconds
+                }
+              }
+            });
+
+            if (!duplicate) {
+              const isOnBossTile = activeTeam.position === 8 || activeTeam.position === 16;
+              const xpEarned = isCorrect ? (isOnBossTile ? 50 : 15) : 0;
+              const coinsEarned = isCorrect ? (isOnBossTile ? 15 : 5) : 0;
+
+              await prisma.questionAttempt.create({
+                data: {
+                  studentId,
+                  classId: student.classId,
+                  grade: student.grade,
+                  questionId: q.id,
+                  questionText: q.questionText,
+                  selectedAnswer: q.options[answerIndex] || '',
+                  correctAnswer: q.correctAnswer,
+                  isCorrect,
+                  xpEarned,
+                  coinsEarned,
+                  activityType: 'ONLINE_GAME'
+                }
+              });
+
+              // Increment totals
+              const newXp = student.xp + xpEarned;
+              const newCoins = student.coins + coinsEarned;
+              const newLevel = Math.floor(newXp / 500) + 1;
+
+              await prisma.studentProfile.update({
+                where: { id: studentId },
+                data: {
+                  xp: newXp,
+                  coins: newCoins,
+                  level: newLevel
+                }
+              });
+            }
+          }
+        } catch (err: any) {
+          logger.error(`[ONLINE ATTEMPT ERROR] Failed to save attempt for student ${studentId}: ${err.message}`);
+        }
+      })();
     }
 
     const roll = room.currentRoll || 1;

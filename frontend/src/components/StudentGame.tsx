@@ -89,6 +89,16 @@ export default function StudentGame({
   theme,
   setTheme
 }: StudentGameProps) {
+  // Local wrapper to automatically inject Authorization token
+  const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const token = localStorage.getItem('bytequest_token');
+    const headers = {
+      ...(init?.headers || {}),
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+    return window.fetch(input, { ...init, headers });
+  };
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
@@ -938,15 +948,48 @@ export default function StudentGame({
     setQuizSelectedOpt(idx);
   };
 
-  const handleQuizCheck = () => {
+  const handleQuizCheck = async () => {
     if (quizSelectedOpt === null) return;
     setQuizChecked(true);
-    const correct = quizSelectedOpt === quizQs[quizQIdx].correctIndex;
+    const q = quizQs[quizQIdx];
+    const correct = quizSelectedOpt === q.correctIndex;
     if (correct) {
       playBeep(523, 'sine', 0.2, 0.1);
       setQuizScore(prev => prev + 1);
     } else {
       playBeep(220, 'sawtooth', 0.3, 0.1);
+    }
+
+    if (activeStudent) {
+      const xpEarned = correct ? (quizDifficulty === 'easy' ? 5 : quizDifficulty === 'hard' ? 15 : 10) : 0;
+      const coinsEarned = correct ? 3 : 0;
+      try {
+        const res = await fetch(`${STUDENT_API_BASE}/question-attempt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentId: activeStudent.id,
+            questionId: q.id,
+            selectedAnswer: q.options[quizSelectedOpt],
+            isCorrect: correct,
+            activityType: 'PRACTICE_QUIZ',
+            xpEarned,
+            coinsEarned
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.student) {
+            if (onUpdateStudent) {
+              onUpdateStudent(activeStudent.id);
+            } else {
+              loadStudentProfile(activeStudent.id);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to submit quiz question attempt:", err);
+      }
     }
   };
 
@@ -956,21 +999,17 @@ export default function StudentGame({
       setQuizSelectedOpt(null);
       setQuizChecked(false);
     } else {
-      const earnedXp = quizScore * (quizDifficulty === 'easy' ? 5 : quizDifficulty === 'hard' ? 15 : 10);
-      const earnedCoins = quizScore * 3;
-      if (activeStudent) {
-        try {
-          await fetch(`${STUDENT_API_BASE}/profile/${activeStudent.id}/rewards`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ xpEarned: earnedXp, coinsEarned: earnedCoins, minutesEarned: 5 })
-          });
-          localStorage.setItem('bytequest_student_id', activeStudent.id);
-        } catch (e) {}
-      }
-      alert(`Quiz completed! You scored ${quizScore}/5. Gained +${earnedXp} XP and +${earnedCoins} Coins!`);
+      const finalXp = quizScore * (quizDifficulty === 'easy' ? 5 : quizDifficulty === 'hard' ? 15 : 10);
+      const finalCoins = quizScore * 3;
+      alert(`Quiz completed! You scored ${quizScore}/5. Gained +${finalXp} XP and +${finalCoins} Coins!`);
       setQuizActive(false);
-      loadStudentProfile(activeStudent.id);
+      if (activeStudent) {
+        if (onUpdateStudent) {
+          onUpdateStudent(activeStudent.id);
+        } else {
+          loadStudentProfile(activeStudent.id);
+        }
+      }
     }
   };
 
@@ -1021,34 +1060,51 @@ export default function StudentGame({
     setDailySelectedOpt(idx);
   };
 
-  const handleDailyCheck = () => {
-    if (dailySelectedOpt === null) return;
+  const handleDailyCheck = async () => {
+    if (dailySelectedOpt === null || !activeStudent) return;
     setDailyChecked(true);
-    const correct = dailySelectedOpt === dailyQs[dailyQIdx].correctIndex;
+    const q = dailyQs[dailyQIdx];
+    const correct = dailySelectedOpt === q.correctIndex;
     if (correct) {
       playBeep(523, 'sine', 0.2, 0.1);
       setDailyScore(prev => prev + 1);
     } else {
       playBeep(220, 'sawtooth', 0.3, 0.1);
     }
-  };
 
-  const submitDailyChallengeRewards = (answered: number, correct: number) => {
-    const xpEarned = correct * 4;
-    const coinsEarned = correct * 2;
-    const minutesEarned = Math.max(1, Math.ceil(answered * 1));
-
-    if (activeStudent && answered > 0) {
-      fetch(`${STUDENT_API_BASE}/profile/${activeStudent.id}/rewards`, {
+    const xpEarned = correct ? 4 : 0;
+    const coinsEarned = correct ? 2 : 0;
+    try {
+      await fetch(`${STUDENT_API_BASE}/question-attempt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ xpEarned, coinsEarned, minutesEarned })
-      }).then(() => {
-        loadStudentProfile(activeStudent.id);
-        if (onUpdateStudent) {
-          onUpdateStudent(activeStudent.id);
-        }
+        body: JSON.stringify({
+          studentId: activeStudent.id,
+          questionId: q.id,
+          selectedAnswer: q.options[dailySelectedOpt],
+          isCorrect: correct,
+          activityType: 'DAILY_CHALLENGE',
+          xpEarned,
+          coinsEarned
+        })
       });
+      if (onUpdateStudent) {
+        onUpdateStudent(activeStudent.id);
+      } else {
+        loadStudentProfile(activeStudent.id);
+      }
+    } catch (err) {
+      console.error("Failed to submit daily challenge question attempt:", err);
+    }
+  };
+
+  const submitDailyChallengeRewards = () => {
+    if (activeStudent) {
+      if (onUpdateStudent) {
+        onUpdateStudent(activeStudent.id);
+      } else {
+        loadStudentProfile(activeStudent.id);
+      }
     }
 
     const key = getDailyPlayedKey();
@@ -1059,8 +1115,7 @@ export default function StudentGame({
   };
 
   const handleDailyFinishEarly = () => {
-    const answeredCount = dailyQIdx + (dailyChecked ? 1 : 0);
-    submitDailyChallengeRewards(answeredCount, dailyScore);
+    submitDailyChallengeRewards();
     setDailyActive(false);
     setShowDailyResults(true);
   };
@@ -1071,7 +1126,7 @@ export default function StudentGame({
       setDailySelectedOpt(null);
       setDailyChecked(false);
     } else {
-      submitDailyChallengeRewards(dailyQs.length, dailyScore);
+      submitDailyChallengeRewards();
       setDailyActive(false);
       setShowDailyResults(true);
     }
@@ -1921,7 +1976,7 @@ export default function StudentGame({
                     {(dailyQIdx > 0 || dailyChecked) && (
                       <button 
                         onClick={handleDailyFinishEarly}
-                        className="px-4 py-3.5 bg-rose-800 hover:bg-rose-750 text-white font-adventure font-extrabold rounded-xl border-b-4 border-rose-900 uppercase text-xs transition-colors no-override animate-fade-in"
+                        className="px-4 py-3.5 bg-[var(--primary-subtle-bg)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-subtle-text)] font-adventure font-extrabold rounded-xl border border-[var(--primary-subtle-border)] uppercase text-xs transition-all active:scale-95 shadow-md animate-fade-in"
                       >
                         Finish Early
                       </button>
@@ -2377,21 +2432,21 @@ export default function StudentGame({
 
           {activeTab === 'settings' && (
             <div className="parchment-panel rounded-2xl p-8 text-slate-800 max-w-md mx-auto space-y-4">
-              <div className="flex items-center gap-3 border-b border-gold-dark/25 pb-2 mb-2">
+              <div className="flex items-center gap-3 border-b border-[var(--primary-subtle-border)] pb-2 mb-2">
                 <button
                   onClick={handleGoBack}
                   className="px-3 py-1.5 rounded-lg bg-[var(--primary-subtle-bg)] border border-[var(--primary-subtle-border)] hover:bg-[var(--primary-subtle-hover)] text-[var(--primary-dark)] font-bold text-xs uppercase font-adventure transition-all"
                 >
                   ← Back
                 </button>
-                <h3 className="font-adventure text-2xl font-bold text-gold-dark">Audio & Themes</h3>
+                <h3 className="font-adventure text-2xl font-bold text-[var(--primary-color)]">Audio & Themes</h3>
               </div>
               
-              <div className="flex justify-between items-center py-2 border-b border-gold-dark/10">
+              <div className="flex justify-between items-center py-2 border-b border-[var(--primary-subtle-border)]">
                 <span className="text-xs font-bold text-slate-500">Sound Effects</span>
                 <button 
                   onClick={() => setAudioOn(!audioOn)}
-                  className="p-2 rounded-lg bg-parchment-light border border-gold-dark/30 hover:bg-gold/15"
+                  className="p-2 rounded-lg bg-parchment-light border border-[var(--primary-subtle-border)] hover:bg-[var(--primary-subtle-hover)]"
                 >
                   {audioOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                 </button>
@@ -2402,8 +2457,8 @@ export default function StudentGame({
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'cyber-blue', name: 'Cyber Blue', emoji: '💙' },
-                    { id: 'aurora', name: 'Aurora', emoji: '💜' },
-                    { id: 'sunset', name: 'Sunset', emoji: '🧡' },
+                    { id: 'aurora', name: 'Aurora', emoji: '🩵' },
+                    { id: 'rose', name: 'Rose', emoji: '💖' },
                     { id: 'emerald-tech', name: 'Emerald Tech', emoji: '💚' }
                   ].map((t) => (
                     <button
@@ -2414,8 +2469,8 @@ export default function StudentGame({
                       }}
                       className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border-2 text-[10px] font-extrabold font-adventure transition-all ${
                         theme === t.id
-                          ? 'bg-gold-dark border-gold-dark text-white shadow-inner scale-[1.02]'
-                          : 'bg-parchment-light hover:bg-gold/15 border-gold-dark/30 text-slate-700'
+                          ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white shadow-inner scale-[1.02]'
+                          : 'bg-parchment-light hover:bg-[var(--primary-subtle-hover)] border-[var(--primary-subtle-border)] text-slate-700'
                       }`}
                     >
                       <span>{t.emoji}</span>

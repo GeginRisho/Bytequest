@@ -3,6 +3,9 @@ import bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
 import { prisma } from '../services/db';
 
+import AuthService from '../services/authService';
+import { authenticate, requireRole } from '../middleware/authMiddleware';
+
 const router = Router();
 
 // student signup
@@ -44,8 +47,15 @@ router.post('/auth/signup', async (req: Request, res: Response) => {
       }
     });
 
+    const token = AuthService.generateAccessToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    });
+
     return res.status(201).json({
       success: true,
+      token,
       student: {
         id: student.id,
         userId: user.id,
@@ -117,6 +127,10 @@ router.post('/auth/login', async (req: Request, res: Response) => {
     return res.status(500).json({ error: err.message });
   }
 });
+
+// Protect all endpoints below this line
+router.use(authenticate as any);
+router.use(requireRole(['STUDENT', 'TEACHER', 'ADMIN']) as any);
 
 // GET all schools
 router.get('/schools', async (req: Request, res: Response) => {
@@ -380,6 +394,118 @@ router.post('/profile/:id/rewards', async (req: Request, res: Response) => {
     });
 
     return res.json({ success: true, student: updated });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST save a single question answer attempt (Requirements 3 & 4)
+router.post('/question-attempt', async (req: Request, res: Response) => {
+  const { studentId, questionId, selectedAnswer, isCorrect, activityType, xpEarned, coinsEarned, sessionId } = req.body;
+
+  if (!studentId || !questionId || selectedAnswer === undefined || isCorrect === undefined || !activityType) {
+    return res.status(400).json({ error: 'Missing required attempt fields' });
+  }
+
+  try {
+    const student = await prisma.studentProfile.findUnique({
+      where: { id: studentId }
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    const question = await prisma.question.findUnique({
+      where: { id: questionId }
+    });
+
+    if (!question) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+
+    // Deduplication check
+    let duplicate = null;
+
+    if (activityType === 'ONLINE_GAME' && sessionId) {
+      duplicate = await prisma.questionAttempt.findFirst({
+        where: {
+          studentId,
+          questionId,
+          activityType,
+          createdAt: {
+            gte: new Date(Date.now() - 4 * 60 * 60 * 1000) // last 4 hours
+          }
+        }
+      });
+    } else if (activityType === 'DAILY_CHALLENGE') {
+      const startOfDay = new Date();
+      startOfDay.setHours(0,0,0,0);
+      duplicate = await prisma.questionAttempt.findFirst({
+        where: {
+          studentId,
+          questionId,
+          activityType,
+          createdAt: {
+            gte: startOfDay
+          }
+        }
+      });
+    } else if (activityType === 'PRACTICE_QUIZ' || activityType === 'OFFLINE_GAME') {
+      duplicate = await prisma.questionAttempt.findFirst({
+        where: {
+          studentId,
+          questionId,
+          activityType,
+          selectedAnswer,
+          createdAt: {
+            gte: new Date(Date.now() - 5000) // last 5 seconds
+          }
+        }
+      });
+    }
+
+    if (duplicate) {
+      return res.json({ success: true, duplicated: true, student });
+    }
+
+    // Save attempt
+    const attempt = await prisma.questionAttempt.create({
+      data: {
+        studentId,
+        classId: student.classId,
+        grade: student.grade,
+        questionId,
+        questionText: question.questionText,
+        selectedAnswer,
+        correctAnswer: question.correctAnswer,
+        isCorrect,
+        xpEarned: isCorrect ? Number(xpEarned || 0) : 0,
+        coinsEarned: isCorrect ? Number(coinsEarned || 0) : 0,
+        activityType
+      }
+    });
+
+    // Update student profile totals
+    const finalXp = student.xp + attempt.xpEarned;
+    const finalCoins = student.coins + attempt.coinsEarned;
+    const finalLevel = Math.floor(finalXp / 500) + 1;
+
+    const updatedStudent = await prisma.studentProfile.update({
+      where: { id: studentId },
+      data: {
+        xp: finalXp,
+        coins: finalCoins,
+        level: finalLevel
+      }
+    });
+
+    return res.json({
+      success: true,
+      attempt,
+      student: updatedStudent
+    });
+
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
