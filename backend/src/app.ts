@@ -65,85 +65,13 @@ app.use('/api/v1/teacher', teacherRouter);
 app.use('/api/v1/student', studentRouter);
 
 
-import { prisma } from './services/db';
-
 // Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    // 1. Check if tables exist in information_schema
-    const checkTable = async (tableName: string) => {
-      const result: any[] = await prisma.$queryRawUnsafe(
-        `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${tableName}');`
-      );
-      return result[0]?.exists || false;
-    };
-
-    const hasQuestionTable = await checkTable('Question');
-    const hasUserTable = await checkTable('User');
-    const hasStudentTable = await checkTable('StudentProfile');
-    const hasTeacherTable = await checkTable('TeacherProfile');
-    const hasClassTable = await checkTable('Class');
-    const hasSessionTable = await checkTable('GameSession');
-    const hasAttemptTable = await checkTable('QuestionAttempt');
-
-    // 2. Query counts
-    const questionsCount = hasQuestionTable ? await prisma.question.count() : 0;
-    const usersCount = hasUserTable ? await prisma.user.count() : 0;
-    const studentsCount = hasStudentTable ? await prisma.studentProfile.count() : 0;
-    const teachersCount = hasTeacherTable ? await prisma.teacherProfile.count() : 0;
-    const classesCount = hasClassTable ? await prisma.class.count() : 0;
-    const sessionsCount = hasSessionTable ? await prisma.gameSession.count() : 0;
-
-    let attemptsCount = 0;
-    let attemptsError = null;
-    if (hasAttemptTable) {
-      try {
-        attemptsCount = await prisma.questionAttempt.count();
-      } catch (err: any) {
-        attemptsError = err.message;
-      }
-    }
-
-    // 3. Resolve database server and connection name safely
-    let dbName = 'unknown';
-    try {
-      const dbInfo: any[] = await prisma.$queryRawUnsafe("SELECT current_database();");
-      dbName = dbInfo[0]?.current_database || 'unknown';
-    } catch (e) {}
-
-    res.json({
-      status: 'ok',
-      service: 'ByteQuest Backend',
-      environment: process.env.NODE_ENV,
-      databaseDiagnostics: {
-        dbName,
-        tablesCheck: {
-          Question: hasQuestionTable,
-          User: hasUserTable,
-          StudentProfile: hasStudentTable,
-          TeacherProfile: hasTeacherTable,
-          Class: hasClassTable,
-          GameSession: hasSessionTable,
-          QuestionAttempt: hasAttemptTable
-        },
-        counts: {
-          questions: questionsCount,
-          users: usersCount,
-          students: studentsCount,
-          teachers: teachersCount,
-          classes: classesCount,
-          sessions: sessionsCount,
-          questionAttempts: attemptsCount
-        },
-        attemptsError
-      }
-    });
-  } catch (err: any) {
-    res.json({
-      status: 'error',
-      message: err.message
-    });
-  }
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'ByteQuest Backend',
+    environment: process.env.NODE_ENV
+  });
 });
 
 // Root endpoint
