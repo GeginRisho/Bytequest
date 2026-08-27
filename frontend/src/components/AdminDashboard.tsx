@@ -29,7 +29,8 @@ import {
   Menu,
   BookOpen as BookIcon,
   HelpCircle,
-  Activity
+  Activity,
+  Loader2
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -143,6 +144,8 @@ export default function AdminDashboard({
 
   // Loading States
   const [loading, setLoading] = useState(false);
+  const [downloadingSystem, setDownloadingSystem] = useState(false);
+  const [downloadingMarks, setDownloadingMarks] = useState(false);
 
   // ------------------------------------------
   // EFFECTS & DATA LOADERS
@@ -557,6 +560,8 @@ export default function AdminDashboard({
 
   // EXPORT HANDLERS (EXCEL DOWNLOADS)
   const handleDownloadMarks = async () => {
+    if (downloadingMarks) return;
+    setDownloadingMarks(true);
     try {
       showToast('Preparing Marks Excel Report...');
       const token = localStorage.getItem('bytequest_token');
@@ -565,22 +570,70 @@ export default function AdminDashboard({
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
-      if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
+      if (!res.ok) {
+        let errorReason = 'Download failed';
+        try {
+          const errData = await res.json();
+          errorReason = errData.error || errorReason;
+        } catch (_) {}
+        throw new Error(errorReason);
+      }
+      const rawBlob = await res.blob();
+      if (!rawBlob || rawBlob.size === 0) {
+        throw new Error('Generated spreadsheet is empty');
+      }
+
+      const blob = new Blob([rawBlob], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
       const url = window.URL.createObjectURL(blob);
+      const filename = `ByteQuest_Marks_${new Date().toISOString().split('T')[0]}.xlsx`;
+
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ByteQuest_Marks_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = filename;
+      a.style.display = 'none';
       document.body.appendChild(a);
-      a.click();
-      a.remove();
-      showToast('Marks Report downloaded successfully!');
+
+      try {
+        a.click();
+      } catch (clickErr) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string;
+          const fallbackA = document.createElement('a');
+          fallbackA.href = dataUrl;
+          fallbackA.download = filename;
+          fallbackA.style.display = 'none';
+          document.body.appendChild(fallbackA);
+          fallbackA.click();
+          setTimeout(() => {
+            if (document.body.contains(fallbackA)) {
+              document.body.removeChild(fallbackA);
+            }
+          }, 2000);
+        };
+        reader.readAsDataURL(blob);
+      }
+
+      setTimeout(() => {
+        if (document.body.contains(a)) {
+          document.body.removeChild(a);
+        }
+        window.URL.revokeObjectURL(url);
+      }, 2000);
+
+      showToast('Download ready. Marks Report downloaded successfully!');
     } catch (err: any) {
       showToast(err.message || 'Failed to download marks', true);
+    } finally {
+      setDownloadingMarks(false);
     }
   };
 
   const handleDownloadSystemData = async () => {
+    if (downloadingSystem) return;
+    setDownloadingSystem(true);
     try {
       showToast('Preparing System Data Export...');
       const token = localStorage.getItem('bytequest_token');
@@ -589,18 +642,64 @@ export default function AdminDashboard({
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
-      if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
+      if (!res.ok) {
+        let errorReason = 'Download failed';
+        try {
+          const errData = await res.json();
+          errorReason = errData.error || errorReason;
+        } catch (_) {}
+        throw new Error(errorReason);
+      }
+      const rawBlob = await res.blob();
+      if (!rawBlob || rawBlob.size === 0) {
+        throw new Error('Generated spreadsheet is empty');
+      }
+
+      const blob = new Blob([rawBlob], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
       const url = window.URL.createObjectURL(blob);
+      const filename = `ByteQuest_System_Output_${new Date().toISOString().split('T')[0]}.xlsx`;
+
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ByteQuest_System_Output_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = filename;
+      a.style.display = 'none';
       document.body.appendChild(a);
-      a.click();
-      a.remove();
-      showToast('System Data downloaded successfully!');
+
+      try {
+        a.click();
+      } catch (clickErr) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string;
+          const fallbackA = document.createElement('a');
+          fallbackA.href = dataUrl;
+          fallbackA.download = filename;
+          fallbackA.style.display = 'none';
+          document.body.appendChild(fallbackA);
+          fallbackA.click();
+          setTimeout(() => {
+            if (document.body.contains(fallbackA)) {
+              document.body.removeChild(fallbackA);
+            }
+          }, 2000);
+        };
+        reader.readAsDataURL(blob);
+      }
+
+      setTimeout(() => {
+        if (document.body.contains(a)) {
+          document.body.removeChild(a);
+        }
+        window.URL.revokeObjectURL(url);
+      }, 2000);
+
+      showToast('Download ready. System Data downloaded successfully!');
     } catch (err: any) {
       showToast(err.message || 'Failed to download system output', true);
+    } finally {
+      setDownloadingSystem(false);
     }
   };
 
@@ -1944,10 +2043,20 @@ export default function AdminDashboard({
                   </div>
                   <button 
                     onClick={handleDownloadSystemData}
-                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white border-b-4 border-emerald-800 rounded-xl font-adventure font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:brightness-105 active:scale-98"
+                    disabled={downloadingSystem}
+                    className={`w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white border-b-4 border-emerald-800 rounded-xl font-adventure font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:brightness-105 active:scale-98 ${downloadingSystem ? 'opacity-65 cursor-not-allowed' : ''}`}
                   >
-                    <Download className="w-4 h-4" />
-                    <span>Download System Data (.xlsx)</span>
+                    {downloadingSystem ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Preparing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span>Download System Data (.xlsx)</span>
+                      </>
+                    )}
                   </button>
                 </div>
 
@@ -1966,10 +2075,20 @@ export default function AdminDashboard({
                   </div>
                   <button 
                     onClick={handleDownloadMarks}
-                    className="w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white border-b-4 border-[var(--primary-dark)] rounded-xl font-adventure font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:brightness-105 active:scale-98"
+                    disabled={downloadingMarks}
+                    className={`w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white border-b-4 border-[var(--primary-dark)] rounded-xl font-adventure font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:brightness-105 active:scale-98 ${downloadingMarks ? 'opacity-65 cursor-not-allowed' : ''}`}
                   >
-                    <Download className="w-4 h-4" />
-                    <span>Download Student Marks (.xlsx)</span>
+                    {downloadingMarks ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Preparing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span>Download Student Marks (.xlsx)</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
