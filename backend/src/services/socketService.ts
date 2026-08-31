@@ -83,6 +83,11 @@ export class SocketService {
     this.initSocketEvents();
   }
 
+  public broadcastAdminUpdate() {
+    this.io.emit('admin:dashboard_update');
+  }
+
+
   private initSocketEvents() {
     this.io.on('connection', (socket: Socket) => {
       logger.info(`🔌 Connection established: ${socket.id}`);
@@ -244,6 +249,7 @@ export class SocketService {
 
       logger.info(`👨‍🎓 Student joined: ${studentId} in Room: ${roomCode}`);
       this.sendRoomUpdate(roomCode);
+      this.broadcastAdminUpdate();
     } catch (err: any) {
       socket.emit('error', { message: 'Server connection error during login' });
     }
@@ -283,6 +289,7 @@ export class SocketService {
 
     logger.info(`🚀 Starting Classroom Match for Room Code: ${roomCode}`);
     this.sendRoomUpdate(roomCode);
+    this.broadcastAdminUpdate();
   }
 
   private async handleDiceRoll(roomCode: string, studentId: string) {
@@ -613,6 +620,7 @@ export class SocketService {
                   level: newLevel
                 }
               });
+              this.broadcastAdminUpdate();
             }
           }
         } catch (err: any) {
@@ -767,31 +775,28 @@ export class SocketService {
 
       if (room.classId) {
         await db.updateSessionStatus(room.sessionId, 'FINISHED');
-        const dbResults = room.teams.map((t, idx) => {
-          let teamCorrect = 0;
-          let teamTotal = 0;
+        const dbResults: any[] = [];
+        room.teams.forEach((t, idx) => {
+          const teamRank = t.finishedRank || (idx + 1);
           t.members.forEach(m => {
             const stats = room.studentStats[m.id];
-            if (stats) {
-              teamCorrect += stats.correct;
-              teamTotal += stats.total;
-            }
+            const accuracy = stats && stats.total > 0 ? (stats.correct / stats.total) * 100 : 0;
+            dbResults.push({
+              teamId: null, // Avoid unique constraint @@unique([sessionId, teamId]) for multiple team members
+              studentId: m.id,
+              position: t.position,
+              accuracy,
+              xp: t.xp,
+              coins: t.coins,
+              rank: teamRank
+            });
           });
-          const teamAccuracy = teamTotal > 0 ? (teamCorrect / teamTotal) * 100 : 0;
-          return {
-            teamId: t.id,
-            position: t.position,
-            accuracy: teamAccuracy,
-            xp: t.xp,
-            coins: t.coins,
-            rank: t.finishedRank || (idx + 1)
-          };
         });
-        dbResults.sort((a, b) => a.rank - b.rank);
         await db.saveSessionResults(room.sessionId, dbResults);
       }
       this.io.to(roomCode).emit('game:victory', { winner: room.teams[0], teams: room.teams, leveledUpMembers });
       this.sendRoomUpdate(roomCode);
+      this.broadcastAdminUpdate();
       return;
     }
 
@@ -934,6 +939,7 @@ export class SocketService {
     await socket.join(roomCode);
     logger.info(`🎮 Student Practice Room created: ${roomCode}`);
     this.sendRoomUpdate(roomCode);
+    this.broadcastAdminUpdate();
   }
 
   private async handleJoinPracticeRoom(socket: Socket, payload: { roomCode: string; studentId: string; studentName: string }) {
@@ -981,6 +987,7 @@ export class SocketService {
     await socket.join(roomCode);
     logger.info(`🎮 Student ${studentName} joined Practice Room: ${roomCode}`);
     this.sendRoomUpdate(roomCode);
+    this.broadcastAdminUpdate();
   }
 
   // ==========================================
@@ -997,6 +1004,7 @@ export class SocketService {
             member.socketId = null;
             logger.info(`💔 Offline mapping: Student ${member.name} in Room ${roomCode}`);
             this.sendRoomUpdate(roomCode);
+            this.broadcastAdminUpdate();
           }
         });
       });

@@ -1,5 +1,6 @@
 import request from 'supertest';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 // Define global mock container to avoid Jest hoist initialization issues
 (global as any).mockPrisma = {
@@ -97,8 +98,11 @@ describe('ByteQuest Teacher API Tests', () => {
     ((global as any).mockPrisma.studentProfile.findMany as jest.Mock).mockResolvedValue([]);
     ((global as any).mockPrisma.team.findMany as jest.Mock).mockResolvedValue([]);
 
+    const token = jwt.sign({ id: 'teacher-123', role: 'TEACHER' }, process.env.JWT_ACCESS_SECRET || 'super_secret_access_key_12345');
+
     const res = await request(app)
-      .get('/api/v1/teacher/classes?teacherId=teacher-123');
+      .get('/api/v1/teacher/classes?teacherId=teacher-123')
+      .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('classes');

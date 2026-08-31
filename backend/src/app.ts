@@ -50,6 +50,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Live admin dashboard socket notification middleware for mutations
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    res.on('finish', () => {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        const socketService = req.app.get('socketService');
+        if (socketService) {
+          logger.info(`✨ Mutation request [${req.method}] ${req.originalUrl} completed with status ${res.statusCode}. Broadcasting live admin update.`);
+          socketService.broadcastAdminUpdate();
+        }
+      }
+    });
+  }
+  next();
+});
+
 // Throttling: limit requests to API routes (100 per minute)
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,

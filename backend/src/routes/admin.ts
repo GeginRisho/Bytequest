@@ -6,6 +6,13 @@ import { Role, Difficulty, QuestionType } from '@prisma/client';
 
 const router = Router();
 
+const broadcastAdminUpdate = (req: any) => {
+  const socketService = req.app.get('socketService');
+  if (socketService) {
+    socketService.broadcastAdminUpdate();
+  }
+};
+
 // ==========================================
 // ADMIN DASHBOARD OVERVIEW STATS
 // ==========================================
@@ -15,7 +22,7 @@ router.get('/dashboard-stats', async (req, res) => {
     const studentsCount = await prisma.studentProfile.count({ where: { deletedAt: null } });
     const questionsCount = await prisma.question.count({ where: { deletedAt: null } });
     const classesCount = await prisma.class.count({ where: { isArchived: false } });
-    const activeSessionsCount = await prisma.gameSession.count({ where: { status: 'PLAYING' } });
+    const activeSessionsCount = await prisma.gameSession.count({ where: { status: { in: ['LOBBY', 'PLAYING'] } } });
 
     // Performance stats
     const totalAttempted = await prisma.questionAttempt.count();
@@ -300,6 +307,7 @@ router.post('/management/teachers', async (req, res) => {
       }
     });
 
+    broadcastAdminUpdate(req);
     return res.status(201).json({ success: true, teacher });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -363,6 +371,7 @@ router.put('/management/teachers/:id', async (req, res) => {
       })
     ]);
 
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: 'Teacher details updated successfully' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -380,6 +389,7 @@ router.post('/management/teachers/:id/toggle-active', async (req, res) => {
       data: { isActive: !teacher.isActive }
     });
 
+    broadcastAdminUpdate(req);
     return res.json({ success: true, isActive: updated.isActive });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -401,6 +411,7 @@ router.post('/management/teachers/:id/reset-password', async (req, res) => {
       data: { passwordHash }
     });
 
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: 'Password reset successful' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -414,6 +425,7 @@ router.delete('/management/teachers/:id', async (req, res) => {
       where: { id },
       data: { deletedAt: new Date() }
     });
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: 'Teacher deleted successfully' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -431,7 +443,8 @@ router.get('/students', async (req, res) => {
         user: true,
         class: true,
         school: true,
-        questionAttempts: true
+        questionAttempts: true,
+        sessionResults: true
       }
     });
 
@@ -454,6 +467,11 @@ router.get('/students', async (req, res) => {
       const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
       const rank = sortedStudents.findIndex(x => x.id === s.id) + 1;
 
+      const gamesPlayed = s.matchesPlayed;
+      const gamesCompleted = s.sessionResults.length;
+      const wins = s.sessionResults.filter(sr => sr.rank === 1).length;
+      const losses = gamesCompleted - wins;
+
       return {
         id: s.id,
         userId: s.userId,
@@ -473,7 +491,11 @@ router.get('/students', async (req, res) => {
         correct,
         wrong,
         accuracy,
-        rank
+        rank,
+        gamesPlayed,
+        gamesCompleted,
+        wins,
+        losses
       };
     });
 
@@ -531,6 +553,7 @@ router.post('/students', async (req, res) => {
       include: { user: true }
     });
 
+    broadcastAdminUpdate(req);
     return res.status(201).json({
       success: true,
       student: {
@@ -591,6 +614,7 @@ router.put('/students/:id', async (req, res) => {
       })
     ]);
 
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: 'Student updated' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -604,6 +628,7 @@ router.post('/students/:id/suspend', async (req, res) => {
       where: { id },
       data: { isSuspended: true }
     });
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: 'Student suspended' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -617,6 +642,7 @@ router.post('/students/:id/unsuspend', async (req, res) => {
       where: { id },
       data: { isSuspended: false }
     });
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: 'Student unsuspended' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -630,6 +656,7 @@ router.post('/students/:id/reset', async (req, res) => {
       where: { id },
       data: { xp: 0, coins: 10, level: 1 }
     });
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: 'Student progress reset' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -653,6 +680,7 @@ router.delete('/students/:id', async (req, res) => {
       })
     ]);
 
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: 'Student deleted' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -696,6 +724,7 @@ router.post('/questions', async (req, res) => {
       }
     });
 
+    broadcastAdminUpdate(req);
     return res.status(201).json({ success: true, question: newQ });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -724,6 +753,7 @@ router.put('/questions/:id', async (req, res) => {
       }
     });
 
+    broadcastAdminUpdate(req);
     return res.json({ success: true, question: updated });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -737,6 +767,7 @@ router.delete('/questions/:id', async (req, res) => {
       where: { id },
       data: { deletedAt: new Date() }
     });
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: 'Question deleted' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -753,6 +784,7 @@ router.post('/questions/bulk-delete', async (req, res) => {
       where: { id: { in: ids } },
       data: { deletedAt: new Date() }
     });
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: `Successfully deleted ${ids.length} questions` });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -775,6 +807,7 @@ router.post('/questions/bulk-edit', async (req, res) => {
       where: { id: { in: ids } },
       data: updateData
     });
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: `Successfully updated ${ids.length} questions` });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -802,6 +835,7 @@ router.post('/questions/:id/duplicate', async (req, res) => {
       }
     });
 
+    broadcastAdminUpdate(req);
     return res.json({ success: true, question: duplicated });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -860,6 +894,7 @@ router.post('/questions/import', async (req, res) => {
       questionsCreated.push(q);
     }
 
+    broadcastAdminUpdate(req);
     return res.json({ success: true, count: questionsCreated.length });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -913,6 +948,7 @@ router.post('/classes', async (req, res) => {
       }
     });
 
+    broadcastAdminUpdate(req);
     return res.status(201).json({ success: true, class: newCls });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -934,6 +970,7 @@ router.put('/classes/:id', async (req, res) => {
         teacherId
       }
     });
+    broadcastAdminUpdate(req);
     return res.json({ success: true, class: updated });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -944,6 +981,7 @@ router.delete('/classes/:id', async (req, res) => {
   const { id } = req.params;
   try {
     await prisma.class.delete({ where: { id } });
+    broadcastAdminUpdate(req);
     return res.json({ success: true, message: 'Class deleted successfully' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -1001,6 +1039,7 @@ router.post('/classes/:id/duplicate', async (req, res) => {
       }
     }
 
+    broadcastAdminUpdate(req);
     return res.json({ success: true, class: duplicated });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -1250,7 +1289,8 @@ router.get('/export/system', async (req, res) => {
               where: { deletedAt: null },
               include: {
                 user: true,
-                questionAttempts: true
+                questionAttempts: true,
+                sessionResults: true
               }
             }
           }
@@ -1262,7 +1302,8 @@ router.get('/export/system', async (req, res) => {
       where: { deletedAt: null },
       include: {
         user: true,
-        questionAttempts: true
+        questionAttempts: true,
+        sessionResults: true
       }
     });
 
@@ -1281,6 +1322,11 @@ router.get('/export/system', async (req, res) => {
           const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
           const rank = sortedStudents.findIndex(x => x.id === s.id) + 1;
 
+          const gamesPlayed = s.matchesPlayed;
+          const gamesCompleted = s.sessionResults.length;
+          const wins = s.sessionResults.filter(sr => sr.rank === 1).length;
+          const losses = gamesCompleted - wins;
+
           teacherStudentsList.push({
             'Teacher Name': `${t.user.firstName} ${t.user.lastName}`.trim(),
             'Teacher Email': t.user.email,
@@ -1291,6 +1337,10 @@ router.get('/export/system', async (req, res) => {
             'Rank': `Rank ${rank}`,
             'XP': s.xp,
             'Rewards/Coins': s.coins,
+            'Games Played': gamesPlayed,
+            'Games Completed': gamesCompleted,
+            'Wins': wins,
+            'Losses': losses,
             'Questions Attempted': attempted,
             'Correct': correct,
             'Wrong': wrong,

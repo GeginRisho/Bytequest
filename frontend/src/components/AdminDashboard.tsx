@@ -176,6 +176,24 @@ export default function AdminDashboard({
     loadReports();
   }, []);
 
+  useEffect(() => {
+    if (socket) {
+      const handleLiveUpdate = () => {
+        console.log('⚡ Socket event received: refreshing admin dashboard data');
+        loadStats();
+        loadStudents();
+        loadClasses();
+        loadReports();
+      };
+      
+      socket.on('admin:dashboard_update', handleLiveUpdate);
+      
+      return () => {
+        socket.off('admin:dashboard_update', handleLiveUpdate);
+      };
+    }
+  }, [socket]);
+
   const loadStats = async () => {
     try {
       const res = await apiFetch(`${API_BASE}/dashboard-stats`);
@@ -236,6 +254,25 @@ export default function AdminDashboard({
         setReportsList(data.reports);
       }
     } catch (e) { console.error(e); }
+  };
+
+  const handleRefreshAll = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        loadStats(),
+        loadTeachers(),
+        loadStudents(),
+        loadQuestions(),
+        loadClasses(),
+        loadReports()
+      ]);
+      showToast('Dashboard data refreshed successfully!');
+    } catch (e) {
+      showToast('Failed to refresh some data', true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const showToast = (msg: string, isErr = false) => {
@@ -1004,7 +1041,13 @@ export default function AdminDashboard({
     questionsList.forEach(q => {
       const grade = q.classLevel;
       const sub = q.subject;
-      if (data[grade] && data[grade][sub] !== undefined) {
+      if (grade >= 4 && grade <= 12 && sub) {
+        if (!data[grade]) {
+          data[grade] = {};
+        }
+        if (data[grade][sub] === undefined) {
+          data[grade][sub] = 0;
+        }
         data[grade][sub]++;
       }
     });
@@ -1043,6 +1086,14 @@ export default function AdminDashboard({
           <span className="hidden md:inline-block px-3 py-1 bg-slate-100 rounded-full text-[10px] font-extrabold text-slate-600 border border-slate-200 uppercase">
             ⚡ Administrator Clearance
           </span>
+          <button 
+            onClick={handleRefreshAll}
+            disabled={loading}
+            className="p-2 text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 active:scale-95 transition-all flex items-center justify-center shrink-0 disabled:opacity-50"
+            title="Refresh All Data"
+          >
+            <RotateCcw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
           <button 
             onClick={() => setShowSettingsModal(true)}
             className="p-2 text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 active:scale-95 transition-all flex items-center justify-center shrink-0"
@@ -1349,7 +1400,7 @@ export default function AdminDashboard({
                         onChange={(e) => setLeaderboard1Grade(e.target.value)}
                         className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 outline-none focus:border-[var(--primary-color)] font-sans"
                       >
-                        <option value="overall">Overall Rankings</option>
+                        <option value="overall">All Classes</option>
                         {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
                           <option key={g} value={`class${g}`}>Class {g} Rankings</option>
                         ))}
@@ -1393,7 +1444,7 @@ export default function AdminDashboard({
                         onChange={(e) => setLeaderboard2Grade(e.target.value)}
                         className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 outline-none focus:border-[var(--primary-color)] font-sans"
                       >
-                        <option value="overall">Overall Rankings</option>
+                        <option value="overall">All Classes</option>
                         {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
                           <option key={g} value={`class${g}`}>Class {g} Rankings</option>
                         ))}
@@ -1437,7 +1488,7 @@ export default function AdminDashboard({
                         onChange={(e) => setLeaderboard3Grade(e.target.value)}
                         className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 outline-none focus:border-[var(--primary-color)] font-sans"
                       >
-                        <option value="overall">Overall Rankings</option>
+                        <option value="overall">All Classes</option>
                         {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
                           <option key={g} value={`class${g}`}>Class {g} Rankings</option>
                         ))}
@@ -1807,6 +1858,9 @@ export default function AdminDashboard({
                         <th className="p-4">Class/Grade</th>
                         <th className="p-4">XP &amp; Level</th>
                         <th className="p-4 text-right">Coins</th>
+                        <th className="p-4 text-right">Played</th>
+                        <th className="p-4 text-right">Wins</th>
+                        <th className="p-4 text-right">Losses</th>
                         <th className="p-4 text-right">Answered</th>
                         <th className="p-4 text-right">Correct</th>
                         <th className="p-4 text-right">Wrong</th>
@@ -1832,6 +1886,9 @@ export default function AdminDashboard({
                             <div className="text-[10px] text-slate-400 font-bold">{s.xp} XP</div>
                           </td>
                           <td className="p-4 text-right font-bold text-purple-600">🪙 {s.coins}</td>
+                          <td className="p-4 text-right font-semibold text-slate-700">{s.gamesPlayed || 0}</td>
+                          <td className="p-4 text-right font-bold text-emerald-600">{s.wins || 0}</td>
+                          <td className="p-4 text-right font-bold text-rose-600">{s.losses || 0}</td>
                           <td className="p-4 text-right font-semibold text-slate-700">{s.attempted}</td>
                           <td className="p-4 text-right font-bold text-emerald-600">{s.correct}</td>
                           <td className="p-4 text-right font-bold text-rose-600">{s.wrong}</td>
@@ -1875,7 +1932,7 @@ export default function AdminDashboard({
                       ))}
                       {filteredStudents.length === 0 && (
                         <tr>
-                          <td colSpan={11} className="text-center py-8 text-slate-400 italic">No students found.</td>
+                          <td colSpan={14} className="text-center py-8 text-slate-400 italic">No students found.</td>
                         </tr>
                       )}
                     </tbody>

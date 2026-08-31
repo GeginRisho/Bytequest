@@ -21,6 +21,7 @@ server.on('error', (err: any) => {
 
 // Initialize Socket.io service pool
 const socketService = new SocketService(server);
+app.set('socketService', socketService);
 
 // Enable Prometheus default system metric scrapers
 client.collectDefaultMetrics({ register: client.register });
