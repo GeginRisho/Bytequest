@@ -393,7 +393,7 @@ export default function App() {
   const [authPassword, setAuthPassword] = useState('');
   const [authFirstName, setAuthFirstName] = useState('');
   const [authLastName, setAuthLastName] = useState('');
-  const [authGrade, setAuthGrade] = useState('11');
+  const [authGrade, setAuthGrade] = useState('4');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [showMainMenuSettings, setShowMainMenuSettings] = useState(false);
@@ -558,17 +558,17 @@ export default function App() {
   
   // Local Player Setup
   const [localPlayerCount, setLocalPlayerCount] = useState<1 | 2 | 3 | 4>(1);
-  const [localSetupPlayers, setLocalSetupPlayers] = useState<Array<{ name: string; grade: 10 | 11 | 12; color: number; avatar: number }>>([
-    { name: 'Player 1', grade: 11, color: 0, avatar: 0 },
-    { name: 'Player 2', grade: 10, color: 1, avatar: 1 },
-    { name: 'Player 3', grade: 12, color: 2, avatar: 2 },
-    { name: 'Player 4', grade: 11, color: 3, avatar: 3 }
+  const [localSetupPlayers, setLocalSetupPlayers] = useState<Array<{ name: string; grade: number; color: number; avatar: number }>>([
+    { name: 'Player 1', grade: 4, color: 0, avatar: 0 },
+    { name: 'Player 2', grade: 4, color: 1, avatar: 1 },
+    { name: 'Player 3', grade: 4, color: 2, avatar: 2 },
+    { name: 'Player 4', grade: 4, color: 3, avatar: 3 }
   ]);
   
   interface LocalPlayer {
     id: string;
     name: string;
-    grade: 10 | 11 | 12 | 'mixed';
+    grade: number;
     isBot: boolean;
     botDifficulty?: 'easy' | 'medium' | 'hard';
     color: string;
@@ -604,6 +604,49 @@ export default function App() {
   
   const [localTrapEffect, setLocalTrapEffect] = useState<'moveBack' | 'skipTurn' | null>(null);
   const [localTreasureChoice, setLocalTreasureChoice] = useState<'decision' | 'safe' | 'challenge'>('decision');
+  const [localSubject, setLocalSubject] = useState<string>('Mathematics');
+
+  const getOfflineIntersectionSubjects = (): string[] => {
+    // Determine active players up to localPlayerCount
+    const activeSetupList = localSetupPlayers.slice(0, localPlayerCount);
+    if (activeSetupList.length === 0) return ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science'];
+    
+    let result = activeSetupList[0].grade <= 10
+      ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science']
+      : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
+    
+    for (let i = 1; i < activeSetupList.length; i++) {
+      const g = activeSetupList[i].grade;
+      const subjects = g <= 10
+        ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science']
+        : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
+      result = result.filter(s => subjects.includes(s));
+    }
+    return result;
+  };
+
+  const updateOfflinePlayerGrade = (idx: number, grade: number) => {
+    const list = [...localSetupPlayers];
+    list[idx].grade = grade;
+    setLocalSetupPlayers(list);
+
+    // Recompute subject validity
+    const activeSetupList = list.slice(0, localPlayerCount);
+    let result = activeSetupList[0].grade <= 10
+      ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science']
+      : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
+    for (let i = 1; i < activeSetupList.length; i++) {
+      const g = activeSetupList[i].grade;
+      const subjects = g <= 10
+        ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science']
+        : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
+      result = result.filter(s => subjects.includes(s));
+    }
+
+    if (!result.includes(localSubject)) {
+      setLocalSubject(result[0] || 'Mathematics');
+    }
+  };
   
   // Quiz
   const [localActiveQuestion, setLocalActiveQuestion] = useState<Question | null>(null);
@@ -636,7 +679,7 @@ export default function App() {
         const list = [...prev];
         list[0] = {
           name: activeStudent.name || 'Player 1',
-          grade: (activeStudent.grade === 10 || activeStudent.grade === 11 || activeStudent.grade === 12) ? activeStudent.grade : 11,
+          grade: (activeStudent.grade >= 4 && activeStudent.grade <= 12) ? activeStudent.grade : 11,
           color: list[0]?.color ?? 0,
           avatar: list[0]?.avatar ?? 0
         };
@@ -1363,15 +1406,27 @@ export default function App() {
       else targetDifficulty = 'hard';
     }
 
-    // Filter available questions using match-level localUsedQuestionIdsRef
+    // Filter available questions using match-level localUsedQuestionIdsRef and selected subject
     let pool = questionBank.filter(q => {
       if (q.difficulty !== targetDifficulty) return false;
       if (grade !== 'mixed' && q.grade !== grade) return false;
+      if (q.subject && q.subject.toLowerCase() !== localSubject.toLowerCase()) return false;
       if (localUsedQuestionIdsRef.current.has(q.id)) return false;
       return true;
     });
 
     if (pool.length === 0) {
+      // Fallback: search grade + any subject
+      pool = questionBank.filter(q => {
+        if (q.difficulty !== targetDifficulty) return false;
+        if (grade !== 'mixed' && q.grade !== grade) return false;
+        if (localUsedQuestionIdsRef.current.has(q.id)) return false;
+        return true;
+      });
+    }
+
+    if (pool.length === 0) {
+      // General difficulty fallback
       pool = questionBank.filter(q => {
         if (q.difficulty !== targetDifficulty) return false;
         if (localUsedQuestionIdsRef.current.has(q.id)) return false;
@@ -2343,9 +2398,9 @@ export default function App() {
                           onChange={(e) => setAuthGrade(e.target.value)}
                           className="w-full bg-slate-950/65 border border-slate-700/60 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[var(--primary-color)] font-bold font-adventure"
                         >
-                          <option value="10">Class 10 (Basics)</option>
-                          <option value="11">Class 11 (Functions)</option>
-                          <option value="12">Class 12 (Advanced)</option>
+                          {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                            <option key={g} value={String(g)}>Class {g}</option>
+                          ))}
                         </select>
                       </div>
                       <div>
@@ -2477,22 +2532,37 @@ export default function App() {
                 <p className="text-slate-500 text-xs font-semibold">Pass the device among players to take turns</p>
               </div>
 
-              <div className="bg-white border-3 border-[var(--primary-color)] p-6 rounded-2xl mb-8 flex flex-col items-center gap-3 shadow-[4px_4px_0px_var(--primary-dark)] text-slate-800">
-                <label className="text-slate-700 font-adventure text-sm font-extrabold uppercase tracking-wider">Select Player Count</label>
-                <div className="flex gap-2.5">
-                  {([1, 2, 3, 4] as const).map(num => (
-                    <button
-                      key={num}
-                      onClick={() => { sounds.playBeep(300 + num*20, 'sine', 0.1); setLocalPlayerCount(num); }}
-                      className={`w-12 h-12 rounded-xl font-adventure font-extrabold text-lg border-2 transition-all flex items-center justify-center ${
-                        localPlayerCount === num 
-                          ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white scale-110 shadow-md' 
-                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      {num}
-                    </button>
-                  ))}
+              <div className="bg-white border-3 border-[var(--primary-color)] p-6 rounded-2xl mb-8 flex flex-col md:flex-row justify-around items-center gap-6 shadow-[4px_4px_0px_var(--primary-dark)] text-slate-800">
+                <div className="flex flex-col items-center gap-2">
+                  <label className="text-slate-700 font-adventure text-sm font-extrabold uppercase tracking-wider">Select Player Count</label>
+                  <div className="flex gap-2.5">
+                    {([1, 2, 3, 4] as const).map(num => (
+                      <button
+                        key={num}
+                        onClick={() => { sounds.playBeep(300 + num*20, 'sine', 0.1); setLocalPlayerCount(num); }}
+                        className={`w-12 h-12 rounded-xl font-adventure font-extrabold text-lg border-2 transition-all flex items-center justify-center ${
+                          localPlayerCount === num 
+                            ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white scale-110 shadow-md' 
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-2">
+                  <label className="text-slate-700 font-adventure text-sm font-extrabold uppercase tracking-wider">Select Game Subject</label>
+                  <select 
+                    value={localSubject} 
+                    onChange={(e) => setLocalSubject(e.target.value)}
+                    className="bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-[var(--primary-color)] w-48 shadow-sm cursor-pointer font-sans"
+                  >
+                    {getOfflineIntersectionSubjects().map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -2518,23 +2588,21 @@ export default function App() {
                       
                       <div>
                         <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1">Grade Syllabus</label>
-                        <div className="flex gap-1.5">
-                          {([10, 11, 12] as const).map(g => (
+                        <div className="grid grid-cols-5 gap-1.5 font-sans">
+                          {([4, 5, 6, 7, 8, 9, 10, 11, 12] as const).map(g => (
                             <button
                               key={g}
                               type="button"
                               onClick={() => {
-                                const list = [...localSetupPlayers];
-                                list[idx].grade = g;
-                                setLocalSetupPlayers(list);
+                                updateOfflinePlayerGrade(idx, g);
                               }}
-                              className={`flex-1 py-2 border-2 rounded-xl font-bold uppercase text-[10px] transition-all ${
+                              className={`py-1 border-2 rounded-xl font-bold uppercase text-[9px] text-center transition-all ${
                                 localSetupPlayers[idx].grade === g 
                                   ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white shadow-sm' 
                                   : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
-                              G{g}
+                              C{g}
                             </button>
                           ))}
                         </div>

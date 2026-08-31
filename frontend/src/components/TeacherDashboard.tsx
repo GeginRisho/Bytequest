@@ -185,8 +185,8 @@ export default function TeacherDashboard({
   const [classes, setClasses] = useState<any[]>([]);
   const [newClassName, setNewClassName] = useState<string>('');
   const [newClassSection, setNewClassSection] = useState<string>('A');
-  const [newClassGrade, setNewClassGrade] = useState<number>(11);
-  const [newClassSubject, setNewClassSubject] = useState<string>('Computer Science');
+  const [newClassGrade, setNewClassGrade] = useState<number>(4);
+  const [newClassSubject, setNewClassSubject] = useState<string>('English');
   const [activeClassDetails, setActiveClassDetails] = useState<any | null>(null);
   const [editingClass, setEditingClass] = useState<any | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -1528,24 +1528,37 @@ export default function TeacherDashboard({
                   <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Target Syllabus Grade</label>
                   <select
                     value={newClassGrade}
-                    onChange={(e) => setNewClassGrade(Number(e.target.value))}
+                    onChange={(e) => {
+                      const grade = Number(e.target.value);
+                      setNewClassGrade(grade);
+                      const validSubs = grade <= 10 
+                        ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science'] 
+                        : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
+                      if (!validSubs.includes(newClassSubject)) {
+                        setNewClassSubject(validSubs[0]);
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold font-sans"
                   >
-                    <option value={10}>Class 10 (Basics)</option>
-                    <option value={11}>Class 11 (Functions)</option>
-                    <option value={12}>Class 12 (Data Structures)</option>
+                    {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                      <option key={g} value={g}>Class {g}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Subject</label>
-                  <input
-                    type="text"
+                  <select
                     value={newClassSubject}
                     onChange={(e) => setNewClassSubject(e.target.value)}
-                    placeholder="e.g. Computer Science"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold"
-                    required
-                  />
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-[var(--primary-color)] font-bold font-sans"
+                  >
+                    {(newClassGrade <= 10
+                      ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science']
+                      : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science']
+                    ).map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex items-end">
                   <button type="submit" className="w-full py-3.5 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl shadow-md uppercase transition-colors">Create Class</button>
@@ -2059,17 +2072,42 @@ export default function TeacherDashboard({
                   {isEditingQuestion.id ? '✏️ Edit Question' : '✨ Create New Question'}
                 </h3>
                 <form onSubmit={handleSaveQuestion} className="space-y-4 text-xs select-text">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Grade</label>
                       <select
                         value={isEditingQuestion.grade || 11}
-                        onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, grade: Number(e.target.value) })}
+                        onChange={(e) => {
+                          const grade = Number(e.target.value);
+                          const validSubs = grade <= 10 
+                            ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science'] 
+                            : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
+                          let sub = isEditingQuestion.subject || (grade <= 10 ? 'Mathematics' : 'Computer Science');
+                          if (!validSubs.includes(sub)) {
+                            sub = validSubs[0];
+                          }
+                          setIsEditingQuestion({ ...isEditingQuestion, grade, subject: sub });
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 font-bold font-sans"
                       >
-                        <option value={10}>Class 10</option>
-                        <option value={11}>Class 11</option>
-                        <option value={12}>Class 12</option>
+                        {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                          <option key={g} value={g}>Class {g}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Subject</label>
+                      <select
+                        value={isEditingQuestion.subject || ((isEditingQuestion.grade || 11) <= 10 ? 'Mathematics' : 'Computer Science')}
+                        onChange={(e) => setIsEditingQuestion({ ...isEditingQuestion, subject: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 font-bold font-sans"
+                      >
+                        {(((isEditingQuestion.grade || 11) <= 10)
+                          ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science']
+                          : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science']
+                        ).map(sub => (
+                          <option key={sub} value={sub}>{sub}</option>
+                        ))}
                       </select>
                     </div>
                     <div>

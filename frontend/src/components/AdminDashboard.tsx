@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -93,10 +93,13 @@ export default function AdminDashboard({
 
   const [leaderboards, setLeaderboards] = useState<any>({
     overall: [],
-    class10: [],
-    class11: [],
-    class12: []
+    class4: [], class5: [], class6: [], class7: [], class8: [], class9: [],
+    class10: [], class11: [], class12: []
   });
+
+  const [leaderboard1Grade, setLeaderboard1Grade] = useState<string>('overall');
+  const [leaderboard2Grade, setLeaderboard2Grade] = useState<string>('class10');
+  const [leaderboard3Grade, setLeaderboard3Grade] = useState<string>('class12');
 
   // Data lists
   const [teachersList, setTeachersList] = useState<any[]>([]);
@@ -113,8 +116,19 @@ export default function AdminDashboard({
   const [studentSortKey, setStudentSortKey] = useState<'rank' | 'xp-asc' | 'xp-desc' | 'coins-asc' | 'coins-desc'>('rank');
   const [studentGradeFilter, setStudentGradeFilter] = useState<'all' | '10' | '11' | '12'>('all');
 
+  // New Question Filters & Selections
+  const [filterClass, setFilterClass] = useState<string>('all');
+  const [filterSubject, setFilterSubject] = useState<string>('all');
+  const [filterTopic, setFilterTopic] = useState<string>('all');
+  const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
+  const [showSyllabusTree, setShowSyllabusTree] = useState<boolean>(true);
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
+  const [bulkEditForm, setBulkEditForm] = useState({
+    grade: '', subject: '', difficulty: '', topic: ''
+  });
+
   // Modals state
-  const [showModal, setShowModal] = useState<'teacher_create' | 'teacher_edit' | 'student_create' | 'student_edit' | 'question_create' | 'question_edit' | 'class_create' | 'class_edit' | 'teacher_reset_pass' | 'student_reset_pass' | 'csv_import' | 'view_report' | null>(null);
+  const [showModal, setShowModal] = useState<any>(null);
 
   // Selected item reference
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
@@ -131,7 +145,7 @@ export default function AdminDashboard({
     name: '', email: '', classId: '', password: ''
   });
   const [questionForm, setQuestionForm] = useState({
-    grade: '11', topic: '', difficulty: 'medium', questionText: '', optionA: '', optionB: '', optionC: '', optionD: '', correctIndex: 0, explanation: ''
+    grade: '11', subject: 'Computer Science', topic: '', difficulty: 'medium', questionText: '', optionA: '', optionB: '', optionC: '', optionD: '', correctIndex: 0, explanation: ''
   });
   const [classForm, setClassForm] = useState({
     teacherId: '', name: '', grade: '11', section: 'A', subject: 'Computer Science'
@@ -146,6 +160,9 @@ export default function AdminDashboard({
   const [loading, setLoading] = useState(false);
   const [downloadingSystem, setDownloadingSystem] = useState(false);
   const [downloadingMarks, setDownloadingMarks] = useState(false);
+  const [downloadingQuestions, setDownloadingQuestions] = useState(false);
+  const [exportGrade, setExportGrade] = useState<string>('all');
+  const [exportSubject, setExportSubject] = useState<string>('all');
 
   // ------------------------------------------
   // EFFECTS & DATA LOADERS
@@ -430,6 +447,7 @@ export default function AdminDashboard({
 
       const payload = {
         grade: Number(questionForm.grade),
+        subject: questionForm.subject,
         topic: questionForm.topic,
         difficulty: questionForm.difficulty,
         question: questionForm.questionText,
@@ -450,6 +468,59 @@ export default function AdminDashboard({
         loadStats();
       } else {
         showToast(data.error || 'Operation failed', true);
+      }
+    } catch (err: any) {
+      showToast(err.message, true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBulkEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const res = await apiFetch(`${API_BASE}/questions/bulk-edit`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ids: Array.from(selectedQuestionIds),
+          fields: bulkEditForm
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`Successfully bulk edited ${selectedQuestionIds.size} questions!`);
+        setShowModal(null);
+        setSelectedQuestionIds(new Set());
+        loadQuestions();
+        loadStats();
+      } else {
+        showToast(data.error || 'Bulk edit failed', true);
+      }
+    } catch (err: any) {
+      showToast(err.message, true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedQuestionIds.size;
+    if (!confirm(`Are you sure you want to delete all ${count} selected questions?`)) return;
+    try {
+      setLoading(true);
+      const res = await apiFetch(`${API_BASE}/questions/bulk-delete`, {
+        method: 'POST',
+        body: JSON.stringify({ ids: Array.from(selectedQuestionIds) })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`Successfully bulk deleted ${count} questions`);
+        setSelectedQuestionIds(new Set());
+        loadQuestions();
+        loadStats();
+      } else {
+        showToast(data.error || 'Bulk delete failed', true);
       }
     } catch (err: any) {
       showToast(err.message, true);
@@ -703,6 +774,78 @@ export default function AdminDashboard({
     }
   };
 
+  const handleDownloadQuestions = async () => {
+    if (downloadingQuestions) return;
+    setDownloadingQuestions(true);
+    try {
+      showToast('Preparing Filtered Questions spreadsheet...');
+      const token = localStorage.getItem('bytequest_token');
+      const res = await fetch(`${API_BASE}/export/questions?grade=${exportGrade}&subject=${encodeURIComponent(exportSubject)}`, {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!res.ok) {
+        let errorReason = 'Download failed';
+        try {
+          const errData = await res.json();
+          errorReason = errData.error || errorReason;
+        } catch (_) {}
+        throw new Error(errorReason);
+      }
+      const rawBlob = await res.blob();
+      if (!rawBlob || rawBlob.size === 0) {
+        throw new Error('Generated spreadsheet is empty');
+      }
+
+      const blob = new Blob([rawBlob], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const url = window.URL.createObjectURL(blob);
+      const filename = `ByteQuest_Questions_${exportGrade}_${exportSubject}.xlsx`;
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+
+      try {
+        a.click();
+      } catch (clickErr) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string;
+          const fallbackA = document.createElement('a');
+          fallbackA.href = dataUrl;
+          fallbackA.download = filename;
+          fallbackA.style.display = 'none';
+          document.body.appendChild(fallbackA);
+          fallbackA.click();
+          setTimeout(() => {
+            if (document.body.contains(fallbackA)) {
+              document.body.removeChild(fallbackA);
+            }
+          }, 2000);
+        };
+        reader.readAsDataURL(blob);
+      }
+
+      setTimeout(() => {
+        if (document.body.contains(a)) {
+          document.body.removeChild(a);
+        }
+        window.URL.revokeObjectURL(url);
+      }, 2000);
+
+      showToast('Download ready. Questions downloaded successfully!');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to download questions export', true);
+    } finally {
+      setDownloadingQuestions(false);
+    }
+  };
+
   const handleLogOut = () => {
     localStorage.removeItem('bytequest_admin_info');
     localStorage.removeItem('bytequest_role');
@@ -744,6 +887,7 @@ export default function AdminDashboard({
     setSelectedQuestion(q);
     setQuestionForm({
       grade: String(q.classLevel),
+      subject: q.subject || 'Computer Science',
       topic: q.topic,
       difficulty: q.difficulty.toLowerCase(),
       questionText: q.questionText,
@@ -814,9 +958,58 @@ export default function AdminDashboard({
 
   const filteredStudents = getProcessedStudents();
 
-  const filteredQuestions = questionsList.filter(q => 
-    `${q.topic} ${q.questionText} ${q.difficulty} ${q.explanation}`.toLowerCase().includes(questionSearch.toLowerCase())
-  );
+  const filteredQuestions = useMemo(() => {
+    return questionsList.filter(q => {
+      // Search query match
+      const search = questionSearch.toLowerCase();
+      const matchesSearch = !search || 
+        `${q.topic} ${q.questionText} ${q.difficulty} ${q.explanation} ${q.id}`.toLowerCase().includes(search);
+
+      // Class match
+      const matchesClass = filterClass === 'all' || q.classLevel === Number(filterClass);
+      // Subject match
+      const matchesSubject = filterSubject === 'all' || q.subject?.toLowerCase() === filterSubject.toLowerCase();
+      // Topic match
+      const matchesTopic = filterTopic === 'all' || q.topic === filterTopic;
+      // Difficulty match
+      const matchesDifficulty = filterDifficulty === 'all' || q.difficulty.toUpperCase() === filterDifficulty.toUpperCase();
+
+      return matchesSearch && matchesClass && matchesSubject && matchesTopic && matchesDifficulty;
+    });
+  }, [questionsList, questionSearch, filterClass, filterSubject, filterTopic, filterDifficulty]);
+
+  const availableTopics = useMemo(() => {
+    const set = new Set<string>();
+    questionsList.forEach(q => {
+      const matchClass = filterClass === 'all' || q.classLevel === Number(filterClass);
+      const matchSubject = filterSubject === 'all' || q.subject?.toLowerCase() === filterSubject.toLowerCase();
+      if (matchClass && matchSubject && q.topic) {
+        set.add(q.topic);
+      }
+    });
+    return Array.from(set).sort();
+  }, [questionsList, filterClass, filterSubject]);
+
+  const syllabusData = useMemo(() => {
+    const data: Record<number, Record<string, number>> = {};
+    for (let grade = 4; grade <= 12; grade++) {
+      const subjects = grade <= 10 
+        ? ["English", "Tamil", "Mathematics", "Science", "Social Science"]
+        : ["English", "Tamil", "Mathematics", "Physics", "Chemistry", "Biology", "Computer Science"];
+      data[grade] = {};
+      subjects.forEach(sub => {
+        data[grade][sub] = 0;
+      });
+    }
+    questionsList.forEach(q => {
+      const grade = q.classLevel;
+      const sub = q.subject;
+      if (data[grade] && data[grade][sub] !== undefined) {
+        data[grade][sub]++;
+      }
+    });
+    return data;
+  }, [questionsList]);
 
   const filteredClasses = classesList.filter(c => 
     `${c.name} ${c.section} ${c.subject} ${c.teacherName}`.toLowerCase().includes(classSearch.toLowerCase())
@@ -1146,20 +1339,32 @@ export default function AdminDashboard({
 
               {/* GRADE-WISE TOP STUDENTS LEADERBOARDS */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* CLASS 10 LEADERBOARD */}
+                {/* COLUMN 1 LEADERBOARD */}
                 <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-4">
                   <h3 className="font-adventure text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wide flex justify-between items-center">
-                    <span>📚 Class 10 Rankings</span>
+                    <span className="flex items-center gap-1.5">
+                      <span>🏆</span>
+                      <select
+                        value={leaderboard1Grade}
+                        onChange={(e) => setLeaderboard1Grade(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 outline-none focus:border-[var(--primary-color)] font-sans"
+                      >
+                        <option value="overall">Overall Rankings</option>
+                        {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                          <option key={g} value={`class${g}`}>Class {g} Rankings</option>
+                        ))}
+                      </select>
+                    </span>
                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-800 uppercase tracking-widest">TOP XP</span>
                   </h3>
                   
-                  {(!leaderboards.class10 || leaderboards.class10.length === 0) ? (
+                  {(!leaderboards[leaderboard1Grade] || leaderboards[leaderboard1Grade].length === 0) ? (
                     <div className="p-6 text-center text-slate-400 text-xs font-semibold">
-                      No Class 10 student records found.
+                      No student records found.
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                      {leaderboards.class10.map((row: any, idx: number) => (
+                      {leaderboards[leaderboard1Grade].map((row: any, idx: number) => (
                         <div key={idx} className="p-3 rounded-xl border border-slate-150 flex items-center justify-between text-xs hover:bg-slate-50 transition-all">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <span className="font-bold shrink-0">{row.rank}</span>
@@ -1178,20 +1383,32 @@ export default function AdminDashboard({
                   )}
                 </div>
 
-                {/* CLASS 11 LEADERBOARD */}
+                {/* COLUMN 2 LEADERBOARD */}
                 <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-4">
                   <h3 className="font-adventure text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wide flex justify-between items-center">
-                    <span>🌴 Class 11 Rankings</span>
+                    <span className="flex items-center gap-1.5">
+                      <span>🌴</span>
+                      <select
+                        value={leaderboard2Grade}
+                        onChange={(e) => setLeaderboard2Grade(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 outline-none focus:border-[var(--primary-color)] font-sans"
+                      >
+                        <option value="overall">Overall Rankings</option>
+                        {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                          <option key={g} value={`class${g}`}>Class {g} Rankings</option>
+                        ))}
+                      </select>
+                    </span>
                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 uppercase tracking-widest">TOP XP</span>
                   </h3>
                   
-                  {(!leaderboards.class11 || leaderboards.class11.length === 0) ? (
+                  {(!leaderboards[leaderboard2Grade] || leaderboards[leaderboard2Grade].length === 0) ? (
                     <div className="p-6 text-center text-slate-400 text-xs font-semibold">
-                      No Class 11 student records found.
+                      No student records found.
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                      {leaderboards.class11.map((row: any, idx: number) => (
+                      {leaderboards[leaderboard2Grade].map((row: any, idx: number) => (
                         <div key={idx} className="p-3 rounded-xl border border-slate-150 flex items-center justify-between text-xs hover:bg-slate-50 transition-all">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <span className="font-bold shrink-0">{row.rank}</span>
@@ -1210,20 +1427,32 @@ export default function AdminDashboard({
                   )}
                 </div>
 
-                {/* CLASS 12 LEADERBOARD */}
+                {/* COLUMN 3 LEADERBOARD */}
                 <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-4">
                   <h3 className="font-adventure text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wide flex justify-between items-center">
-                    <span>🏰 Class 12 Rankings</span>
+                    <span className="flex items-center gap-1.5">
+                      <span>🏰</span>
+                      <select
+                        value={leaderboard3Grade}
+                        onChange={(e) => setLeaderboard3Grade(e.target.value)}
+                        className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 outline-none focus:border-[var(--primary-color)] font-sans"
+                      >
+                        <option value="overall">Overall Rankings</option>
+                        {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                          <option key={g} value={`class${g}`}>Class {g} Rankings</option>
+                        ))}
+                      </select>
+                    </span>
                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-purple-50 border border-purple-200 text-purple-800 uppercase tracking-widest">TOP XP</span>
                   </h3>
                   
-                  {(!leaderboards.class12 || leaderboards.class12.length === 0) ? (
+                  {(!leaderboards[leaderboard3Grade] || leaderboards[leaderboard3Grade].length === 0) ? (
                     <div className="p-6 text-center text-slate-400 text-xs font-semibold">
-                      No Class 12 student records found.
+                      No student records found.
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                      {leaderboards.class12.map((row: any, idx: number) => (
+                      {leaderboards[leaderboard3Grade].map((row: any, idx: number) => (
                         <div key={idx} className="p-3 rounded-xl border border-slate-150 flex items-center justify-between text-xs hover:bg-slate-50 transition-all">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <span className="font-bold shrink-0">{row.rank}</span>
@@ -1778,13 +2007,121 @@ export default function AdminDashboard({
                   </button>
                   <button
                     onClick={() => {
-                      setQuestionForm({ grade: '11', topic: '', difficulty: 'medium', questionText: '', optionA: '', optionB: '', optionC: '', optionD: '', correctIndex: 0, explanation: '' });
+                      setQuestionForm({ grade: '11', subject: 'Computer Science', topic: '', difficulty: 'medium', questionText: '', optionA: '', optionB: '', optionC: '', optionD: '', correctIndex: 0, explanation: '' });
                       setShowModal('question_create');
                     }}
                     className="px-4 py-2 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors"
                   >
                     + Add Question
                   </button>
+                </div>
+              </div>
+
+              {/* SYLLABUS STATUS TREE */}
+              <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-4">
+                <div 
+                  className="flex justify-between items-center cursor-pointer border-b border-slate-100 pb-2.5" 
+                  onClick={() => setShowSyllabusTree(!showSyllabusTree)}
+                >
+                  <h3 className="font-adventure text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                    📊 Complete Syllabus & Question Bank Status Tree
+                  </h3>
+                  <span className="text-[10px] text-slate-500 font-extrabold uppercase">{showSyllabusTree ? 'Collapse ▲' : 'Expand ▼'}</span>
+                </div>
+                
+                {showSyllabusTree && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-1.5 max-h-[300px] overflow-y-auto pr-1">
+                    {Object.keys(syllabusData).map((gradeStr) => {
+                      const grade = Number(gradeStr);
+                      const subjects = syllabusData[grade];
+                      return (
+                        <div key={grade} className="bg-slate-50 border border-slate-150 p-3.5 rounded-xl space-y-1.5 shadow-inner">
+                          <div className="font-adventure text-[11px] font-extrabold text-[var(--primary-color)] border-b border-slate-200 pb-1 uppercase tracking-wide">
+                            Class {grade} Syllabus
+                          </div>
+                          <div className="space-y-1 text-[10px] font-bold text-slate-650">
+                            {Object.keys(subjects).map(sub => {
+                              const count = subjects[sub];
+                              const isComplete = count >= 25;
+                              return (
+                                <div key={sub} className="flex justify-between items-center">
+                                  <span>{sub}</span>
+                                  <span className={`px-1.5 py-0.5 rounded font-extrabold flex items-center gap-0.5 ${isComplete ? 'bg-emerald-50 border border-emerald-250 text-emerald-700' : 'bg-amber-50 border border-amber-250 text-amber-700'}`}>
+                                    {count}/25 {isComplete ? '✓' : '⚠'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* DROPDOWN FILTERS */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-[9px] uppercase text-slate-400 font-extrabold mb-1">Class/Grade</label>
+                  <select 
+                    value={filterClass}
+                    onChange={(e) => { setFilterClass(e.target.value); setFilterTopic('all'); }}
+                    className="w-full bg-white border border-slate-250 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-700 focus:outline-none focus:border-[var(--primary-color)]"
+                  >
+                    <option value="all">All Grades</option>
+                    {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                      <option key={g} value={String(g)}>Class {g}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] uppercase text-slate-400 font-extrabold mb-1">Subject</label>
+                  <select 
+                    value={filterSubject}
+                    onChange={(e) => { setFilterSubject(e.target.value); setFilterTopic('all'); }}
+                    className="w-full bg-white border border-slate-250 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-700 focus:outline-none focus:border-[var(--primary-color)]"
+                  >
+                    <option value="all">All Subjects</option>
+                    <option value="English">English</option>
+                    <option value="Tamil">Tamil</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Science">Science</option>
+                    <option value="Social Science">Social Science</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Computer Science">Computer Science</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] uppercase text-slate-400 font-extrabold mb-1">Chapter/Topic</label>
+                  <select 
+                    value={filterTopic}
+                    onChange={(e) => setFilterTopic(e.target.value)}
+                    className="w-full bg-white border border-slate-250 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-700 focus:outline-none focus:border-[var(--primary-color)]"
+                  >
+                    <option value="all">All Topics</option>
+                    {availableTopics.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] uppercase text-slate-400 font-extrabold mb-1">Difficulty</label>
+                  <select 
+                    value={filterDifficulty}
+                    onChange={(e) => setFilterDifficulty(e.target.value)}
+                    className="w-full bg-white border border-slate-250 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-700 focus:outline-none focus:border-[var(--primary-color)]"
+                  >
+                    <option value="all">All Difficulties</option>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
                 </div>
               </div>
 
@@ -1801,17 +2138,74 @@ export default function AdminDashboard({
                   />
                 </div>
                 <div className="flex justify-between items-center text-[10px] text-slate-500 font-extrabold uppercase px-1">
-                  <span>Showing {filteredQuestions.length} of {questionsList.length} total questions</span>
-                  {questionSearch && (
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox"
+                      checked={filteredQuestions.length > 0 && filteredQuestions.every(q => selectedQuestionIds.has(q.id))}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        const newSet = new Set(selectedQuestionIds);
+                        filteredQuestions.forEach(q => {
+                          if (checked) newSet.add(q.id);
+                          else newSet.delete(q.id);
+                        });
+                        setSelectedQuestionIds(newSet);
+                      }}
+                      className="cursor-pointer rounded border-slate-300 text-[var(--primary-color)] focus:ring-[var(--primary-color)]"
+                    />
+                    <span>Select All Showing ({filteredQuestions.length})</span>
+                  </div>
+                  {(questionSearch || filterClass !== 'all' || filterSubject !== 'all' || filterTopic !== 'all' || filterDifficulty !== 'all') ? (
                     <button 
-                      onClick={() => setQuestionSearch('')}
-                      className="text-[var(--primary-color)] hover:underline"
+                      onClick={() => {
+                        setQuestionSearch('');
+                        setFilterClass('all');
+                        setFilterSubject('all');
+                        setFilterTopic('all');
+                        setFilterDifficulty('all');
+                      }}
+                      className="text-[var(--primary-color)] hover:underline animate-fade-in"
                     >
-                      Clear Filter
+                      Clear All Filters
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
+
+              {/* BULK ACTION BAR */}
+              {selectedQuestionIds.size > 0 && (
+                <div className="bg-slate-900 text-white px-5 py-3.5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg border border-white/10 animate-scale-in text-xs">
+                  <div className="font-bold flex items-center gap-2">
+                    <span className="bg-[var(--primary-color)] text-white px-2 py-0.5 rounded-lg text-[10px] font-extrabold">
+                      {selectedQuestionIds.size}
+                    </span>
+                    <span>Questions Selected for Bulk Actions</span>
+                  </div>
+                  <div className="flex gap-2 font-bold uppercase tracking-wider text-[10px]">
+                    <button 
+                      onClick={() => {
+                        setBulkEditForm({ grade: '', subject: '', difficulty: '', topic: '' });
+                        setShowModal('bulk_edit');
+                      }}
+                      className="px-3.5 py-2 bg-indigo-650 hover:bg-indigo-600 rounded-xl transition-all border border-indigo-500/30"
+                    >
+                      ✏️ Bulk Edit
+                    </button>
+                    <button 
+                      onClick={handleBulkDelete}
+                      className="px-3.5 py-2 bg-rose-650 hover:bg-rose-600 rounded-xl transition-all border border-rose-500/30"
+                    >
+                      🗑️ Bulk Delete
+                    </button>
+                    <button 
+                      onClick={() => setSelectedQuestionIds(new Set())}
+                      className="px-3.5 py-2 bg-slate-750 hover:bg-slate-700 rounded-xl transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* QUESTIONS PANEL GRID */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1819,9 +2213,22 @@ export default function AdminDashboard({
                   <div key={q.id} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-center gap-2 border-b border-slate-100 pb-2 mb-3">
-                        <span className="text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200">
-                          Grade {q.classLevel} • {q.topic}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="checkbox"
+                            checked={selectedQuestionIds.has(q.id)}
+                            onChange={() => {
+                              const newSet = new Set(selectedQuestionIds);
+                              if (newSet.has(q.id)) newSet.delete(q.id);
+                              else newSet.add(q.id);
+                              setSelectedQuestionIds(newSet);
+                            }}
+                            className="cursor-pointer rounded border-slate-350 text-[var(--primary-color)] focus:ring-[var(--primary-color)] w-3.5 h-3.5"
+                          />
+                          <span className="text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200">
+                            Grade {q.classLevel} • {q.subject} • {q.topic}
+                          </span>
+                        </div>
                         <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border ${
                           q.difficulty === 'EASY' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
                           q.difficulty === 'MEDIUM' ? 'bg-amber-50 border-amber-200 text-amber-700' :
@@ -2027,7 +2434,7 @@ export default function AdminDashboard({
                 <p className="text-slate-600 text-xs">Download all relevant game logs, activity data, pedagogical questions, teacher tables, and student performance marks.</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* SYSTEM DATA PANEL */}
                 <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between min-h-[220px]">
                   <div>
@@ -2087,6 +2494,72 @@ export default function AdminDashboard({
                       <>
                         <Download className="w-4 h-4" />
                         <span>Download Student Marks (.xlsx)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* QUESTIONS EXPORT PANEL */}
+                <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between min-h-[220px]">
+                  <div>
+                    <div className="flex items-center gap-2.5 border-b border-slate-100 pb-2 mb-2">
+                      <div className="w-9 h-9 rounded-lg bg-indigo-500 text-white flex items-center justify-center">
+                        <Download className="w-5 h-5" />
+                      </div>
+                      <h3 className="font-adventure text-lg font-bold text-slate-950 uppercase tracking-wide">Questions Bank Export</h3>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed font-sans mb-3">
+                      Export questions filtered by syllabus class and subject area to separate spreadsheets.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-600 mb-2">
+                      <div>
+                        <label className="block text-[8px] uppercase text-slate-400 mb-1">Grade</label>
+                        <select 
+                          value={exportGrade} 
+                          onChange={(e)=>setExportGrade(e.target.value)} 
+                          className="w-full bg-slate-55 border border-slate-250 rounded-lg px-2 py-1.5 focus:outline-none"
+                        >
+                          <option value="all">All Grades</option>
+                          {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                            <option key={g} value={String(g)}>Class {g}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[8px] uppercase text-slate-400 mb-1">Subject</label>
+                        <select 
+                          value={exportSubject} 
+                          onChange={(e)=>setExportSubject(e.target.value)} 
+                          className="w-full bg-slate-55 border border-slate-250 rounded-lg px-2 py-1.5 focus:outline-none"
+                        >
+                          <option value="all">All Subjects</option>
+                          <option value="English">English</option>
+                          <option value="Tamil">Tamil</option>
+                          <option value="Mathematics">Mathematics</option>
+                          <option value="Science">Science</option>
+                          <option value="Social Science">Social Science</option>
+                          <option value="Physics">Physics</option>
+                          <option value="Chemistry">Chemistry</option>
+                          <option value="Biology">Biology</option>
+                          <option value="Computer Science">Computer Science</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleDownloadQuestions}
+                    disabled={downloadingQuestions}
+                    className={`w-full py-3 bg-indigo-650 hover:bg-indigo-605 text-white border-b-4 border-indigo-800 rounded-xl font-adventure font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:brightness-105 active:scale-98 ${downloadingQuestions ? 'opacity-65 cursor-not-allowed' : ''}`}
+                  >
+                    {downloadingQuestions ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Preparing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span>Download Questions (.xlsx)</span>
                       </>
                     )}
                   </button>
@@ -2283,9 +2756,9 @@ export default function AdminDashboard({
                   <div>
                     <label className="block text-[10px] uppercase text-slate-400 font-extrabold mb-1">Syllabus Grade</label>
                     <select value={questionForm.grade} onChange={(e)=>setQuestionForm({...questionForm, grade: e.target.value})} className="w-full bg-slate-55 border border-slate-355 rounded-xl px-3 py-2 text-slate-800">
-                      <option value="10">Grade 10</option>
-                      <option value="11">Grade 11</option>
-                      <option value="12">Grade 12</option>
+                      {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                        <option key={g} value={String(g)}>Grade {g}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -2299,13 +2772,28 @@ export default function AdminDashboard({
                 </div>
 
                 <div>
+                  <label className="block text-[10px] uppercase text-slate-400 font-extrabold mb-1">Subject Area</label>
+                  <select value={questionForm.subject} onChange={(e)=>setQuestionForm({...questionForm, subject: e.target.value})} className="w-full bg-slate-55 border border-slate-355 rounded-xl px-3 py-2 text-slate-800">
+                    <option value="English">English</option>
+                    <option value="Tamil">Tamil</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Science">Science</option>
+                    <option value="Social Science">Social Science</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Computer Science">Computer Science</option>
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-[10px] uppercase text-slate-400 font-extrabold mb-1">Syllabus Topic</label>
                   <input type="text" required value={questionForm.topic} onChange={(e)=>setQuestionForm({...questionForm, topic: e.target.value})} className="w-full border border-slate-355 rounded-xl px-3 py-2 text-slate-800" placeholder="e.g. Stack Operations" />
                 </div>
 
                 <div>
                   <label className="block text-[10px] uppercase text-slate-400 font-extrabold mb-1">Question Content Text</label>
-                  <textarea required rows={3} value={questionForm.questionText} onChange={(e)=>setQuestionForm({...questionForm, questionText: e.target.value})} className="w-full border border-slate-355 rounded-xl px-3 py-2 text-slate-800 resize-none font-sans" placeholder="Type the Computer Science question..." />
+                  <textarea required rows={3} value={questionForm.questionText} onChange={(e)=>setQuestionForm({...questionForm, questionText: e.target.value})} className="w-full border border-slate-355 rounded-xl px-3 py-2 text-slate-800 resize-none font-sans" placeholder="Type the question..." />
                 </div>
 
                 <div className="space-y-2">
@@ -2337,6 +2825,61 @@ export default function AdminDashboard({
               </form>
             )}
 
+            {/* E2. BULK EDIT QUESTIONS */}
+            {showModal === 'bulk_edit' && (
+              <form onSubmit={handleBulkEditSubmit} className="space-y-4 text-xs font-semibold">
+                <h3 className="font-adventure text-xl font-bold text-[var(--primary-color)] border-b border-slate-100 pb-2 uppercase tracking-wide text-center">
+                  Bulk Edit ({selectedQuestionIds.size} Questions)
+                </h3>
+                <p className="text-[10px] text-slate-500 text-center font-bold">Leave fields blank if you do not want to modify them.</p>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 font-extrabold mb-1">Grade Level</label>
+                  <select value={bulkEditForm.grade} onChange={(e)=>setBulkEditForm({...bulkEditForm, grade: e.target.value})} className="w-full bg-slate-55 border border-slate-355 rounded-xl px-3 py-2 text-slate-800">
+                    <option value="">-- Keep Original Grade --</option>
+                    {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                      <option key={g} value={String(g)}>Grade {g}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 font-extrabold mb-1">Subject Area</label>
+                  <select value={bulkEditForm.subject} onChange={(e)=>setBulkEditForm({...bulkEditForm, subject: e.target.value})} className="w-full bg-slate-55 border border-slate-355 rounded-xl px-3 py-2 text-slate-800">
+                    <option value="">-- Keep Original Subject --</option>
+                    <option value="English">English</option>
+                    <option value="Tamil">Tamil</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Science">Science</option>
+                    <option value="Social Science">Social Science</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Computer Science">Computer Science</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 font-extrabold mb-1">Difficulty</label>
+                  <select value={bulkEditForm.difficulty} onChange={(e)=>setBulkEditForm({...bulkEditForm, difficulty: e.target.value})} className="w-full bg-slate-55 border border-slate-355 rounded-xl px-3 py-2 text-slate-800">
+                    <option value="">-- Keep Original Difficulty --</option>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-400 font-extrabold mb-1">Chapter/Topic</label>
+                  <input type="text" value={bulkEditForm.topic} onChange={(e)=>setBulkEditForm({...bulkEditForm, topic: e.target.value})} className="w-full border border-slate-355 rounded-xl px-3 py-2 text-slate-800" placeholder="e.g. Loops & Arrays (or leave blank)" />
+                </div>
+
+                <button type="submit" disabled={loading} className="w-full py-3 bg-[var(--primary-color)] text-white font-bold rounded-xl uppercase transition-colors">
+                  {loading ? 'Submitting...' : 'Apply Changes'}
+                </button>
+              </form>
+            )}
+
             {/* F. CLASS CREATE OR EDIT */}
             {(showModal === 'class_create' || showModal === 'class_edit') && (
               <form onSubmit={handleClassCreateOrUpdate} className="space-y-4 text-xs font-semibold">
@@ -2363,9 +2906,9 @@ export default function AdminDashboard({
                   <div>
                     <label className="block text-[10px] uppercase text-slate-400 font-extrabold mb-1">Grade Level</label>
                     <select value={classForm.grade} onChange={(e)=>setClassForm({...classForm, grade: e.target.value})} className="w-full bg-slate-55 border border-slate-355 rounded-xl px-3 py-2 text-slate-800">
-                      <option value="10">Grade 10</option>
-                      <option value="11">Grade 11</option>
-                      <option value="12">Grade 12</option>
+                      {[4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                        <option key={g} value={String(g)}>Grade {g}</option>
+                      ))}
                     </select>
                   </div>
                   <div>

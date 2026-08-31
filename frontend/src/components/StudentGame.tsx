@@ -354,8 +354,41 @@ export default function StudentGame({
   const [profileSaveError, setProfileSaveError] = useState<string>('');
 
   // Local Practice Quiz State
-  const [quizTopic, setQuizTopic] = useState<string>('Python Programming');
+  const getInitialQuizGrade = () => {
+    return activeStudent?.grade || 4;
+  };
+
+  const getInitialQuizSubject = (grade: number) => {
+    const validSubjects = grade <= 10 
+      ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science'] 
+      : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
+    if (activeStudent?.classSubject && validSubjects.includes(activeStudent.classSubject)) {
+      return activeStudent.classSubject;
+    }
+    return grade <= 10 ? 'Mathematics' : 'Computer Science';
+  };
+
+  const initialGrade = getInitialQuizGrade();
+  const [quizGrade, setQuizGrade] = useState<number>(initialGrade);
+  const [quizSubject, setQuizSubject] = useState<string>(getInitialQuizSubject(initialGrade));
   const [quizDifficulty, setQuizDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+
+  useEffect(() => {
+    if (activeStudent) {
+      const grade = activeStudent.grade || 4;
+      setQuizGrade(grade);
+      
+      const validSubjects = grade <= 10 
+        ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science'] 
+        : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
+      
+      if (activeStudent.classSubject && validSubjects.includes(activeStudent.classSubject)) {
+        setQuizSubject(activeStudent.classSubject);
+      } else {
+        setQuizSubject(grade <= 10 ? 'Mathematics' : 'Computer Science');
+      }
+    }
+  }, [activeStudent]);
   const [quizActive, setQuizActive] = useState<boolean>(false);
   const [quizQs, setQuizQs] = useState<Question[]>([]);
   const [quizQIdx, setQuizQIdx] = useState<number>(0);
@@ -929,7 +962,11 @@ export default function StudentGame({
 
   // Practice Quiz Mechanics
   const handleStartPracticeQuiz = () => {
-    const pool = questionBank.filter(q => q.topic.toLowerCase().includes(quizTopic.toLowerCase()) && q.difficulty === quizDifficulty);
+    const pool = questionBank.filter(q => 
+      q.grade === Number(quizGrade) && 
+      q.subject.toLowerCase() === quizSubject.toLowerCase() && 
+      q.difficulty === quizDifficulty
+    );
     if (pool.length === 0) {
       alert('No matching questions found in the question bank.');
       return;
@@ -1024,8 +1061,29 @@ export default function StudentGame({
           setDailyQs([]);
           setDailyActive(false);
         } else {
-          // Select up to 5 unique questions based on unique question IDs
-          const available = [...questionBank];
+          const studentGrade = activeStudent?.grade || 4;
+          const validSubjects = studentGrade <= 10 
+            ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science'] 
+            : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
+          const studentSubject = activeStudent?.classSubject && validSubjects.includes(activeStudent.classSubject)
+            ? activeStudent.classSubject
+            : (studentGrade <= 10 ? 'Mathematics' : 'Computer Science');
+
+          let available = questionBank.filter(q => 
+            q.grade === studentGrade && 
+            q.subject.toLowerCase() === studentSubject.toLowerCase()
+          );
+
+          if (available.length === 0) {
+            // Fallback to student grade, any subject
+            available = questionBank.filter(q => q.grade === studentGrade);
+          }
+
+          if (available.length === 0) {
+            // Fallback to entire bank
+            available = [...questionBank];
+          }
+
           const selected: Question[] = [];
           const selectedIds = new Set<string>();
 
@@ -1711,18 +1769,44 @@ export default function StudentGame({
                   <p className="text-center text-xs font-semibold text-white/50">Select a study subject and difficulty. No board coordinates, no bots, just pure CS revision!</p>
 
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Subject Topic</label>
-                      <select 
-                        value={quizTopic} 
-                        onChange={(e) => setQuizTopic(e.target.value)}
-                        className="w-full bg-[var(--primary-deep-dark)] border border-white/10 rounded-xl px-3 py-3 text-xs font-bold text-white focus:outline-none focus:border-[var(--primary-color)]"
-                      >
-                        <option value="Python Programming" className="bg-stone-900 text-white">Python programming</option>
-                        <option value="Relational Databases" className="bg-stone-900 text-white">Relational Databases & SQL</option>
-                        <option value="Boolean Logic" className="bg-stone-900 text-white">Boolean Logic & Gates</option>
-                        <option value="Computer Networks" className="bg-stone-900 text-white">Computer Networking Basics</option>
-                      </select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Select Class/Grade</label>
+                        <select 
+                          value={quizGrade} 
+                          onChange={(e) => {
+                            const grade = Number(e.target.value);
+                            setQuizGrade(grade);
+                            const validSubs = grade <= 10 
+                              ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science'] 
+                              : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
+                            if (!validSubs.includes(quizSubject)) {
+                              setQuizSubject(validSubs[0]);
+                            }
+                          }}
+                          className="w-full bg-[var(--primary-deep-dark)] border border-white/10 rounded-xl px-3 py-3 text-xs font-bold text-white focus:outline-none focus:border-[var(--primary-color)] font-sans"
+                        >
+                          {([4, 5, 6, 7, 8, 9, 10, 11, 12] as const).map(g => (
+                            <option key={g} value={g} className="bg-stone-900 text-white">Class {g}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Select Subject</label>
+                        <select 
+                          value={quizSubject} 
+                          onChange={(e) => setQuizSubject(e.target.value)}
+                          className="w-full bg-[var(--primary-deep-dark)] border border-white/10 rounded-xl px-3 py-3 text-xs font-bold text-white focus:outline-none focus:border-[var(--primary-color)] font-sans"
+                        >
+                          {(quizGrade <= 10
+                            ? ['English', 'Tamil', 'Mathematics', 'Science', 'Social Science']
+                            : ['English', 'Tamil', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science']
+                          ).map(sub => (
+                            <option key={sub} value={sub} className="bg-stone-900 text-white">{sub}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     <div>

@@ -19,6 +19,7 @@ export interface DbQuestion {
   teacherId: string;
   grade: number;
   topic: string;
+  subject: string;
   difficulty: 'easy' | 'medium' | 'hard';
   question: string;
   options: string[];
@@ -131,6 +132,7 @@ export class PostgresDatabase {
       teacherId: q.creatorId || '',
       grade: q.classLevel,
       topic: q.topic,
+      subject: q.subject,
       difficulty: q.difficulty.toLowerCase() as 'easy' | 'medium' | 'hard',
       question: q.questionText,
       options: q.options,
@@ -320,6 +322,7 @@ export class PostgresDatabase {
       data: {
         classLevel: q.grade,
         topic: q.topic,
+        subject: q.subject || "Computer Science",
         subtopic: "General",
         difficulty: q.difficulty.toUpperCase() as Difficulty,
         type: QuestionType.MCQ,
@@ -338,6 +341,7 @@ export class PostgresDatabase {
       teacherId: res.creatorId || '',
       grade: res.classLevel,
       topic: res.topic,
+      subject: res.subject,
       difficulty: res.difficulty.toLowerCase() as 'easy' | 'medium' | 'hard',
       question: res.questionText,
       options: res.options,
@@ -350,6 +354,7 @@ export class PostgresDatabase {
     const updateData: any = {};
     if (q.grade !== undefined) updateData.classLevel = q.grade;
     if (q.topic !== undefined) updateData.topic = q.topic;
+    if (q.subject !== undefined) updateData.subject = q.subject;
     if (q.difficulty !== undefined) updateData.difficulty = q.difficulty.toUpperCase();
     if (q.question !== undefined) updateData.questionText = q.question;
     if (q.options !== undefined) updateData.options = q.options;
@@ -460,10 +465,10 @@ export class PostgresDatabase {
     const clsObj = await prisma.class.findUnique({
       where: { id: classId }
     });
-    const grade = clsObj?.name.includes('10') ? 10 : clsObj?.name.includes('12') ? 12 : 11;
+    const grade = clsObj ? clsObj.grade : 4;
     
     // Resolve pedagogical world
-    const worldName = grade === 10 ? 'Isle of Basics' : grade === 11 ? 'Function Jungle' : grade === 12 ? 'Data Fortress' : 'Mixed Map';
+    const worldName = grade <= 10 ? 'Isle of Basics' : grade === 11 ? 'Function Jungle' : 'Data Fortress';
     const world = await prisma.mapWorld.findUnique({
       where: { name: worldName }
     });

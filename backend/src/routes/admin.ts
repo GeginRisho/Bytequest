@@ -104,9 +104,10 @@ router.get('/dashboard-stats', async (req, res) => {
     };
 
     const overallLeaderboard = rankList(studentLeaderboardData);
-    const class10Leaderboard = rankList(studentLeaderboardData.filter(s => s.grade === 10), true);
-    const class11Leaderboard = rankList(studentLeaderboardData.filter(s => s.grade === 11), true);
-    const class12Leaderboard = rankList(studentLeaderboardData.filter(s => s.grade === 12), true);
+    const gradeLeaderboards: Record<string, any[]> = {};
+    for (let g = 4; g <= 12; g++) {
+      gradeLeaderboards[`class${g}`] = rankList(studentLeaderboardData.filter(s => s.grade === g), true);
+    }
 
     return res.json({
       success: true,
@@ -134,9 +135,7 @@ router.get('/dashboard-stats', async (req, res) => {
       },
       leaderboards: {
         overall: overallLeaderboard,
-        class10: class10Leaderboard,
-        class11: class11Leaderboard,
-        class12: class12Leaderboard
+        ...gradeLeaderboards
       }
     });
 
@@ -675,7 +674,7 @@ router.get('/questions', async (req, res) => {
 });
 
 router.post('/questions', async (req, res) => {
-  const { grade, topic, difficulty, question, options, correctIndex, explanation } = req.body;
+  const { grade, topic, difficulty, question, options, correctIndex, explanation, subject } = req.body;
   if (!grade || !topic || !difficulty || !question || !options || correctIndex === undefined) {
     return res.status(400).json({ error: 'Missing required question fields' });
   }
@@ -692,7 +691,8 @@ router.post('/questions', async (req, res) => {
         questionText: question,
         options,
         correctAnswer: options[correctIndex] || options[0],
-        explanation: explanation || 'No explanation provided.'
+        explanation: explanation || 'No explanation provided.',
+        subject: subject || 'Computer Science'
       }
     });
 
@@ -704,7 +704,7 @@ router.post('/questions', async (req, res) => {
 
 router.put('/questions/:id', async (req, res) => {
   const { id } = req.params;
-  const { grade, topic, difficulty, question, options, correctIndex, explanation } = req.body;
+  const { grade, topic, difficulty, question, options, correctIndex, explanation, subject } = req.body;
 
   try {
     const oldQ = await prisma.question.findUnique({ where: { id } });
@@ -719,7 +719,8 @@ router.put('/questions/:id', async (req, res) => {
         questionText: question || oldQ.questionText,
         options: options || oldQ.options,
         correctAnswer: options && correctIndex !== undefined ? options[correctIndex] : oldQ.correctAnswer,
-        explanation: explanation || oldQ.explanation
+        explanation: explanation || oldQ.explanation,
+        subject: subject || oldQ.subject
       }
     });
 
@@ -737,6 +738,44 @@ router.delete('/questions/:id', async (req, res) => {
       data: { deletedAt: new Date() }
     });
     return res.json({ success: true, message: 'Question deleted' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/questions/bulk-delete', async (req, res) => {
+  const { ids } = req.body;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Missing or invalid question IDs' });
+  }
+  try {
+    await prisma.question.updateMany({
+      where: { id: { in: ids } },
+      data: { deletedAt: new Date() }
+    });
+    return res.json({ success: true, message: `Successfully deleted ${ids.length} questions` });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/questions/bulk-edit', async (req, res) => {
+  const { ids, fields } = req.body;
+  if (!ids || !Array.isArray(ids) || ids.length === 0 || !fields) {
+    return res.status(400).json({ error: 'Missing required bulk-edit fields' });
+  }
+  try {
+    const updateData: any = {};
+    if (fields.grade !== undefined && fields.grade !== '') updateData.classLevel = Number(fields.grade);
+    if (fields.subject !== undefined && fields.subject !== '') updateData.subject = fields.subject;
+    if (fields.difficulty !== undefined && fields.difficulty !== '') updateData.difficulty = fields.difficulty.toUpperCase() as Difficulty;
+    if (fields.topic !== undefined && fields.topic !== '') updateData.topic = fields.topic;
+
+    await prisma.question.updateMany({
+      where: { id: { in: ids } },
+      data: updateData
+    });
+    return res.json({ success: true, message: `Successfully updated ${ids.length} questions` });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -1282,6 +1321,7 @@ router.get('/export/system', async (req, res) => {
     const questionRows = questions.map(q => ({
       'Question ID': q.id,
       'Grade': q.classLevel,
+      'Subject': q.subject,
       'Topic': q.topic,
       'Difficulty': q.difficulty,
       'Question Text': q.questionText,
@@ -1373,6 +1413,45 @@ router.get('/export/system', async (req, res) => {
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=ByteQuest_System_Data.xlsx');
+    return res.send(buf);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/export/questions', async (req, res) => {
+  const { grade, subject } = req.query;
+  try {
+    const whereClause: any = { deletedAt: null };
+    if (grade && grade !== 'all') whereClause.classLevel = Number(grade);
+    if (subject && subject !== 'all') whereClause.subject = { equals: String(subject), mode: 'insensitive' };
+
+    const questions = await prisma.question.findMany({
+      where: whereClause
+    });
+
+    const questionRows = questions.map(q => ({
+      'Question ID': q.id,
+      'Grade': q.classLevel,
+      'Subject': q.subject,
+      'Topic': q.topic,
+      'Difficulty': q.difficulty,
+      'Question Text': q.questionText,
+      'Option A': q.options[0] || '',
+      'Option B': q.options[1] || '',
+      'Option C': q.options[2] || '',
+      'Option D': q.options[3] || '',
+      'Correct Answer': q.correctAnswer,
+      'Explanation': q.explanation
+    }));
+
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, xlsx.utils.json_to_sheet(questionRows), 'Questions Bank');
+
+    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=ByteQuest_Questions_${grade || 'all'}_${subject || 'all'}.xlsx`);
     return res.send(buf);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

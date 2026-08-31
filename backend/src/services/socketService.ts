@@ -30,6 +30,7 @@ interface LiveRoom {
   roomCode: string;
   classId: string;
   grade: number | 'mixed';
+  subject: string;
   status: 'LOBBY' | 'PLAYING' | 'FINISHED';
   teams: TeamState[];
   activeTeamIdx: number;
@@ -167,7 +168,8 @@ export class SocketService {
           where: { id: dbSession.worldId }
         }) : null;
         const isMixed = world?.name === 'Mixed Map';
-        const grade = isMixed ? 'mixed' : (cls ? (cls.name.includes('10') ? 10 : cls.name.includes('12') ? 12 : 11) : 11);
+        const grade = isMixed ? 'mixed' : (cls ? cls.grade : 11);
+        const subject = cls ? cls.subject : 'Computer Science';
         
         const dbTeams = await db.getClassTeams(session.classId);
         const roomTeams: TeamState[] = await Promise.all(dbTeams.map(async (t) => {
@@ -196,6 +198,7 @@ export class SocketService {
           roomCode,
           classId: session.classId,
           grade,
+          subject,
           status: session.status,
           teams: roomTeams,
           activeTeamIdx: 0,
@@ -410,6 +413,7 @@ export class SocketService {
           teacherId: q.creatorId || 'admin',
           grade: q.classLevel,
           topic: q.topic,
+          subject: q.subject,
           difficulty: q.difficulty.toLowerCase() as any,
           question: room.classId ? `[General] ${q.questionText}` : q.questionText,
           options: q.options,
@@ -426,8 +430,13 @@ export class SocketService {
 
       let filteredPool = pool;
       if (room.grade !== 'mixed') {
-        filteredPool = pool.filter(q => q.grade === room.grade);
-        if (filteredPool.length === 0) filteredPool = pool; // fallback
+        filteredPool = pool.filter(q => q.grade === room.grade && q.subject.toLowerCase() === room.subject.toLowerCase());
+        if (filteredPool.length === 0) {
+          filteredPool = pool.filter(q => q.grade === room.grade); // fallback to grade-only
+        }
+        if (filteredPool.length === 0) {
+          filteredPool = pool; // ultimate fallback
+        }
       }
 
       let diffPool = filteredPool;
@@ -889,6 +898,7 @@ export class SocketService {
       roomCode,
       classId: '',
       grade: 'mixed',
+      subject: 'Computer Science',
       status: 'LOBBY',
       teams: [{
         id: studentId,

@@ -335,7 +335,7 @@ router.get('/questions', async (req, res) => {
 });
 
 router.post('/questions', async (req, res) => {
-  const { teacherId, grade, topic, difficulty, question, options, correctIndex, explanation } = req.body;
+  const { teacherId, grade, topic, subject, difficulty, question, options, correctIndex, explanation } = req.body;
   
   if (!grade || !topic || !difficulty || !question || !options || correctIndex === undefined) {
     return res.status(400).json({ error: 'Missing required question fields' });
@@ -346,6 +346,7 @@ router.post('/questions', async (req, res) => {
       teacherId: teacherId || 'teacher_001',
       grade: Number(grade),
       topic,
+      subject: subject || 'Computer Science',
       difficulty,
       question,
       options,
@@ -386,7 +387,7 @@ router.delete('/questions/:id', async (req, res) => {
 
 // CSV Bulk Import
 router.post('/questions/import', async (req, res) => {
-  const { csvText, teacherId } = req.body;
+  const { csvText, teacherId, subject } = req.body;
   if (!csvText) {
     return res.status(400).json({ error: 'Missing CSV text data' });
   }
@@ -418,10 +419,14 @@ router.post('/questions/import', async (req, res) => {
         const correctIndex = Number(commaParts[8]);
         const explanation = commaParts[9] || '';
 
+        const resolvedSubject = subject || (grade <= 10 ? 'Mathematics' : 'Computer Science');
+        const finalSub = (grade <= 10 && resolvedSubject === 'Computer Science') ? 'Mathematics' : resolvedSubject;
+
         const newQ = await db.addQuestion({
           teacherId: teacherId || 'teacher_001',
           grade,
           topic,
+          subject: finalSub,
           difficulty,
           question: questionText,
           options,
@@ -440,10 +445,14 @@ router.post('/questions/import', async (req, res) => {
       const correctIndex = Number(parts[8]);
       const explanation = parts[9] || '';
 
+      const resolvedSubject = subject || (grade <= 10 ? 'Mathematics' : 'Computer Science');
+      const finalSub = (grade <= 10 && resolvedSubject === 'Computer Science') ? 'Mathematics' : resolvedSubject;
+
       const newQ = await db.addQuestion({
         teacherId: teacherId || 'teacher_001',
         grade,
         topic,
+        subject: finalSub,
         difficulty,
         question: questionText,
         options,
