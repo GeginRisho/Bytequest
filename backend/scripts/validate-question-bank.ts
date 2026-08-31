@@ -50,49 +50,56 @@ async function runValidation() {
       }
     });
 
-    // Verify minimums
+    // Verify minimums and print breakdown grouped by Class
     grades.forEach(grade => {
+      console.log(`Class ${grade}`);
       getExpectedSubjects(grade).forEach(subject => {
         const key = `${grade}-${subject.toLowerCase()}`;
         const count = counts[key] || 0;
         if (count < 25) {
           errors.push(`❌ Completeness Error: Class ${grade} - Subject "${subject}" has only ${count}/25 questions.`);
           errorsCount++;
-        } else {
-          console.log(`✅ Class ${grade} - Subject "${subject}": ${count} questions (Complete)`);
         }
+        console.log(`  ${subject}: ${count}`);
       });
     });
 
     // 2. Formatting & Validation Checks
     console.log('\n--- 2. Question Formatting & Quality Verification ---');
     const questionTextMap = new Map<string, string[]>(); // key: class-subject-text -> array of ids
+    let invalidCount = 0;
+    let duplicateCount = 0;
 
     questions.forEach(q => {
       const qId = q.id;
+      let hasError = false;
       
       // Check topic
       if (!q.topic || q.topic.trim() === '') {
         errors.push(`❌ Formatting Error (ID ${qId}): Topic is empty.`);
         errorsCount++;
+        hasError = true;
       }
 
       // Check question text
       if (!q.questionText || q.questionText.trim() === '') {
         errors.push(`❌ Formatting Error (ID ${qId}): Question text is empty.`);
         errorsCount++;
+        hasError = true;
       }
 
       // Check options length
       if (!q.options || !Array.isArray(q.options) || q.options.length !== 4) {
         errors.push(`❌ Formatting Error (ID ${qId}): Options must have exactly 4 items.`);
         errorsCount++;
+        hasError = true;
       } else {
         // Check for empty options
         q.options.forEach((opt, idx) => {
           if (!opt || opt.trim() === '') {
             errors.push(`❌ Formatting Error (ID ${qId}): Option ${String.fromCharCode(65 + idx)} is empty.`);
             errorsCount++;
+            hasError = true;
           }
         });
 
@@ -101,15 +108,18 @@ async function runValidation() {
         if (uniqueOpts.size !== q.options.length) {
           errors.push(`❌ Formatting Error (ID ${qId}): Contains duplicate options [${q.options.join(', ')}].`);
           errorsCount++;
+          hasError = true;
         }
 
         // Check correct answer mapping
         if (!q.correctAnswer || q.correctAnswer.trim() === '') {
           errors.push(`❌ Formatting Error (ID ${qId}): Correct answer is empty.`);
           errorsCount++;
+          hasError = true;
         } else if (!q.options.includes(q.correctAnswer)) {
           errors.push(`❌ Mapping Error (ID ${qId}): Correct answer "${q.correctAnswer}" is not present in options list.`);
           errorsCount++;
+          hasError = true;
         }
       }
 
@@ -117,9 +127,15 @@ async function runValidation() {
       if (!q.explanation || q.explanation.trim() === '') {
         errors.push(`❌ Formatting Error (ID ${qId}): Explanation is empty.`);
         errorsCount++;
+        hasError = true;
       } else if (q.explanation.trim().length < 15) {
         errors.push(`❌ Quality Error (ID ${qId}): Explanation is too short ("${q.explanation}").`);
         errorsCount++;
+        hasError = true;
+      }
+
+      if (hasError) {
+        invalidCount++;
       }
 
       // 3. Deduplication Check within Class and Subject
@@ -135,10 +151,13 @@ async function runValidation() {
       if (ids.length > 1) {
         errors.push(`❌ Duplicate Error: Found ${ids.length} identical questions in the same Class-Subject bucket. IDs: [${ids.join(', ')}]`);
         errorsCount++;
+        duplicateCount += (ids.length - 1);
       }
     });
 
     console.log('\n--- 3. Validation Report Summary ---');
+    console.log(`📊 Duplicate Count: ${duplicateCount}`);
+    console.log(`📊 Invalid Question Count: ${invalidCount}`);
     if (errorsCount === 0) {
       console.log('🏆 CONGRATULATIONS! The Question Bank is 100% compliant, complete, and contains NO errors or duplicates!');
     } else {

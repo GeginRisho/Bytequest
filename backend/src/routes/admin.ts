@@ -1508,4 +1508,32 @@ router.get('/export/questions', async (req, res) => {
   }
 });
 
+router.post('/run-production-seed', async (req, res) => {
+  const { exec } = require('child_process');
+  const { promisify } = require('util');
+  const execAsync = promisify(exec);
+
+  try {
+    console.log('🌱 Programmatic database seeding request received via admin route.');
+    const { stdout, stderr } = await execAsync('npx ts-node prisma/seed.ts');
+    return res.json({ success: true, stdout, stderr });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/run-production-validation', async (req, res) => {
+  const { exec } = require('child_process');
+  const { promisify } = require('util');
+  const execAsync = promisify(exec);
+
+  try {
+    console.log('📊 Programmatic database validation request received via admin route.');
+    const { stdout, stderr } = await execAsync('npx ts-node scripts/validate-question-bank.ts');
+    return res.json({ success: true, stdout, stderr });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
