@@ -2560,7 +2560,7 @@ export default function AdminDashboard({
                 <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between min-h-[220px]">
                   <div>
                     <div className="flex items-center gap-2.5 border-b border-slate-100 pb-2 mb-2">
-                      <div className="w-9 h-9 rounded-lg bg-indigo-500 text-white flex items-center justify-center">
+                      <div className="w-9 h-9 rounded-lg bg-[var(--primary-color)] text-white flex items-center justify-center">
                         <Download className="w-5 h-5" />
                       </div>
                       <h3 className="font-adventure text-lg font-bold text-slate-950 uppercase tracking-wide">Questions Bank Export</h3>
@@ -2606,7 +2606,7 @@ export default function AdminDashboard({
                   <button 
                     onClick={handleDownloadQuestions}
                     disabled={downloadingQuestions}
-                    className={`w-full py-3 bg-indigo-650 hover:bg-indigo-605 text-white border-b-4 border-indigo-800 rounded-xl font-adventure font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:brightness-105 active:scale-98 ${downloadingQuestions ? 'opacity-65 cursor-not-allowed' : ''}`}
+                    className={`w-full py-3 bg-[var(--primary-color)] hover:bg-[var(--primary-light)] text-white border-b-4 border-[var(--primary-dark)] rounded-xl font-adventure font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:brightness-105 active:scale-98 focus:outline-none focus:ring-2 focus:ring-[var(--primary-light)] focus:ring-offset-2 ${downloadingQuestions ? 'opacity-65 cursor-not-allowed' : ''}`}
                   >
                     {downloadingQuestions ? (
                       <>
